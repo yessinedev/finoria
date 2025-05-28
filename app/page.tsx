@@ -13,7 +13,7 @@ import Products from "@/components/products";
 import Sales from "@/components/sales";
 import Invoices from "@/components/invoices";
 
-type NavigationItem =
+export type NavigationItem =
   | "dashboard"
   | "clients"
   | "products"
