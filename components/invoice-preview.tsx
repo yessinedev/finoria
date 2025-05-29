@@ -1,23 +1,12 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { PDFViewer, pdf } from "@react-pdf/renderer";
 
 import { InvoicePDFDocument } from "@/components/invoice-pdf";
@@ -80,54 +69,6 @@ export default function InvoicePreview({
       setIsPrinting(false);
     }
   };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Payée":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "En attente":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "En retard":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "Annulée":
-        return "bg-gray-100 text-gray-800 border-gray-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Payée":
-        return <Check className="h-4 w-4" />;
-      case "En attente":
-        return <Clock className="h-4 w-4" />;
-      case "En retard":
-        return <AlertCircle className="h-4 w-4" />;
-      case "Annulée":
-        return <X className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "TND",
-    }).format(amount);
-  };
-
-  const isOverdue =
-    new Date(invoice.dueDate) < new Date() && invoice.status !== "Payée";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
