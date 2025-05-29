@@ -4,18 +4,15 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus, Edit, Trash2, Package, Settings, AlertCircle } from "lucide-react"
+import { Plus, Edit, Trash2, Package, AlertCircle } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
-import CategoryManager from "@/components/category-manager"
+import ProductFormModal from "@/components/ProductFormModal"
+import CategoryManagerModal from "@/components/CategoryManagerModal"
 import { db } from "@/lib/database"
 import type { Product, Category } from "@/types/types"
-import { FormField } from "@/components/common/FormField"
-import { EntitySelect } from "@/components/common/EntitySelect"
+import { Badge } from "@/components/ui/badge"
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -47,7 +44,6 @@ export default function Products() {
     filters,
   } = useDataTable(products, { key: "name", direction: "asc" })
 
-  const activeCategories = categories.filter((cat) => cat.isActive)
 
   const columns = [
     {
@@ -147,11 +143,9 @@ export default function Products() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleProductFormSubmit = async (formData: any, editingProduct: Product | null) => {
     setSaving(true)
     setError(null)
-
     try {
       let result
       if (editingProduct) {
@@ -159,7 +153,6 @@ export default function Products() {
       } else {
         result = await db.products.create(formData)
       }
-
       if (result.success) {
         await loadData()
         resetForm()
@@ -240,126 +233,37 @@ export default function Products() {
             Gérez votre catalogue de produits et services ({products.length} produit{products.length > 1 ? "s" : ""})
           </p>
         </div>
-
         <div className="flex gap-2">
-          <Dialog open={isCategoryManagerOpen} onOpenChange={setIsCategoryManagerOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
-                Gérer les catégories
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-full sm:max-w-[900px] mx-auto" style={{ maxHeight: "90vh", overflowY: "auto" }}>
-              <DialogHeader>
-                <DialogTitle>Gestion des catégories</DialogTitle>
-              </DialogHeader>
-              <CategoryManager
-                categories={categories}
-                onCategoriesChange={setCategories}
-                onClose={() => setIsCategoryManagerOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nouveau produit
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>{editingProduct ? "Modifier le produit" : "Nouveau produit"}</DialogTitle>
-              </DialogHeader>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    label="Nom du produit"
-                    id="productName"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                  <EntitySelect
-                    label="Catégorie"
-                    id="category"
-                    value={formData.category}
-                    onChange={(value) => setFormData({ ...formData, category: value })}
-                    options={activeCategories}
-                    getOptionLabel={(cat) => cat.name}
-                    getOptionValue={(cat) => cat.name}
-                    required
-                  />
-                </div>
-
-                <FormField
-                  label="Description"
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  textarea
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    label="Prix unitaire (€)"
-                    id="price"
-                    type="number"
-                    value={formData.price.toString()}
-                    onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
-                    required
-                  />
-                  <FormField
-                    label="Stock (0 pour les services)"
-                    id="stock"
-                    type="number"
-                    value={formData.stock.toString()}
-                    onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300"
-                    disabled={saving}
-                  />
-                  <Label htmlFor="isActive">Produit actif</Label>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={resetForm} disabled={saving}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Enregistrement..." : editingProduct ? "Modifier" : "Créer"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <CategoryManagerModal
+            open={isCategoryManagerOpen}
+            onOpenChange={setIsCategoryManagerOpen}
+            categories={categories}
+            onCategoriesChange={setCategories}
+          />
+          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nouveau produit
+          </Button>
+          <ProductFormModal
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            onSubmit={handleProductFormSubmit}
+            editingProduct={editingProduct}
+            categories={categories}
+            saving={saving}
+            error={error}
+            formData={formData}
+            setFormData={setFormData}
+            onReset={resetForm}
+          />
         </div>
       </div>
-
       {error && !isDialogOpen && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

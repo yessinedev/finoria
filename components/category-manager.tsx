@@ -4,34 +4,15 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, Tag, Palette, AlertCircle } from "lucide-react";
+import { Plus, Edit, Tag, Palette, AlertCircle } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
 import type { Category } from "@/types/types";
+import CategoryFormModal from "@/components/CategoryFormModal";
+import CategoryDeleteDialog from "@/components/CategoryDeleteDialog";
 
 interface CategoryManagerProps {
   categories: Category[];
@@ -159,7 +140,6 @@ export default function CategoryManager({
         </Badge>
       ),
     },
-    
   ];
 
   useEffect(() => {
@@ -194,11 +174,13 @@ export default function CategoryManager({
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Modularize form modal logic
+  const handleCategoryFormSubmit = async (
+    formData: any,
+    editingCategory: Category | null
+  ) => {
     setSaving(true);
     setError(null);
-
     try {
       let result;
       if (editingCategory) {
@@ -206,7 +188,6 @@ export default function CategoryManager({
       } else {
         result = await db.categories.create(formData);
       }
-
       if (result.success) {
         await loadCategories();
         resetForm();
@@ -280,29 +261,7 @@ export default function CategoryManager({
       <Button variant="outline" size="sm" onClick={() => handleEdit(category)}>
         <Edit className="h-4 w-4" />
       </Button>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer la catégorie</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer la catégorie "{category.name}"
-              ? Cette action est irréversible. Les produits utilisant cette
-              catégorie devront être mis à jour manuellement.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleDelete(category.id)}>
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CategoryDeleteDialog category={category} onDelete={handleDelete} />
     </div>
   );
 
@@ -316,112 +275,26 @@ export default function CategoryManager({
             {localCategories.length > 1 ? "s" : ""})
           </p>
         </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle catégorie
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingCategory
-                  ? "Modifier la catégorie"
-                  : "Nouvelle catégorie"}
-              </DialogTitle>
-            </DialogHeader>
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="categoryName">Nom de la catégorie</Label>
-                <Input
-                  id="categoryName"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Ex: Services, Matériel..."
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="categoryDescription">Description</Label>
-                <Textarea
-                  id="categoryDescription"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Description de la catégorie..."
-                  rows={2}
-                />
-              </div>
-
-              <div>
-                <Label>Couleur</Label>
-                <div className="grid grid-cols-4 gap-2 mt-2">
-                  {colorOptions.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      onClick={() =>
-                        setFormData({ ...formData, color: color.value })
-                      }
-                      className={`p-2 rounded-md border-2 text-xs font-medium transition-all ${
-                        formData.color === color.value
-                          ? `${color.class} border-current ring-2 ring-offset-2 ring-current`
-                          : `${color.class} border-transparent hover:border-current`
-                      }`}
-                    >
-                      {color.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="categoryActive"
-                  checked={formData.isActive}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isActive: e.target.checked })
-                  }
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <Label htmlFor="categoryActive">Catégorie active</Label>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={resetForm}
-                  disabled={saving}
-                >
-                  Annuler
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving
-                    ? "Enregistrement..."
-                    : editingCategory
-                    ? "Modifier"
-                    : "Créer"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button
+          onClick={() => {
+            resetForm();
+            setIsDialogOpen(true);
+          }}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvelle catégorie
+        </Button>
+        <CategoryFormModal
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSubmit={handleCategoryFormSubmit}
+          editingCategory={editingCategory}
+          saving={saving}
+          error={error}
+          formData={formData}
+          setFormData={setFormData}
+          onReset={resetForm}
+        />
       </div>
 
       {error && !isDialogOpen && (
@@ -431,7 +304,7 @@ export default function CategoryManager({
         </Alert>
       )}
 
-      <Card className="">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />

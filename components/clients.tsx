@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
+import ClientFormModal from "@/components/ClientFormModal";
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -105,11 +106,9 @@ export default function Clients() {
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleClientFormSubmit = async (formData: any, editingClient: Client | null) => {
     setSaving(true);
     setError(null);
-
     try {
       let result;
       if (editingClient) {
@@ -117,9 +116,8 @@ export default function Clients() {
       } else {
         result = await db.clients.create(formData);
       }
-
       if (result.success) {
-        await loadClients(); // Refresh the list
+        await loadClients();
         resetForm();
       } else {
         setError(result.error || "Erreur lors de la sauvegarde");
@@ -188,103 +186,28 @@ export default function Clients() {
             {clients.length > 1 ? "s" : ""})
           </p>
         </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouveau client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingClient ? "Modifier le client" : "Nouveau client"}
-              </DialogTitle>
-            </DialogHeader>
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <FormField
-                label="Nom complet"
-                id="clientName"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-              <FormField
-                label="Entreprise"
-                id="clientCompany"
-                value={formData.company}
-                onChange={(e) =>
-                  setFormData({ ...formData, company: e.target.value })
-                }
-              />
-              <FormField
-                label="Email"
-                id="clientEmail"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                type="email"
-                required
-              />
-              <FormField
-                label="Téléphone"
-                id="clientPhone"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
-              <FormField
-                label="Adresse"
-                id="clientAddress"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-                textarea
-              />
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={resetForm}
-                  disabled={saving}
-                >
-                  Annuler
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving
-                    ? "Enregistrement..."
-                    : editingClient
-                    ? "Modifier"
-                    : "Créer"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nouveau client
+        </Button>
+        <ClientFormModal
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSubmit={handleClientFormSubmit}
+          editingClient={editingClient}
+          saving={saving}
+          error={error}
+          formData={formData}
+          setFormData={setFormData}
+          onReset={resetForm}
+        />
       </div>
-
       {error && !isDialogOpen && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
