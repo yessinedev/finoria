@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { EntitySelect } from "@/components/common/EntitySelect"
 import {
   FileText,
   Download,
@@ -434,33 +434,39 @@ export default function Invoices() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrer par statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="En attente">En attente</SelectItem>
-                  <SelectItem value="Payée">Payée</SelectItem>
-                  <SelectItem value="En retard">En retard</SelectItem>
-                  <SelectItem value="Annulée">Annulée</SelectItem>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                label="Filtrer par statut"
+                id="statusFilter"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { label: "Tous les statuts", value: "all" },
+                  { label: "En attente", value: "En attente" },
+                  { label: "Payée", value: "Payée" },
+                  { label: "En retard", value: "En retard" },
+                  { label: "Annulée", value: "Annulée" },
+                ]}
+                getOptionLabel={(opt) => opt.label}
+                getOptionValue={(opt) => opt.value}
+              />
             </div>
 
             <div className="flex-1">
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrer par période" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les périodes</SelectItem>
-                  <SelectItem value="today">Aujourd'hui</SelectItem>
-                  <SelectItem value="week">Cette semaine</SelectItem>
-                  <SelectItem value="month">Ce mois</SelectItem>
-                  <SelectItem value="quarter">Ce trimestre</SelectItem>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                label="Filtrer par période"
+                id="dateFilter"
+                value={dateFilter}
+                onChange={setDateFilter}
+                options={[
+                  { label: "Toutes les périodes", value: "all" },
+                  { label: "Aujourd'hui", value: "today" },
+                  { label: "Cette semaine", value: "week" },
+                  { label: "Ce mois", value: "month" },
+                  { label: "Ce trimestre", value: "quarter" },
+                ]}
+                getOptionLabel={(opt) => opt.label}
+                getOptionValue={(opt) => opt.value}
+              />
             </div>
 
             {(statusFilter !== "all" || dateFilter !== "all") && (

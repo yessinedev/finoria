@@ -24,20 +24,14 @@ import { InvoicePDFDocument } from "@/components/invoice-pdf";
 import {
   Download,
   Printer,
-  Building2,
-  Calendar,
-  CreditCard,
   FileText,
-  Mail,
-  Phone,
-  MapPin,
   Loader2,
   Check,
   Clock,
   AlertCircle,
   X,
 } from "lucide-react";
-import type { Invoice, InvoiceItem } from "@/types/types";
+import type { Invoice } from "@/types/types";
 
 interface InvoicePreviewProps {
   invoice: Invoice;

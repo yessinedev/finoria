@@ -2,11 +2,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
@@ -28,6 +23,10 @@ import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/database"
 import type { Sale } from "@/types/types"
+import { FormField } from "@/components/common/FormField"
+import { EntitySelect } from "@/components/common/EntitySelect"
+import { FinancialSummaryCard } from "@/components/common/FinancialSummaryCard"
+import { Label } from "./ui/label"
 
 interface InvoiceGeneratorProps {
   isOpen: boolean
@@ -171,30 +170,16 @@ export default function InvoiceGenerator({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="sale">Vente à facturer</Label>
-                        <Select value={selectedSale?.id.toString() || ""} onValueChange={handleSaleSelection}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choisir une vente..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableSales.map((sale) => (
-                              <SelectItem key={sale.id} value={sale.id.toString()}>
-                                <div className="flex flex-col">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{sale.clientName}</span>
-                                    <Badge variant="outline">{sale.clientCompany}</Badge>
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {formatCurrency(sale.totalAmount + sale.taxAmount)} •{" "}
-                                    {new Date(sale.saleDate).toLocaleDateString("fr-FR")}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <EntitySelect
+                        label="Vente à facturer"
+                        id="sale"
+                        value={selectedSale?.id?.toString() || ""}
+                        onChange={handleSaleSelection}
+                        options={availableSales}
+                        getOptionLabel={(sale) => `${sale.clientName} (${sale.clientCompany})`}
+                        getOptionValue={(sale) => sale.id.toString()}
+                        required
+                      />
 
                       {selectedSale && (
                         <Card className="border-primary/20 bg-primary/5">
@@ -264,15 +249,13 @@ export default function InvoiceGenerator({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div>
-                        <Label>Numéro de facture</Label>
-                        <Input
-                          value={formData.customNumber}
-                          onChange={(e) => setFormData({ ...formData, customNumber: e.target.value })}
-                          placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Laissez vide pour génération automatique</p>
-                      </div>
+                      <FormField
+                        label="Numéro de facture (optionnel)"
+                        id="customNumber"
+                        value={formData.customNumber}
+                        onChange={(e) => setFormData({ ...formData, customNumber: e.target.value })}
+                        placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
+                      />
 
                       <div>
                         <Label>Date d'échéance</Label>
@@ -305,66 +288,35 @@ export default function InvoiceGenerator({
                         </Popover>
                       </div>
 
-                      <div>
-                        <Label>Conditions de paiement</Label>
-                        <Select
-                          value={formData.paymentTerms}
-                          onValueChange={(value) => setFormData({ ...formData, paymentTerms: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {paymentTermsOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <EntitySelect
+                        label="Conditions de paiement"
+                        id="paymentTerms"
+                        value={formData.paymentTerms}
+                        onChange={(value) => setFormData({ ...formData, paymentTerms: value })}
+                        options={paymentTermsOptions}
+                        getOptionLabel={(opt) => opt.label}
+                        getOptionValue={(opt) => opt.value}
+                      />
 
-                      <div>
-                        <Label>Notes (optionnel)</Label>
-                        <Textarea
-                          value={formData.notes}
-                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                          placeholder="Notes additionnelles pour la facture..."
-                          rows={3}
-                        />
-                      </div>
+                      <FormField
+                        label="Notes (optionnel)"
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        textarea
+                      />
                     </CardContent>
                   </Card>
 
                   {selectedSale && (
-                    <Card className="border-green-200 bg-green-50">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-green-800">
-                          <CreditCard className="h-5 w-5" />
-                          Récapitulatif financier
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Sous-total HT:</span>
-                          <span className="font-medium">{formatCurrency(selectedSale.totalAmount)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">TVA (20%):</span>
-                          <span className="font-medium">{formatCurrency(selectedSale.taxAmount)}</span>
-                        </div>
-                        <div className="border-t pt-2">
-                          <div className="flex justify-between text-lg font-bold text-green-800">
-                            <span>Total TTC:</span>
-                            <span>{formatCurrency(selectedSale.totalAmount + selectedSale.taxAmount)}</span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground pt-2 border-t">
-                          <p>Échéance: {format(formData.dueDate, "PPP", { locale: fr })}</p>
-                          <p>Conditions: {formData.paymentTerms}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <FinancialSummaryCard
+                      subtotal={selectedSale.totalAmount}
+                      tax={selectedSale.taxAmount}
+                      total={selectedSale.totalAmount + selectedSale.taxAmount}
+                      dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
+                      paymentTerms={formData.paymentTerms}
+                      currency="TND"
+                    />
                   )}
                 </div>
               </div>
