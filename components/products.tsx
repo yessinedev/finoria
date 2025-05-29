@@ -151,7 +151,6 @@ export default function Products() {
       const [productsResult, categoriesResult] = await Promise.all([db.products.getAll(), db.categories.getAll()])
 
       if (productsResult.success) {
-        console.log(productsResult.data)
         setProducts(productsResult.data || [])
       } else {
         setError(productsResult.error || "Erreur lors du chargement des produits")
@@ -177,7 +176,6 @@ export default function Products() {
     try {
       let result
       if (editingProduct) {
-        console.log(formData)
         result = await db.products.update(editingProduct.id, formData)
       } else {
         result = await db.products.create(formData)
@@ -232,7 +230,6 @@ export default function Products() {
   const toggleProductStatus = async (id: number) => {
     const product = products.find((p) => p.id === id)
     if (!product) return
-    console.log(product)
     const result = await db.products.update(id, { ...product, isActive: !product.isActive })
     if (result.success) {
       await loadData()
@@ -273,7 +270,7 @@ export default function Products() {
                 Gérer les catégories
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-full sm:max-w-[900px] px-4" style={{ maxHeight: "90vh", overflowY: "auto" }}>
+            <DialogContent className="max-w-full sm:max-w-[900px] mx-auto" style={{ maxHeight: "90vh", overflowY: "auto" }}>
               <DialogHeader>
                 <DialogTitle>Gestion des catégories</DialogTitle>
               </DialogHeader>

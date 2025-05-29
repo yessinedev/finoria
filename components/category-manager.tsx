@@ -168,12 +168,7 @@ export default function CategoryManager({
         </Badge>
       ),
     },
-    {
-      key: "createdAt" as keyof Category,
-      label: "Date de création",
-      sortable: true,
-      render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
-    },
+    
   ];
 
   useEffect(() => {
@@ -212,7 +207,6 @@ export default function CategoryManager({
     e.preventDefault();
     setSaving(true);
     setError(null);
-    console.log(formData)
 
     try {
       let result;
@@ -322,7 +316,7 @@ export default function CategoryManager({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
@@ -366,7 +360,6 @@ export default function CategoryManager({
                   }
                   placeholder="Ex: Services, Matériel..."
                   required
-                  disabled={saving}
                 />
               </div>
 
@@ -380,7 +373,6 @@ export default function CategoryManager({
                   }
                   placeholder="Description de la catégorie..."
                   rows={2}
-                  disabled={saving}
                 />
               </div>
 
@@ -394,7 +386,6 @@ export default function CategoryManager({
                       onClick={() =>
                         setFormData({ ...formData, color: color.value })
                       }
-                      disabled={saving}
                       className={`p-2 rounded-md border-2 text-xs font-medium transition-all ${
                         formData.color === color.value
                           ? `${color.class} border-current ring-2 ring-offset-2 ring-current`
@@ -416,7 +407,6 @@ export default function CategoryManager({
                     setFormData({ ...formData, isActive: e.target.checked })
                   }
                   className="h-4 w-4 rounded border-gray-300"
-                  disabled={saving}
                 />
                 <Label htmlFor="categoryActive">Catégorie active</Label>
               </div>
@@ -450,7 +440,7 @@ export default function CategoryManager({
         </Alert>
       )}
 
-      <Card>
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />

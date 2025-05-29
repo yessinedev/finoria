@@ -126,7 +126,7 @@ export default function Sales() {
     finalAmount:
       sale.totalAmount +
       sale.taxAmount -
-      (sale.discountAmount ?? 0), // subtract if present, otherwise 0
+      (sale.discountAmount ?? 0),
   }));
   
 
@@ -207,7 +207,6 @@ export default function Sales() {
       if (clientsResult.success) setClients(clientsResult.data || []);
       if (productsResult.success) setProducts(productsResult.data || []);
       if (salesResult.success) setSales(salesResult.data || []);
-      console.log(salesResult.data);
     } catch (error) {
       setError("Erreur lors du chargement des données");
     } finally {
@@ -322,7 +321,11 @@ export default function Sales() {
 
       const result = await db.sales.create(saleData);
       if (result.success) {
-        // Reset form
+        saleData.items.map(async (item) => {
+          const currentStock = await db.products.getStock(item.productId);
+          const stock = currentStock.data! - item.quantity;
+          db.products.updateStock(item.productId, stock);
+        })
         setSelectedClient("");
         setLineItems([]);
         setGlobalDiscount(0);

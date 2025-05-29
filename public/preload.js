@@ -2,37 +2,41 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 // Enhanced preload script with real-time data updates
 contextBridge.exposeInMainWorld("electronAPI", {
-  // Categories
+  // --- Categories API ---
   getCategories: () => ipcRenderer.invoke("get-categories"),
   createCategory: (category) => ipcRenderer.invoke("create-category", category),
   updateCategory: (id, category) =>
     ipcRenderer.invoke("update-category", id, category),
   deleteCategory: (id) => ipcRenderer.invoke("delete-category", id),
 
-  // Clients
+  // --- Clients API ---
   getClients: () => ipcRenderer.invoke("get-clients"),
   createClient: (client) => ipcRenderer.invoke("create-client", client),
   updateClient: (id, client) => ipcRenderer.invoke("update-client", id, client),
   deleteClient: (id) => ipcRenderer.invoke("delete-client", id),
 
-  // Products
+  // --- Products API ---
   getProducts: () => ipcRenderer.invoke("get-products"),
+  getProductById: (id) => ipcRenderer.invoke("get-product-by-id", id),
   createProduct: (product) => ipcRenderer.invoke("create-product", product),
   updateProduct: (id, product) =>
     ipcRenderer.invoke("update-product", id, product),
+  updateProductStock: (id, quantity) =>
+    ipcRenderer.invoke("update-product-stock", id, quantity),
+  getProductStock: (id) => ipcRenderer.invoke("get-product-stock", id),
   deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
 
-  // Sales
+  // --- Sales API ---
   createSale: (sale) => ipcRenderer.invoke("create-sale", sale),
   getSales: () => ipcRenderer.invoke("get-sales"),
   getSaleItems: (saleId) => ipcRenderer.invoke("get-sale-items", saleId),
   updateSaleStatus: (id, status) =>
     ipcRenderer.invoke("update-sale-status", id, status),
 
-  // Dashboard
+  // --- Dashboard API ---
   getDashboardStats: () => ipcRenderer.invoke("get-dashboard-stats"),
 
-  // Invoices
+  // --- Invoices API ---
   getInvoices: () => ipcRenderer.invoke("get-invoices"),
   createInvoice: (invoice) => ipcRenderer.invoke("create-invoice", invoice),
   updateInvoiceStatus: (id, status) =>
@@ -40,12 +44,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   generateInvoiceFromSale: (saleId) =>
     ipcRenderer.invoke("generate-invoice-from-sale", saleId),
 
-  // PDF Generation
+  // --- PDF Generation API ---
   generateInvoicePDF: (invoiceId) =>
     ipcRenderer.invoke("generate-invoice-pdf", invoiceId),
   openPDF: (filePath) => ipcRenderer.invoke("open-pdf", filePath),
 
-  // Real-time data updates
+  // --- Real-time Data Updates ---
   onDataChange: (callback) => {
     const listener = (event, table, action, data) => {
       callback(table, action, data);
