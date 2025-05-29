@@ -5,9 +5,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Plus, Edit, Trash2, Package, Settings, AlertCircle } from "lucide-react"
@@ -16,6 +14,8 @@ import { useDataTable } from "@/hooks/use-data-table"
 import CategoryManager from "@/components/category-manager"
 import { db } from "@/lib/database"
 import type { Product, Category } from "@/types/types"
+import { FormField } from "@/components/common/FormField"
+import { EntitySelect } from "@/components/common/EntitySelect"
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -282,72 +282,49 @@ export default function Products() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Nom du produit</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                      disabled={saving}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Catégorie</Label>
-                    <select
-                      id="category"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      required
-                      disabled={saving}
-                    >
-                      <option value="">Sélectionner une catégorie</option>
-                      {activeCategories.map((category) => (
-                        <option key={category.id} value={category.name}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    disabled={saving}
+                  <FormField
+                    label="Nom du produit"
+                    id="productName"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                  <EntitySelect
+                    label="Catégorie"
+                    id="category"
+                    value={formData.category}
+                    onChange={(value) => setFormData({ ...formData, category: value })}
+                    options={activeCategories}
+                    getOptionLabel={(cat) => cat.name}
+                    getOptionValue={(cat) => cat.name}
+                    required
                   />
                 </div>
 
+                <FormField
+                  label="Description"
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  textarea
+                />
+
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="price">Prix unitaire (€)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
-                      required
-                      disabled={saving}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="stock">Stock (0 pour les services)</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      min="0"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
-                      disabled={saving}
-                    />
-                  </div>
+                  <FormField
+                    label="Prix unitaire (€)"
+                    id="price"
+                    type="number"
+                    value={formData.price.toString()}
+                    onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
+                    required
+                  />
+                  <FormField
+                    label="Stock (0 pour les services)"
+                    id="stock"
+                    type="number"
+                    value={formData.stock.toString()}
+                    onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
+                  />
                 </div>
 
                 <div className="flex items-center space-x-2">
