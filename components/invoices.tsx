@@ -23,8 +23,8 @@ import {
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
-import InvoicePreview from "@/components/invoice-preview"
-import InvoiceGenerator from "@/components/invoice-generator"
+import InvoiceGeneratorModal from "@/components/InvoiceGeneratorModal"
+import InvoicePreviewModal from "@/components/InvoicePreviewModal"
 import { db } from "@/lib/database"
 import type { Invoice, Sale } from "@/types/types"
 
@@ -512,26 +512,24 @@ export default function Invoices() {
       </Card>
 
       {/* Invoice Generator Modal */}
-      <InvoiceGenerator
-        isOpen={isGeneratorOpen}
+      <InvoiceGeneratorModal
+        open={isGeneratorOpen}
         onClose={() => setIsGeneratorOpen(false)}
         onInvoiceGenerated={loadData}
         availableSales={availableSales}
       />
 
       {/* Invoice Preview Modal */}
-      {selectedInvoice && (
-        <InvoicePreview
-          invoice={selectedInvoice}
-          isOpen={isPreviewOpen}
-          onClose={() => {
-            setIsPreviewOpen(false)
-            setSelectedInvoice(null)
-          }}
-          onPrint={handlePrintInvoice}
-          onStatusChange={handleStatusChange}
-        />
-      )}
+      <InvoicePreviewModal
+        invoice={selectedInvoice}
+        open={isPreviewOpen}
+        onClose={() => {
+          setIsPreviewOpen(false)
+          setSelectedInvoice(null)
+        }}
+        onPrint={handlePrintInvoice}
+        onStatusChange={handleStatusChange}
+      />
     </div>
   )
 }
