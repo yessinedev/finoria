@@ -26,55 +26,7 @@ import { useDataTable } from "@/hooks/use-data-table"
 import InvoicePreview from "@/components/invoice-preview"
 import InvoiceGenerator from "@/components/invoice-generator"
 import { db } from "@/lib/database"
-
-interface Invoice {
-  id: number
-  number: string
-  saleId: number
-  clientName: string
-  clientCompany: string
-  clientEmail: string
-  clientPhone: string
-  clientAddress: string
-  amount: number
-  taxAmount: number
-  totalAmount: number
-  issueDate: string
-  dueDate: string
-  status: "Payée" | "En attente" | "En retard" | "Annulée"
-  items: Array<{
-    id: number
-    productName: string
-    description: string
-    quantity: number
-    unitPrice: number
-    discount: number
-    totalPrice: number
-  }>
-  notes?: string
-  paymentTerms?: string
-}
-
-interface Sale {
-  id: number
-  clientName: string
-  clientCompany: string
-  clientEmail: string
-  clientPhone: string
-  clientAddress: string
-  totalAmount: number
-  taxAmount: number
-  saleDate: string
-  status: string
-  items: Array<{
-    id: number
-    productName: string
-    description: string
-    quantity: number
-    unitPrice: number
-    totalPrice: number
-  }>
-}
+import type { Invoice, Sale } from "@/types/types"
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -241,21 +193,14 @@ export default function Invoices() {
 
       if (salesResult.success) {
         // Mock additional data for sales (in real app, this would come from database)
+        // Fix type error: ensure clientCompany, clientEmail, clientPhone, clientAddress are always strings
         const enhancedSales = (salesResult.data || []).map((sale) => ({
           ...sale,
-          clientEmail: "client@example.com",
-          clientPhone: "01 23 45 67 89",
-          clientAddress: "123 Rue Example, 75001 Paris",
-          items: [
-            {
-              id: 1,
-              productName: "Service",
-              description: "Service fourni",
-              quantity: 1,
-              unitPrice: sale.totalAmount,
-              totalPrice: sale.totalAmount,
-            },
-          ],
+          clientCompany: sale.clientCompany || "",
+          clientEmail: sale.clientEmail || "",
+          clientPhone: sale.clientPhone || "",
+          clientAddress: sale.clientAddress || "",
+          items: sale.items || [],
         }))
         setSales(enhancedSales)
       }

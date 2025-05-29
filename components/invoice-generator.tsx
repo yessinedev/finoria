@@ -27,27 +27,7 @@ import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/database"
-
-interface Sale {
-  id: number
-  clientName: string
-  clientCompany: string
-  clientEmail: string
-  clientPhone: string
-  clientAddress: string
-  totalAmount: number
-  taxAmount: number
-  saleDate: string
-  status: string
-  items: Array<{
-    id: number
-    productName: string
-    description: string
-    quantity: number
-    unitPrice: number
-    totalPrice: number
-  }>
-}
+import type { Sale } from "@/types/types"
 
 interface InvoiceGeneratorProps {
   isOpen: boolean
@@ -98,15 +78,23 @@ export default function InvoiceGenerator({
     setError(null)
 
     try {
+      // Always provide a valid invoice number
+      const invoiceNumber = formData.customNumber.trim() !== ""
+        ? formData.customNumber.trim()
+        : generatePreviewInvoiceNumber();
       const invoiceData = {
+        number: invoiceNumber,
         saleId: selectedSale.id,
         dueDate: formData.dueDate.toISOString(),
-        paymentTerms: formData.paymentTerms,
+        amount: selectedSale.totalAmount,
+        taxAmount: selectedSale.taxAmount,
+        totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+        clientId: selectedSale.clientId,
+        status: "En attente",
         notes: formData.notes,
-        customNumber: formData.customNumber,
-      }
+      };
 
-      const result = await db.invoices.generateFromSale(selectedSale.id)
+      const result = await db.invoices.create(invoiceData)
       if (result.success) {
         onInvoiceGenerated()
         onClose()
@@ -241,10 +229,10 @@ export default function InvoiceGenerator({
                             </div>
                             <div>
                               <p className="text-muted-foreground text-sm mb-1">
-                                Articles ({selectedSale.items.length}):
+                                Articles ({selectedSale?.items?.length}):
                               </p>
                               <div className="space-y-1">
-                                {selectedSale.items.slice(0, 3).map((item) => (
+                                {selectedSale?.items?.slice(0, 3).map((item) => (
                                   <div key={item.id} className="text-xs bg-background/50 p-2 rounded">
                                     <span className="font-medium">{item.productName}</span>
                                     <span className="text-muted-foreground ml-2">
@@ -252,9 +240,9 @@ export default function InvoiceGenerator({
                                     </span>
                                   </div>
                                 ))}
-                                {selectedSale.items.length > 3 && (
+                                {(selectedSale?.items?.length ?? 0) > 3 && (
                                   <p className="text-xs text-muted-foreground">
-                                    +{selectedSale.items.length - 3} autre(s) article(s)
+                                    +{(selectedSale?.items?.length ?? 0) - 3} autre(s) article(s)
                                   </p>
                                 )}
                               </div>
@@ -277,7 +265,7 @@ export default function InvoiceGenerator({
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <Label>Numéro de facture (optionnel)</Label>
+                        <Label>Numéro de facture</Label>
                         <Input
                           value={formData.customNumber}
                           onChange={(e) => setFormData({ ...formData, customNumber: e.target.value })}

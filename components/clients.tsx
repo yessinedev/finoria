@@ -1,6 +1,6 @@
 "use client";
 
-import type React from "react";
+import type { Client } from "@/types/types";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,17 +19,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
-
-interface Client {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  company: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -156,8 +145,8 @@ export default function Clients() {
     setFormData({
       name: client.name,
       email: client.email,
-      phone: client.phone,
-      address: client.address,
+      phone: client.phone || "",
+      address: client.address || "",
       company: client.company,
     });
     setIsDialogOpen(true);

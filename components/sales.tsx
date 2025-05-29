@@ -51,46 +51,7 @@ import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
-
-interface LineItem {
-  id: number;
-  productId: number;
-  name: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  total: number;
-}
-
-interface Client {
-  id: number;
-  name: string;
-  company: string;
-  email: string;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  stock: number;
-  isActive: boolean;
-}
-
-interface Sale {
-  id: number;
-  clientId: number;
-  clientName: string;
-  totalAmount: number;
-  taxAmount: number;
-  discountAmount: number;
-  finalAmount: number;
-  status: string;
-  saleDate: string;
-}
+import type { LineItem, Client, Product, Sale } from "@/types/types";
 
 export default function Sales() {
   const [clients, setClients] = useState<Client[]>([]);

@@ -15,28 +15,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import CategoryManager from "@/components/category-manager"
 import { db } from "@/lib/database"
-
-interface Product {
-  id: number
-  name: string
-  description: string
-  price: number
-  category: string
-  stock: number
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-interface Category {
-  id: number
-  name: string
-  description: string
-  color: string
-  isActive: boolean,
-  createdAt: string,
-  updatedAt: string,
-}
+import type { Product, Category } from "@/types/types"
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])

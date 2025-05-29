@@ -37,36 +37,7 @@ import {
   AlertCircle,
   X,
 } from "lucide-react";
-
-interface InvoiceItem {
-  id: number;
-  productName: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  totalPrice: number;
-}
-
-interface Invoice {
-  id: number;
-  number: string;
-  saleId: number;
-  clientName: string;
-  clientCompany: string;
-  clientEmail: string;
-  clientPhone: string;
-  clientAddress: string;
-  amount: number;
-  taxAmount: number;
-  totalAmount: number;
-  issueDate: string;
-  dueDate: string;
-  status: "Payée" | "En attente" | "En retard" | "Annulée";
-  items: InvoiceItem[];
-  notes?: string;
-  paymentTerms?: string;
-}
+import type { Invoice, InvoiceItem } from "@/types/types";
 
 interface InvoicePreviewProps {
   invoice: Invoice;

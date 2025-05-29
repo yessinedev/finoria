@@ -31,16 +31,7 @@ import { Plus, Edit, Trash2, Tag, Palette, AlertCircle } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
-
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-  color: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Category } from "@/types/types";
 
 interface CategoryManagerProps {
   categories: Category[];

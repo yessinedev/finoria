@@ -24,39 +24,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import { LineChart, BarChart, PieChart, ChartContainer } from "@/components/ui/chart"
 import { db } from "@/lib/database"
-
-interface DashboardStats {
-  todayRevenue: number
-  monthlyRevenue: number
-  totalClients: number
-  activeClients: number
-  totalProducts: number
-  lowStockProducts: number
-  totalSales: number
-  pendingInvoices: number
-  overdueInvoices: number
-  recentSales: Array<{
-    id: number
-    client: string
-    amount: number
-    date: string
-    status: string
-  }>
-  salesByMonth: Array<{
-    month: string
-    revenue: number
-    sales: number
-  }>
-  topProducts: Array<{
-    name: string
-    quantity: number
-    revenue: number
-  }>
-  clientDistribution: Array<{
-    name: string
-    value: number
-  }>
-}
+import type { DashboardStats } from "@/types/types"
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
