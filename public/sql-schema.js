@@ -1,6 +1,3 @@
-// filepath: public/sql-schema.js
-// Contains all SQL table creation and index creation logic for the Electron app
-
 function createTables(db) {
   // Categories table
   db.exec(`
