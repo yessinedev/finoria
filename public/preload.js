@@ -44,6 +44,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   generateInvoiceFromSale: (saleId) =>
     ipcRenderer.invoke("generate-invoice-from-sale", saleId),
 
+  // --- Quotes API ---
+  getQuotes: () => ipcRenderer.invoke("get-quotes"),
+  createQuote: (quote) => ipcRenderer.invoke("create-quote", quote),
+  updateQuoteStatus: (id, status) =>
+    ipcRenderer.invoke("update-quote-status", id, status),
+  deleteQuote: (id) => ipcRenderer.invoke("delete-quote", id),
+  
   // --- PDF Generation API ---
   generateInvoicePDF: (invoiceId) =>
     ipcRenderer.invoke("generate-invoice-pdf", invoiceId),

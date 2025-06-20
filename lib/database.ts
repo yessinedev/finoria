@@ -35,6 +35,13 @@ interface ElectronAPI {
   updateInvoiceStatus: (id: number, status: string) => Promise<any>;
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
 
+  //Quotes
+  getQuotes: () => Promise<any[]>;
+  createQuote: (quote: any) => Promise<any>;
+  updateQuote: (id: number, quote: any) => Promise<any>;
+  deleteQuote: (id: number) => Promise<boolean>;
+  
+
   // PDF Generation
   generateInvoicePDF: (invoiceId: number) => Promise<any>;
   openPDF: (filePath: string) => Promise<any>;

@@ -8,7 +8,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
   BarChart3,
@@ -24,12 +23,12 @@ import { useState } from "react";
 const navigationItems = [
   { id: "dashboard", label: "Tableau de bord", icon: BarChart3 },
   {
-    id: "sales",
-    label: "Ventes",
+    id: "sales-management",
+    label: "Gestion de ventes",
     icon: ShoppingCart,
     children: [
-      { id: "quote", label: "Devis" },
-      { id: "order", label: "Commande client" },
+      { id: "quotes", label: "Devis" },
+      { id: "sales", label: "Commande client" },
       { id: "delivery", label: "Bon de livraison" },
       { id: "invoices", label: "Facture" },
       { id: "output", label: "Bon de sortie" },
@@ -37,7 +36,7 @@ const navigationItems = [
   },
   {
     id: "purchases",
-    label: "Achats",
+    label: "Gestion d'achats",
     icon: ShoppingCart,
     children: [
       { id: "purchase-order", label: "Commande fournisseur" },
@@ -47,7 +46,7 @@ const navigationItems = [
   },
   {
     id: "payments",
-    label: "Paiements",
+    label: "Gestion de paiements",
     icon: FileText,
     children: [
       { id: "client-payments", label: "Paiements clients" },
@@ -56,7 +55,7 @@ const navigationItems = [
   },
   {
     id: "stock",
-    label: "Stock",
+    label: "Gestion de stock",
     icon: Package,
     children: [
       { id: "inventory", label: "Inventaire" },
@@ -81,7 +80,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
     setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
   };
   return (
-    <Sidebar className="border-r" collapsible="offcanvas">
+    <Sidebar className="border-r" collapsible="offcanvas" variant="inset">
       <SidebarHeader className="border-b px-6 py-4 flex items-start gap-2">
         <div className="flex items-center gap-2">
           <Building2 className="h-6 w-6 text-primary" />
@@ -89,7 +88,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         </div>
         <p className="text-xs text-muted-foreground">Gestion & Facturation</p>
       </SidebarHeader>
-      <SidebarContent className="px-4 py-4">
+      <SidebarContent className="py-4 px-4">
         <SidebarMenu>
           {navigationItems.map((item) => (
             <SidebarMenuItem key={item.id}>
@@ -98,7 +97,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
                   <SidebarMenuButton
                     onClick={() => handleToggle(item.id)}
                     isActive={activeView === item.id}
-                    className="w-full justify-start gap-3 px-3 py-2.5 flex items-center hover:cursor-pointer"
+                    className="w-full justify-start gap-3 px-3 py-2.5 flex items-center hover:cursor-pointer font-semibold"
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
@@ -109,13 +108,13 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
                     />
                   </SidebarMenuButton>
                   {openGroups[item.id] && (
-                    <SidebarMenu className="ml-6 border-l border-muted-foreground/10 pl-2 mt-1">
+                    <SidebarMenu className="ml-4 border-muted-foreground/10 pl-2 mt-1">
                       {item.children.map((sub) => (
                         <SidebarMenuItem key={sub.id}>
                           <SidebarMenuButton
                             onClick={() => setActiveView(sub.id as NavigationItem)}
                             isActive={activeView === sub.id}
-                            className="w-full justify-start gap-3 px-3 py-2.5"
+                            className="w-full justify-start gap-3 px-3 py-2.5 hover:cursor-pointer"
                           >
                             <span>{sub.label}</span>
                           </SidebarMenuButton>

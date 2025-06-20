@@ -7,17 +7,19 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import Dashboard from "@/components/dashboard";
-import Clients from "@/components/clients";
-import Products from "@/components/products";
-import Sales from "@/components/sales";
-import Invoices from "@/components/invoices";
+import Quotes from "@/components/quote/quotes";
+import Dashboard from "@/components/dashboard/dashboard";
+import Clients from "@/components/clients/clients";
+import Products from "@/components/products/products";
+import Sales from "@/components/sales/sales";
+import Invoices from "@/components/invoices/invoices";
 
 export type NavigationItem =
   | "dashboard"
   | "clients"
   | "products"
   | "sales"
+  | "quotes"
   | "invoices";
 
 export default function App() {
@@ -33,6 +35,8 @@ export default function App() {
         return <Products />;
       case "sales":
         return <Sales />;
+      case "quotes":
+        return <Quotes />;
       case "invoices":
         return <Invoices />;
       default:
@@ -42,9 +46,9 @@ export default function App() {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex gap-2 h-screen w-full overflow-auto">
         <AppSidebar activeView={activeView} setActiveView={setActiveView} />
-        <SidebarInset className="flex-1 h-full overflow-auto">
+        <SidebarInset className="flex-1">
           <main className="h-full min-w-0 bg-background">
             <SidebarTrigger />
             {renderContent()}

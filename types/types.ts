@@ -1,4 +1,3 @@
-
 export interface Category {
   id: number;
   name: string;
@@ -99,6 +98,26 @@ export interface InvoiceItem {
   unitPrice: number;
   discount: number;
   totalPrice: number;
+}
+
+export interface Quote {
+  id: number;
+  number: string;
+  clientId: number;
+  clientName: string;
+  clientCompany?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  issueDate: string;
+  dueDate: string;
+  paymentTerms?: string;
+  status: "En attente" | "Accepté" | "Refusé" | "Envoyé" | "Brouillon";
+  items: LineItem[];
+  notes?: string;
 }
 
 export interface DashboardStats {

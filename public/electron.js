@@ -91,6 +91,7 @@ app.whenReady().then(() => {
   const dashboardHandlers = require("./ipc-handlers/dashboard");
   const invoicesHandlers = require("./ipc-handlers/invoices");
   const pdfHandlers = require("./ipc-handlers/pdf");
+  const quotesHandlers = require("./ipc-handlers/quotes");
 
   categoriesHandlers(ipcMain, db, notifyDataChange);
   clientsHandlers(ipcMain, db, notifyDataChange);
@@ -98,6 +99,7 @@ app.whenReady().then(() => {
   salesHandlers(ipcMain, db, notifyDataChange);
   dashboardHandlers(ipcMain, db);
   invoicesHandlers(ipcMain, db, notifyDataChange);
+  quotesHandlers(ipcMain, db, notifyDataChange);
   pdfHandlers(ipcMain, db, mainWindow);
 
   app.on("activate", () => {

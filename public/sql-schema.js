@@ -88,7 +88,24 @@ function createTables(db) {
       FOREIGN KEY (saleId) REFERENCES sales(id),
       FOREIGN KEY (clientId) REFERENCES clients(id)
     )
+
+    
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      number TEXT NOT NULL UNIQUE,
+      clientId INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      taxAmount REAL NOT NULL,
+      totalAmount REAL NOT NULL,
+      status TEXT DEFAULT 'En attente',
+      issueDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+      dueDate DATETIME,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (clientId) REFERENCES clients(id)
+    )`)
 }
 
 function createIndexes(db) {
@@ -105,6 +122,9 @@ function createIndexes(db) {
       CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(clientId);
       CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(issueDate);
       CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_quotes_client ON quotes(clientId);
+      CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(issueDate);
+      CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status);
     `);
   } catch (error) {
     console.error("Error creating indexes:", error);
