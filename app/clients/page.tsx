@@ -1,9 +1,9 @@
-import Dashboard from '@/components/dashboard/dashboard'
+import Clients from '@/components/clients/clients'
 import React from 'react'
 
 const page = () => {
   return (
-    <Dashboard />
+    <Clients />
   )
 }
 
