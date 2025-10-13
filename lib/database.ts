@@ -59,6 +59,14 @@ interface ElectronAPI {
   updateQuote: (id: number, quote: any) => Promise<any>;
   deleteQuote: (id: number) => Promise<boolean>;
   
+  // Stock Movements
+  getStockMovements: () => Promise<any[]>;
+  createStockMovement: (movement: any) => Promise<any>;
+  getStockMovementsByProduct: (productId: number) => Promise<any[]>;
+
+  // Enterprise Settings
+  getEnterpriseSettings: () => Promise<any>;
+  updateEnterpriseSettings: (settings: any) => Promise<any>;
 
   // PDF Generation
   generateInvoicePDF: (invoiceId: number) => Promise<any>;
@@ -111,6 +119,14 @@ class DatabaseService {
   // --- Error Handling Wrapper ---
   private async handle<T>(operation: () => Promise<T>, name: string): Promise<{ success: boolean; data?: T; error?: string }> {
     try {
+      // Check if we're in a browser environment and electronAPI is available
+      if (typeof window === "undefined" || !window.electronAPI) {
+        console.warn(`Electron API not available for operation: ${name}`);
+        return {
+          success: false,
+          error: "Electron API not available",
+        };
+      }
       const data = await operation();
       return { success: true, data };
     } catch (error) {
@@ -195,6 +211,28 @@ class DatabaseService {
     generatePDF: (invoiceId: number) => this.handle(() => window.electronAPI?.generateInvoicePDF(invoiceId) || Promise.resolve(null), "generateInvoicePDF"),
     openPDF: (filePath: string) => this.handle(() => window.electronAPI?.openPDF(filePath) || Promise.resolve(null), "openPDF"),
   };
+
+  // --- Quotes API ---
+  quotes = {
+    getAll: () => this.handle(() => window.electronAPI?.getQuotes() || Promise.resolve([]), "getQuotes"),
+    create: (quote: any) => this.handle(() => window.electronAPI?.createQuote(quote) || Promise.resolve(null), "createQuote"),
+    update: (id: number, quote: any) => this.handle(() => window.electronAPI?.updateQuote(id, quote) || Promise.resolve(null), "updateQuote"),
+    delete: (id: number) => this.handle(() => window.electronAPI?.deleteQuote(id) || Promise.resolve(false), "deleteQuote"),
+  };
+
+  // --- Stock Movements API ---
+  stockMovements = {
+    getAll: () => this.handle(() => window.electronAPI?.getStockMovements() || Promise.resolve([]), "getStockMovements"),
+    create: (movement: any) => this.handle(() => window.electronAPI?.createStockMovement(movement) || Promise.resolve(null), "createStockMovement"),
+    getByProduct: (productId: number) => this.handle(() => window.electronAPI?.getStockMovementsByProduct(productId) || Promise.resolve([]), "getStockMovementsByProduct"),
+  };
+
+  // --- Enterprise Settings API ---
+  settings = {
+    get: () => this.handle(() => window.electronAPI?.getEnterpriseSettings() || Promise.resolve({}), "getEnterpriseSettings"),
+    update: (settings: any) => this.handle(() => window.electronAPI?.updateEnterpriseSettings(settings) || Promise.resolve(null), "updateEnterpriseSettings"),
+  };
+
 }
 
 export const db = new DatabaseService();

@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Calculator, Percent, Plus, Trash2, Save, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Client, Product, LineItem } from "@/types/types";
+import { saleSchema } from "@/lib/validation/schemas";
+import { z } from "zod";
 
 interface SaleFormProps {
   clients: Client[];
@@ -39,7 +42,9 @@ interface SaleFormProps {
   taxAmount: number;
   finalTotal: number;
   saving: boolean;
-  handleSubmit: () => void;
+  handleSubmit: (errors: Record<string, string>) => void;
+  errors: Record<string, string>;
+  setErrors: (errors: Record<string, string>) => void;
 }
 
 export default function SaleForm(props: SaleFormProps) {
@@ -72,9 +77,75 @@ export default function SaleForm(props: SaleFormProps) {
     finalTotal,
     saving,
     handleSubmit,
+    errors,
+    setErrors,
   } = props;
 
   const activeProducts = products.filter((product) => product.isActive);
+
+  // Clear error when client is selected
+  useEffect(() => {
+    if (selectedClient && errors.clientId) {
+      setErrors({ ...errors, clientId: "" });
+    }
+  }, [selectedClient, errors, setErrors]);
+
+  // Clear error when items are added
+  useEffect(() => {
+    if (lineItems.length > 0 && errors.items) {
+      setErrors({ ...errors, items: "" });
+    }
+  }, [lineItems, errors, setErrors]);
+
+  const validateForm = () => {
+    try {
+      const saleData = {
+        clientId: Number(selectedClient),
+        totalAmount: discountedSubtotal,
+        taxAmount: taxAmount,
+        discountAmount: globalDiscountAmount,
+        finalAmount: finalTotal,
+        status: "En attente",
+        saleDate: new Date().toISOString(),
+        items: lineItems.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discount: item.discount,
+          total: item.total,
+        })),
+      };
+      
+      saleSchema.parse(saleData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            // Handle items array errors
+            if (err.path[0] === 'items') {
+              newErrors['items'] = err.message;
+            } else {
+              newErrors[err.path[0]] = err.message;
+            }
+          }
+        });
+        setErrors(newErrors);
+        return false;
+      }
+      return false;
+    }
+  };
+
+  const handleFormSubmit = () => {
+    if (validateForm()) {
+      handleSubmit({});
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -86,12 +157,12 @@ export default function SaleForm(props: SaleFormProps) {
           </CardHeader>
           <CardContent>
             <div>
-              <Label htmlFor="client">Sélectionner un client</Label>
+              <Label htmlFor="client">Sélectionner un client *</Label>
               <Select
                 value={selectedClient}
                 onValueChange={setSelectedClient}
               >
-                <SelectTrigger>
+                <SelectTrigger className={errors.clientId ? "border-red-500" : ""}>
                   <SelectValue placeholder="Choisir un client..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -105,6 +176,9 @@ export default function SaleForm(props: SaleFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.clientId && (
+                <p className="text-sm text-red-500 mt-1">{errors.clientId}</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -312,6 +386,9 @@ export default function SaleForm(props: SaleFormProps) {
                 </TableBody>
               </Table>
             )}
+            {errors.items && (
+              <p className="text-sm text-red-500 mt-1">{errors.items}</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -386,7 +463,7 @@ export default function SaleForm(props: SaleFormProps) {
               </div>
             </div>
             <Button
-              onClick={handleSubmit}
+              onClick={handleFormSubmit}
               className="w-full"
               disabled={!selectedClient || lineItems.length === 0 || saving}
             >

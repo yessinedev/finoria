@@ -69,6 +69,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-quote-status", id, status),
   deleteQuote: (id) => ipcRenderer.invoke("delete-quote", id),
   
+  // --- Stock Movements API ---
+  getStockMovements: () => ipcRenderer.invoke("get-stock-movements"),
+  createStockMovement: (movement) => ipcRenderer.invoke("create-stock-movement", movement),
+  getStockMovementsByProduct: (productId) => ipcRenderer.invoke("get-stock-movements-by-product", productId),
+
+  // --- Enterprise Settings API ---
+  getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),
+  updateEnterpriseSettings: (settings) => ipcRenderer.invoke("update-enterprise-settings", settings),
+
   // --- PDF Generation API ---
   generateInvoicePDF: (invoiceId) =>
     ipcRenderer.invoke("generate-invoice-pdf", invoiceId),
@@ -92,4 +101,3 @@ contextBridge.exposeInMainWorld("electronAPI", {
     };
   },
 });
-

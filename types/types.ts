@@ -220,3 +220,16 @@ export interface DashboardStats {
     value: number;
   }>;
 }
+
+export interface StockMovement {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  movementType: 'IN' | 'OUT';
+  sourceType: string;
+  sourceId: number;
+  reference: string;
+  reason: string;
+  createdAt: string;
+}

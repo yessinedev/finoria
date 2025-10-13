@@ -18,12 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Building2 } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Building2, AlertTriangle } from "lucide-react";
 import { db } from "@/lib/database";
 import { Supplier } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
+import { supplierSchema, SupplierFormData } from "@/lib/validation/schemas";
+import { z } from "zod";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -32,6 +36,8 @@ export default function Suppliers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -42,6 +48,9 @@ export default function Suppliers() {
     address: "",
     taxId: "",
   });
+
+  // Validation errors state
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadSuppliers();
@@ -75,7 +84,36 @@ export default function Suppliers() {
     }
   };
 
+  const validateForm = () => {
+    try {
+      supplierSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            newErrors[err.path[0]] = err.message;
+          }
+        });
+        setErrors(newErrors);
+        return false;
+      }
+      return false;
+    }
+  };
+
   const handleCreate = async () => {
+    if (!validateForm()) {
+      toast({
+        title: "Erreur de validation",
+        description: "Veuillez corriger les erreurs dans le formulaire",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const response = await db.suppliers.create(formData);
       if (response.success && response.data) {
@@ -101,6 +139,15 @@ export default function Suppliers() {
   const handleUpdate = async () => {
     if (!currentSupplier) return;
     
+    if (!validateForm()) {
+      toast({
+        title: "Erreur de validation",
+        description: "Veuillez corriger les erreurs dans le formulaire",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const response = await db.suppliers.update(currentSupplier.id, formData);
       if (response.success && response.data) {
@@ -130,6 +177,8 @@ export default function Suppliers() {
       const response = await db.suppliers.delete(id);
       if (response.success) {
         setSuppliers(suppliers.filter((s) => s.id !== id));
+        setIsDeleteDialogOpen(false);
+        setSupplierToDelete(null);
         toast({
           title: "Succès",
           description: "Fournisseur supprimé avec succès",
@@ -156,6 +205,7 @@ export default function Suppliers() {
       taxId: "",
     });
     setCurrentSupplier(null);
+    setErrors({});
   };
 
   const openCreateDialog = () => {
@@ -173,7 +223,13 @@ export default function Suppliers() {
       taxId: supplier.taxId || "",
     });
     setCurrentSupplier(supplier);
+    setErrors({});
     setIsDialogOpen(true);
+  };
+
+  const openDeleteDialog = (supplier: Supplier) => {
+    setSupplierToDelete(supplier);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -189,7 +245,10 @@ export default function Suppliers() {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Fournisseurs</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Building2 className="h-8 w-8 text-primary" />
+            Fournisseurs
+          </h1>
           <p className="text-muted-foreground">
             Gérez vos fournisseurs et leurs informations
           </p>
@@ -201,7 +260,7 @@ export default function Suppliers() {
               Ajouter un fournisseur
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {currentSupplier ? "Modifier le fournisseur" : "Ajouter un fournisseur"}
@@ -214,8 +273,11 @@ export default function Suppliers() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
+                  className={errors.name ? "border-red-500" : ""}
                 />
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="company">Entreprise</Label>
@@ -232,7 +294,11 @@ export default function Suppliers() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className={errors.email ? "border-red-500" : ""}
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Téléphone</Label>
@@ -276,7 +342,7 @@ export default function Suppliers() {
       </div>
 
       <div className="mb-6">
-        <div className="relative w-80">
+        <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Rechercher des fournisseurs..."
@@ -287,15 +353,41 @@ export default function Suppliers() {
         </div>
       </div>
 
-      <div className="rounded-md border">
+      {/* Responsive table container */}
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nom</TableHead>
-              <TableHead>Entreprise</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Téléphone</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <Building2 className="h-4 w-4" />
+                  <span>Nom</span>
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <Building2 className="h-4 w-4" />
+                  <span>Entreprise</span>
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <Building2 className="h-4 w-4" />
+                  <span>Email</span>
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <Building2 className="h-4 w-4" />
+                  <span>Téléphone</span>
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <Building2 className="h-4 w-4" />
+                  <span>Actions</span>
+                </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -330,7 +422,7 @@ export default function Suppliers() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(supplier.id)}
+                        onClick={() => openDeleteDialog(supplier)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -342,6 +434,36 @@ export default function Suppliers() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le fournisseur "{supplierToDelete?.name}" ? 
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => supplierToDelete && handleDelete(supplierToDelete.id)}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

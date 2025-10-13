@@ -26,7 +26,10 @@ export type NavigationItem =
   | "products"
   | "sales"
   | "quotes"
-  | "invoices";
+  | "invoices"
+  | "inventory"
+  | "stock-movements"
+  | "settings";
 
 const navigationItems = [
   { id: "dashboard", label: "Tableau de bord", icon: BarChart3 },
@@ -49,7 +52,6 @@ const navigationItems = [
     children: [
       { id: "purchase-order", label: "Commande fournisseur" },
       { id: "supplier-invoice", label: "Facture fournisseur" },
-      { id: "supplier-delivery", label: "Bon de livraison fournisseur" },
     ],
   },
   {
@@ -73,6 +75,8 @@ const navigationItems = [
   { id: "clients", label: "Clients", icon: Users },
   { id: "suppliers", label: "Fournisseurs", icon: Building2 },
   { id: "products", label: "Produits", icon: Package },
+  // Add settings section
+  { id: "settings", label: "Paramètres", icon: FileText },
 ];
 
 export interface AppSidebarProps {
@@ -81,13 +85,12 @@ export interface AppSidebarProps {
 }
 
 export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
-  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
+
   const handleToggle = (id: string) => {
     setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
   };
-  
+
   // Map navigation item IDs to their respective routes
   const getRoute = (id: string) => {
     switch (id) {
@@ -103,6 +106,22 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/quotes";
       case "invoices":
         return "/invoices";
+      case "delivery":
+        return "/sales/delivery";
+      case "output":
+        return "/sales/output";
+      case "purchase-order":
+        return "/suppliers/orders";
+      case "supplier-invoice":
+        return "/suppliers/invoices";
+      case "suppliers":
+        return "/suppliers";
+      case "inventory":
+        return "/inventory/inventory";
+      case "stock-movements":
+        return "/inventory/movements";
+      case "settings":
+        return "/settings";
       default:
         return "#";
     }
@@ -117,6 +136,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         </div>
         <p className="text-xs text-muted-foreground">Gestion & Facturation</p>
       </SidebarHeader>
+
       <SidebarContent className="py-4 px-4">
         <SidebarMenu>
           {navigationItems.map((item) => (
@@ -136,13 +156,16 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
                       }`}
                     />
                   </SidebarMenuButton>
+
                   {openGroups[item.id] && (
                     <SidebarMenu className="ml-4 border-muted-foreground/10 pl-2 mt-1">
                       {item.children.map((sub) => (
                         <SidebarMenuItem key={sub.id}>
                           <Link href={getRoute(sub.id)} passHref>
                             <SidebarMenuButton
-                              onClick={() => setActiveView(sub.id as NavigationItem)}
+                              onClick={() =>
+                                setActiveView(sub.id as NavigationItem)
+                              }
                               isActive={activeView === sub.id}
                               className="w-full justify-start gap-3 px-3 py-2.5 hover:cursor-pointer"
                             >

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/common/FormField";
@@ -7,6 +7,8 @@ import { EntitySelect } from "@/components/common/EntitySelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Save } from "lucide-react";
 import type { Client, Product, LineItem } from "@/types/types";
+import { quoteSchema } from "@/lib/validation/schemas";
+import { z } from "zod";
 
 interface CreateQuoteModalProps {
   open: boolean;
@@ -27,6 +29,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
   const [taxRate, setTaxRate] = useState(20);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Financial calculations
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
@@ -34,6 +37,70 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
   const discountedSubtotal = subtotal - globalDiscountAmount;
   const taxAmount = (discountedSubtotal * taxRate) / 100;
   const finalTotal = discountedSubtotal + taxAmount;
+
+  // Clear error when client is selected
+  useEffect(() => {
+    if (selectedClient && errors.clientId) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.clientId;
+        return newErrors;
+      });
+    }
+  }, [selectedClient, errors]);
+
+  // Clear error when items are added
+  useEffect(() => {
+    if (lineItems.length > 0 && errors.items) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.items;
+        return newErrors;
+      });
+    }
+  }, [lineItems, errors]);
+
+  const validateForm = () => {
+    try {
+      const quoteData = {
+        clientId: Number(selectedClient),
+        amount: discountedSubtotal,
+        taxAmount: taxAmount,
+        totalAmount: finalTotal,
+        status: "Brouillon",
+        issueDate: new Date().toISOString(),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        items: lineItems.map(item => ({
+          productId: item.productId,
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.total,
+        })),
+      };
+      
+      quoteSchema.parse(quoteData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            // Handle items array errors
+            if (err.path[0] === 'items') {
+              newErrors['items'] = err.message;
+            } else {
+              newErrors[err.path[0]] = err.message;
+            }
+          }
+        });
+        setErrors(newErrors);
+        return false;
+      }
+      return false;
+    }
+  };
 
   const addLineItem = () => {
     if (!selectedProduct) return;
@@ -60,6 +127,10 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
   };
 
   const handleCreate = () => {
+    if (!validateForm()) {
+      return;
+    }
+    
     setSaving(true);
     // Minimal quote object for demo
     const quote = {
@@ -95,7 +166,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <EntitySelect
-              label="Client"
+              label="Client *"
               id="client"
               value={selectedClient}
               onChange={setSelectedClient}
@@ -104,8 +175,11 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
               getOptionValue={(c) => c.id.toString()}
               required
             />
+            {errors.clientId && (
+              <p className="text-sm text-red-500 mt-1">{errors.clientId}</p>
+            )}
             <div>
-              <label className="block text-sm font-medium mb-1">Articles</label>
+              <label className="block text-sm font-medium mb-1">Articles *</label>
               <div className="flex gap-2 mb-2">
                 <EntitySelect
                   label="Produit"
@@ -148,6 +222,9 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
                     </div>
                   ))}
                 </div>
+              )}
+              {errors.items && (
+                <p className="text-sm text-red-500 mt-1">{errors.items}</p>
               )}
             </div>
             <FormField

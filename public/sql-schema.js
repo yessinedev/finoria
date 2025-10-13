@@ -174,6 +174,51 @@ function createTables(db) {
       FOREIGN KEY (clientId) REFERENCES clients(id)
     )
   `);
+
+  // Stock movements table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS stock_movements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      productId INTEGER NOT NULL,
+      productName TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      movementType TEXT NOT NULL, -- 'IN' for purchases, 'OUT' for sales
+      sourceType TEXT, -- 'supplier_order', 'sale', etc.
+      sourceId INTEGER, -- ID of the source document
+      reference TEXT, -- Reference number of the source document
+      reason TEXT, -- Reason for the movement
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (productId) REFERENCES products(id)
+    )
+  `);
+
+  // Enterprise settings table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS enterprise_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1), -- Only one row
+      companyName TEXT,
+      address TEXT,
+      city TEXT,
+      postalCode TEXT,
+      country TEXT,
+      phone TEXT,
+      email TEXT,
+      taxId TEXT,
+      invoicePrefix TEXT DEFAULT 'INV',
+      nextInvoiceNumber INTEGER DEFAULT 1001,
+      paymentDueDays INTEGER DEFAULT 30,
+      defaultTaxRate REAL DEFAULT 19.0,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Insert default settings if table is empty
+  const settingsCount = db.prepare("SELECT COUNT(*) as count FROM enterprise_settings").get();
+  if (settingsCount.count === 0) {
+    db.exec(`
+      INSERT INTO enterprise_settings (id) VALUES (1)
+    `);
+  }
 }
 
 function createIndexes(db) {

@@ -20,6 +20,9 @@ import {
   Filter,
   TrendingUp,
   TrendingDown,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
@@ -83,7 +86,12 @@ export default function Invoices() {
       label: "N° Facture",
       sortable: true,
       filterable: true,
-      render: (value: string) => <span className="font-mono font-medium text-primary">{value}</span>,
+      render: (value: string) => (
+        <div className="flex items-center gap-1">
+          <FileText className="h-4 w-4" />
+          <span className="font-mono font-medium text-primary">{value}</span>
+        </div>
+      ),
     },
     {
       key: "clientName" as keyof Invoice,

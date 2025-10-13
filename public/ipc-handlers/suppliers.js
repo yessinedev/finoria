@@ -378,4 +378,116 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       throw error;
     }
   });
+
+  // Stock Movements CRUD
+  ipcMain.handle("get-stock-movements", async () => {
+    try {
+      const movements = db.prepare(`
+        SELECT * FROM stock_movements ORDER BY createdAt DESC
+      `).all();
+      return movements;
+    } catch (error) {
+      console.error("Error getting stock movements:", error);
+      throw new Error("Erreur lors de la récupération des mouvements de stock");
+    }
+  });
+
+  ipcMain.handle("create-stock-movement", async (event, movement) => {
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO stock_movements (
+          productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      const result = stmt.run(
+        movement.productId,
+        movement.productName,
+        movement.quantity,
+        movement.movementType,
+        movement.sourceType,
+        movement.sourceId,
+        movement.reference,
+        movement.reason
+      );
+      
+      const newMovement = {
+        id: result.lastInsertRowid,
+        ...movement,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Don't notify data change for stock movements as they're not real-time updated
+      return newMovement;
+    } catch (error) {
+      console.error("Error creating stock movement:", error);
+      throw new Error("Erreur lors de la création du mouvement de stock");
+    }
+  });
+
+  ipcMain.handle("get-stock-movements-by-product", async (event, productId) => {
+    try {
+      const movements = db.prepare(`
+        SELECT * FROM stock_movements 
+        WHERE productId = ? 
+        ORDER BY createdAt DESC
+      `).all(productId);
+      return movements;
+    } catch (error) {
+      console.error("Error getting stock movements by product:", error);
+      throw new Error("Erreur lors de la récupération des mouvements de stock pour le produit");
+    }
+  });
+
+  // Enterprise Settings CRUD
+  ipcMain.handle("get-enterprise-settings", async () => {
+    try {
+      const settings = db.prepare(`
+        SELECT * FROM enterprise_settings WHERE id = 1
+      `).get();
+      return settings || {};
+    } catch (error) {
+      console.error("Error getting enterprise settings:", error);
+      throw new Error("Erreur lors de la récupération des paramètres de l'entreprise");
+    }
+  });
+
+  ipcMain.handle("update-enterprise-settings", async (event, settings) => {
+    try {
+      const stmt = db.prepare(`
+        UPDATE enterprise_settings 
+        SET companyName = ?, address = ?, city = ?, postalCode = ?, country = ?,
+            phone = ?, email = ?, taxId = ?, invoicePrefix = ?, 
+            nextInvoiceNumber = ?, paymentDueDays = ?, defaultTaxRate = ?,
+            updatedAt = CURRENT_TIMESTAMP
+        WHERE id = 1
+      `);
+      
+      stmt.run(
+        settings.companyName,
+        settings.address,
+        settings.city,
+        settings.postalCode,
+        settings.country,
+        settings.phone,
+        settings.email,
+        settings.taxId,
+        settings.invoicePrefix,
+        settings.nextInvoiceNumber,
+        settings.paymentDueDays,
+        settings.defaultTaxRate
+      );
+      
+      const updatedSettings = {
+        id: 1,
+        ...settings,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      return updatedSettings;
+    } catch (error) {
+      console.error("Error updating enterprise settings:", error);
+      throw new Error("Erreur lors de la mise à jour des paramètres de l'entreprise");
+    }
+  });
 };
