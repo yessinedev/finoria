@@ -156,10 +156,9 @@ function createTables(db) {
       FOREIGN KEY (saleId) REFERENCES sales(id),
       FOREIGN KEY (clientId) REFERENCES clients(id)
     )
-
-    
   `);
 
+  // Quotes table
   db.exec(`
     CREATE TABLE IF NOT EXISTS quotes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -173,7 +172,8 @@ function createTables(db) {
       dueDate DATETIME,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (clientId) REFERENCES clients(id)
-    )`)
+    )
+  `);
 }
 
 function createIndexes(db) {

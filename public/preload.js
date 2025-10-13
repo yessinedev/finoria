@@ -92,3 +92,4 @@ contextBridge.exposeInMainWorld("electronAPI", {
     };
   },
 });
+

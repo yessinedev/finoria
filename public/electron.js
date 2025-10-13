@@ -36,11 +36,11 @@ function initDatabase() {
   db.pragma("cache_size = 10000"); // Increase cache size
   db.pragma("temp_store = MEMORY"); // Store temporary tables in memory
 
+  // Create tables first
+  createTables(db);
+
   // Create indexes for better query performance
   createIndexes(db);
-
-  // Create tables
-  createTables(db);
 }
 
 function createWindow() {

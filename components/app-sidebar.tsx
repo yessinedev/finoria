@@ -1,6 +1,5 @@
 "use client";
 
-import { NavigationItem } from "@/app/page";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +18,15 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
+
+export type NavigationItem =
+  | "dashboard"
+  | "clients"
+  | "products"
+  | "sales"
+  | "quotes"
+  | "invoices";
 
 const navigationItems = [
   { id: "dashboard", label: "Tableau de bord", icon: BarChart3 },
@@ -79,6 +87,27 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
   const handleToggle = (id: string) => {
     setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
   };
+  
+  // Map navigation item IDs to their respective routes
+  const getRoute = (id: string) => {
+    switch (id) {
+      case "dashboard":
+        return "/";
+      case "clients":
+        return "/clients";
+      case "products":
+        return "/products";
+      case "sales":
+        return "/sales";
+      case "quotes":
+        return "/quotes";
+      case "invoices":
+        return "/invoices";
+      default:
+        return "#";
+    }
+  };
+
   return (
     <Sidebar className="border-r" collapsible="offcanvas" variant="inset">
       <SidebarHeader className="border-b px-6 py-4 flex items-start gap-2">
@@ -111,27 +140,31 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
                     <SidebarMenu className="ml-4 border-muted-foreground/10 pl-2 mt-1">
                       {item.children.map((sub) => (
                         <SidebarMenuItem key={sub.id}>
-                          <SidebarMenuButton
-                            onClick={() => setActiveView(sub.id as NavigationItem)}
-                            isActive={activeView === sub.id}
-                            className="w-full justify-start gap-3 px-3 py-2.5 hover:cursor-pointer"
-                          >
-                            <span>{sub.label}</span>
-                          </SidebarMenuButton>
+                          <Link href={getRoute(sub.id)} passHref>
+                            <SidebarMenuButton
+                              onClick={() => setActiveView(sub.id as NavigationItem)}
+                              isActive={activeView === sub.id}
+                              className="w-full justify-start gap-3 px-3 py-2.5 hover:cursor-pointer"
+                            >
+                              <span>{sub.label}</span>
+                            </SidebarMenuButton>
+                          </Link>
                         </SidebarMenuItem>
                       ))}
                     </SidebarMenu>
                   )}
                 </>
               ) : (
-                <SidebarMenuButton
-                  onClick={() => setActiveView(item.id as NavigationItem)}
-                  isActive={activeView === item.id}
-                  className="w-full justify-start gap-3 px-3 py-2.5"
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
+                <Link href={getRoute(item.id)} passHref>
+                  <SidebarMenuButton
+                    onClick={() => setActiveView(item.id as NavigationItem)}
+                    isActive={activeView === item.id}
+                    className="w-full justify-start gap-3 px-3 py-2.5"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </Link>
               )}
             </SidebarMenuItem>
           ))}
