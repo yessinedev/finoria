@@ -29,6 +29,18 @@ export interface Client {
   address?: string;
 }
 
+export interface Supplier {
+  id: number;
+  name: string;
+  company: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  taxId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LineItem {
   id: number;
   productId: number;
@@ -65,6 +77,62 @@ export interface SaleItem {
   quantity: number;
   unitPrice: number;
   discount?: number;
+  totalPrice: number;
+}
+
+export interface SupplierOrder {
+  id: number;
+  supplierId: number;
+  supplierName: string;
+  supplierCompany?: string;
+  supplierEmail?: string;
+  supplierPhone?: string;
+  supplierAddress?: string;
+  orderNumber: string;
+  totalAmount: number;
+  taxAmount: number;
+  status: string;
+  orderDate: string;
+  deliveryDate?: string;
+  items?: SupplierOrderItem[];
+}
+
+export interface SupplierOrderItem {
+  id: number;
+  productId: number;
+  productName: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface SupplierInvoice {
+  id: number;
+  supplierId: number;
+  supplierName: string;
+  supplierCompany?: string;
+  supplierEmail?: string;
+  supplierPhone?: string;
+  supplierAddress?: string;
+  orderId?: number;
+  invoiceNumber: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  issueDate: string;
+  dueDate?: string;
+  paymentDate?: string;
+  status: string;
+  items?: SupplierInvoiceItem[];
+}
+
+export interface SupplierInvoiceItem {
+  id: number;
+  productName: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
   totalPrice: number;
 }
 
@@ -151,4 +219,17 @@ export interface DashboardStats {
     name: string;
     value: number;
   }>;
+}
+
+export interface StockMovement {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  movementType: 'IN' | 'OUT';
+  sourceType: string;
+  sourceId: number;
+  reference: string;
+  reason: string;
+  createdAt: string;
 }

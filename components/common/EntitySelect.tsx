@@ -13,6 +13,7 @@ interface EntitySelectProps<T> {
   placeholder?: string
   required?: boolean
   className?: string
+  error?: string | null
 }
 
 export function EntitySelect<T>({
@@ -26,12 +27,13 @@ export function EntitySelect<T>({
   placeholder = "Sélectionner...",
   required = false,
   className = "",
+  error,
 }: EntitySelectProps<T>) {
   return (
     <div className={className}>
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={onChange} required={required}>
-        <SelectTrigger id={id}>
+        <SelectTrigger id={id} className={error ? "border-red-500" : ""}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -42,6 +44,7 @@ export function EntitySelect<T>({
           ))}
         </SelectContent>
       </Select>
+      {error && <div className="text-xs text-red-600 mt-1">{error}</div>}
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus, Edit, Trash2, Package, AlertCircle } from "lucide-react"
+import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import ProductFormModal from "@/components/products/ProductFormModal"
@@ -13,6 +13,15 @@ import CategoryManagerModal from "@/components/category/CategoryManagerModal"
 import { db } from "@/lib/database"
 import type { Product, Category } from "@/types/types"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -23,6 +32,10 @@ export default function Products() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const { toast } = useToast()
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -52,9 +65,12 @@ export default function Products() {
       sortable: true,
       filterable: true,
       render: (value: string, product: Product) => (
-        <div>
-          <div className="font-medium">{value}</div>
-          <div className="text-sm text-muted-foreground">{product.description}</div>
+        <div className="flex items-center gap-1">
+          <Package className="h-4 w-4" />
+          <div>
+            <div className="font-medium">{value}</div>
+            <div className="text-sm text-muted-foreground">{product.description}</div>
+          </div>
         </div>
       ),
     },
@@ -186,16 +202,33 @@ export default function Products() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) {
-      return
-    }
+  const handleDelete = (product: Product) => {
+    setProductToDelete(product)
+    setIsDeleteDialogOpen(true)
+  }
 
-    const result = await db.products.delete(id)
-    if (result.success) {
-      await loadData()
-    } else {
-      setError(result.error || "Erreur lors de la suppression")
+  const confirmDelete = async () => {
+    if (!productToDelete) return
+
+    try {
+      const result = await db.products.delete(productToDelete.id)
+      if (result.success) {
+        await loadData()
+        setIsDeleteDialogOpen(false)
+        setProductToDelete(null)
+        toast({
+          title: "Succès",
+          description: "Produit supprimé avec succès",
+        })
+      } else {
+        throw new Error(result.error || "Erreur lors de la suppression")
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la suppression du produit",
+        variant: "destructive",
+      })
     }
   }
 
@@ -218,11 +251,22 @@ export default function Products() {
       <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
         <Edit className="h-4 w-4" />
       </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDelete(product.id)}>
+      <Button variant="outline" size="sm" onClick={() => handleDelete(product)}>
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
   )
+
+  if (loading) {
+    return (
+      <div className="p-6 flex flex-col gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">Gestion des produits</h1>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 flex flex-col gap-2">
@@ -288,6 +332,36 @@ export default function Products() {
           />
         </CardContent>
       </Card>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le produit "{productToDelete?.name}" ? 
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

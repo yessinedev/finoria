@@ -8,6 +8,10 @@ import {
   ShoppingCart,
   AlertCircle,
   Eye,
+  AlertTriangle,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -16,6 +20,7 @@ import type { LineItem, Client, Product, Sale } from "@/types/types";
 import SaleDetailsModal from "@/components/sales/SaleDetailsModal";
 import SaleForm from "@/components/sales/SaleForm";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Sales() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -35,6 +40,8 @@ export default function Sales() {
   const [showSalesList, setShowSalesList] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isSaleDetailsOpen, setIsSaleDetailsOpen] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const { toast } = useToast();
 
   // Data table for sales list
   const {
@@ -63,6 +70,13 @@ export default function Sales() {
       label: "Client",
       sortable: true,
       filterable: true,
+      render: (value: string, sale: Sale) => (
+        <div className="flex items-center gap-1">
+          <ShoppingCart className="h-4 w-4" />
+          {value}
+          {sale.clientCompany && <span className="text-muted-foreground">({sale.clientCompany})</span>}
+        </div>
+      ),
     },
     {
       key: "finalAmount" as keyof Sale,
@@ -218,7 +232,7 @@ export default function Sales() {
   const taxAmount = (discountedSubtotal * taxRate) / 100;
   const finalTotal = discountedSubtotal + taxAmount;
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (errors: Record<string, string>) => {
     if (!selectedClient || lineItems.length === 0) {
       setError(
         "Veuillez sélectionner un client et ajouter au moins un article"
@@ -247,16 +261,42 @@ export default function Sales() {
       };
 
       const result = await db.sales.create(saleData);
-      if (result.success) {
-        saleData.items.map(async (item) => {
-          const currentStock = await db.products.getStock(item.productId);
-          const stock = currentStock.data! - item.quantity;
-          db.products.updateStock(item.productId, stock);
-        })
+      if (result.success && result.data) {
+        // Update product stock for each item in the sale
+        for (const item of saleData.items) {
+          try {
+            // Get current stock
+            const stockResponse = await db.products.getStock(item.productId);
+            const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
+            
+            // Update stock (reduce quantity for sale)
+            const newStock = currentStock - item.quantity;
+            await db.products.updateStock(item.productId, newStock);
+            
+            // Create stock movement record
+            await db.stockMovements.create({
+              productId: item.productId,
+              productName: item.name,
+              quantity: item.quantity,
+              movementType: 'OUT',
+              sourceType: 'sale',
+              sourceId: result.data.id,
+              reference: `SALE-${result.data.id}`,
+              reason: 'Product sold'
+            });
+          } catch (stockError) {
+            console.error(`Failed to update stock for product ${item.productId}:`, stockError);
+          }
+        }
+        
         setSelectedClient("");
         setLineItems([]);
         setGlobalDiscount(0);
-        alert("Vente enregistrée avec succès!");
+        setFormErrors({});
+        toast({
+          title: "Succès",
+          description: "Vente enregistrée avec succès!",
+        });
         await loadData();
       } else {
         setError(result.error || "Erreur lors de l'enregistrement");
@@ -374,6 +414,8 @@ export default function Sales() {
           finalTotal={finalTotal}
           saving={saving}
           handleSubmit={handleSubmit}
+          errors={formErrors}
+          setErrors={setFormErrors}
         />
       )}
       <SaleDetailsModal

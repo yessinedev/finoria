@@ -14,14 +14,21 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  AlertTriangle,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Trash2
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
+import { db } from "@/lib/database";
 import type { Client, Product, LineItem } from "@/types/types";
 import CreateQuoteModal from "./create-quote-modal";
 import { PDFViewer, pdf } from "@react-pdf/renderer";
 import { QuotePDFDocument } from "./quote-pdf";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 // TODO: Move to types.ts and backend
 export type QuoteStatus = "Brouillon" | "Envoyé" | "Accepté" | "Refusé";
@@ -55,6 +62,9 @@ export default function Quotes() {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
+  const { toast } = useToast();
 
   // DataTable logic (reuse from invoices)
   const {
@@ -75,7 +85,10 @@ export default function Quotes() {
       sortable: true,
       filterable: true,
       render: (value: string) => (
-        <span className="font-mono font-medium text-primary">{value}</span>
+        <div className="flex items-center gap-1">
+          <FileText className="h-4 w-4" />
+          <span className="font-mono font-medium text-primary">{value}</span>
+        </div>
       ),
     },
     {
@@ -137,130 +150,62 @@ export default function Quotes() {
   ];
 
   useEffect(() => {
-    // Mock clients
-    setClients([
-      {
-        id: 1,
-        name: "Société Alpha",
-        company: "Alpha SARL",
-        email: "contact@alpha.com",
-        phone: "01 23 45 67 89",
-        address: "1 rue Alpha, Tunis",
-      },
-      {
-        id: 2,
-        name: "Entreprise Beta",
-        company: "Beta SAS",
-        email: "info@beta.com",
-        phone: "98 76 54 32 10",
-        address: "2 avenue Beta, Sfax",
-      },
-    ]);
-    // Mock products
-    setProducts([
-      {
-        id: 1,
-        name: "Produit A",
-        description: "Service de conseil",
-        price: 100,
-        category: "Services",
-        stock: 10,
-        isActive: true,
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-01",
-      },
-      {
-        id: 2,
-        name: "Produit B",
-        description: "Produit physique",
-        price: 250,
-        category: "Produits",
-        stock: 5,
-        isActive: true,
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-01",
-      },
-    ]);
-    // Mock quotes
-    setQuotes([
-      {
-        id: 1,
-        number: "DEV-2025-001",
-        clientId: 1,
-        clientName: "Société Alpha",
-        clientCompany: "Alpha SARL",
-        clientEmail: "contact@alpha.com",
-        clientPhone: "01 23 45 67 89",
-        clientAddress: "1 rue Alpha, Tunis",
-        amount: 100,
-        taxAmount: 20,
-        totalAmount: 120,
-        issueDate: "2025-05-01",
-        dueDate: "2025-06-01",
-        status: "Envoyé",
-        items: [
-          {
-            id: 1,
-            productId: 1,
-            name: "Produit A",
-            description: "Service de conseil",
-            quantity: 1,
-            unitPrice: 100,
-            discount: 0,
-            total: 100,
-          },
-        ],
-        notes: "Merci pour votre confiance.",
-        paymentTerms: "30 jours net",
-      },
-      {
-        id: 2,
-        number: "DEV-2025-002",
-        clientId: 2,
-        clientName: "Entreprise Beta",
-        clientCompany: "Beta SAS",
-        clientEmail: "info@beta.com",
-        clientPhone: "98 76 54 32 10",
-        clientAddress: "2 avenue Beta, Sfax",
-        amount: 250,
-        taxAmount: 50,
-        totalAmount: 300,
-        issueDate: "2025-05-15",
-        dueDate: "2025-06-15",
-        status: "Brouillon",
-        items: [
-          {
-            id: 2,
-            productId: 2,
-            name: "Produit B",
-            description: "Produit physique",
-            quantity: 1,
-            unitPrice: 250,
-            discount: 0,
-            total: 250,
-          },
-        ],
-        notes: "Devis valable 30 jours.",
-        paymentTerms: "30 jours net",
-      },
-    ]);
-    setLoading(false);
+    loadData();
   }, []);
 
-  const loadQuotes = async () => {
+  const loadData = async () => {
     setLoading(true);
     setError(null);
+    
     try {
-      // Replace with actual API call
-      const response = await window.electronAPI.getQuotes();
-      setQuotes(response);
+      // Load quotes from database
+      const quotesResult = await db.quotes.getAll();
+      if (quotesResult.success) {
+        setQuotes(quotesResult.data || []);
+      } else {
+        setError(quotesResult.error || "Erreur lors du chargement des devis");
+        toast({
+          title: "Erreur",
+          description: quotesResult.error || "Erreur lors du chargement des devis",
+          variant: "destructive",
+        });
+      }
+      
+      // Load clients from database
+      const clientsResult = await db.clients.getAll();
+      if (clientsResult.success) {
+        setClients(clientsResult.data || []);
+      } else {
+        toast({
+          title: "Erreur",
+          description: clientsResult.error || "Erreur lors du chargement des clients",
+          variant: "destructive",
+        });
+      }
+      
+      // Load products from database
+      const productsResult = await db.products.getAll();
+      if (productsResult.success) {
+        setProducts(productsResult.data || []);
+      } else {
+        toast({
+          title: "Erreur",
+          description: productsResult.error || "Erreur lors du chargement des produits",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
-      console.error("Failed to load quotes:", err);
-      setError("Erreur lors du chargement des devis");
+      console.error("Failed to load data:", err);
+      setError("Erreur lors du chargement des données");
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des données",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -314,6 +259,62 @@ export default function Quotes() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }, 100);
+  };
+
+  const handleDeleteQuote = (quote: Quote) => {
+    setQuoteToDelete(quote);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteQuote = async () => {
+    if (!quoteToDelete) return;
+    
+    try {
+      const result = await db.quotes.delete(quoteToDelete.id);
+      if (result.success) {
+        await loadData();
+        setIsDeleteDialogOpen(false);
+        setQuoteToDelete(null);
+        toast({
+          title: "Succès",
+          description: "Devis supprimé avec succès",
+        });
+      } else {
+        throw new Error(result.error || "Erreur lors de la suppression");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la suppression du devis",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateQuote = async (quoteData: any) => {
+    try {
+      const result = await db.quotes.create(quoteData);
+      if (result.success) {
+        await loadData(); // Refresh the list
+        setIsCreating(false);
+        toast({
+          title: "Succès",
+          description: "Devis créé avec succès",
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la création du devis",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la création du devis",
+        variant: "destructive",
+      });
+    }
   };
 
   // TODO: Add quote creation and preview logic
@@ -378,6 +379,9 @@ export default function Quotes() {
                 <Button variant="outline" size="sm" onClick={() => handleDownloadQuote(quote)}>
                   <Download className="h-4 w-4" />
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => handleDeleteQuote(quote)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             )}
           />
@@ -401,6 +405,37 @@ export default function Quotes() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le devis "{quoteToDelete?.number}" ? 
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteQuote}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       {/* TODO: Add Quote creation modal and preview modal */}
       {isCreating && (
         <CreateQuoteModal
@@ -408,10 +443,7 @@ export default function Quotes() {
           clients={clients}
           products={products}
           onClose={() => setIsCreating(false)}
-          onCreate={(newQuote) => {
-            setQuotes((prev) => [...prev, newQuote]);
-            setIsCreating(false);
-          }}
+          onCreate={handleCreateQuote}
         />
       )}
     </div>

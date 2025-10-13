@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -28,6 +28,8 @@ import { EntitySelect } from "@/components/common/EntitySelect"
 import { FinancialSummaryCard } from "@/components/common/FinancialSummaryCard"
 import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
 import { Label } from "@/components/ui/label"
+import { invoiceSchema } from "@/lib/validation/schemas"
+import { z } from "zod"
 
 interface InvoiceGeneratorProps {
   isOpen: boolean
@@ -53,6 +55,14 @@ export default function InvoiceGenerator({
   const [error, setError] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [previewInvoice, setPreviewInvoice] = useState<any>(null)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+  // Clear error when sale is selected
+  useEffect(() => {
+    if (selectedSale && error) {
+      setError(null);
+    }
+  }, [selectedSale, error]);
 
   const paymentTermsOptions = [
     { value: "15 jours net", label: "15 jours net" },
@@ -63,6 +73,43 @@ export default function InvoiceGenerator({
     { value: "Paiement à réception", label: "Paiement à réception" },
   ]
 
+  const validateForm = () => {
+    try {
+      if (!selectedSale) {
+        setError("Veuillez sélectionner une vente");
+        return false;
+      }
+
+      const invoiceData = {
+        number: formData.customNumber.trim() !== "" ? formData.customNumber.trim() : generatePreviewInvoiceNumber(),
+        saleId: selectedSale.id,
+        clientId: selectedSale.clientId,
+        amount: selectedSale.totalAmount,
+        taxAmount: selectedSale.taxAmount,
+        totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+        status: "En attente",
+        issueDate: new Date().toISOString(),
+        dueDate: formData.dueDate.toISOString(),
+      };
+
+      invoiceSchema.parse(invoiceData);
+      setFormErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            newErrors[err.path[0]] = err.message;
+          }
+        });
+        setFormErrors(newErrors);
+        return false;
+      }
+      return false;
+    }
+  };
+
   const handleSaleSelection = (saleId: string) => {
     const sale = availableSales.find((s) => s.id.toString() === saleId)
     setSelectedSale(sale || null)
@@ -70,9 +117,8 @@ export default function InvoiceGenerator({
   }
 
   const handleGenerateInvoice = async () => {
-    if (!selectedSale) {
-      setError("Veuillez sélectionner une vente")
-      return
+    if (!validateForm()) {
+      return;
     }
 
     setIsGenerating(true)
@@ -107,6 +153,7 @@ export default function InvoiceGenerator({
           notes: "",
           customNumber: "",
         })
+        setFormErrors({});
       } else {
         setError(result.error || "Erreur lors de la génération de la facture")
       }
@@ -134,6 +181,10 @@ export default function InvoiceGenerator({
   }
 
   const handleShowPreview = () => {
+    if (!validateForm()) {
+      return;
+    }
+    
     if (!selectedSale) return
     // Prepare a preview invoice object
     const invoiceNumber = formData.customNumber.trim() !== ""
@@ -193,7 +244,7 @@ export default function InvoiceGenerator({
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <FileText className="h-5 w-5" />
-                          Sélection de la vente
+                          Sélection de la vente *
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -207,6 +258,9 @@ export default function InvoiceGenerator({
                           getOptionValue={(sale) => sale.id.toString()}
                           required
                         />
+                        {formErrors.saleId && (
+                          <p className="text-sm text-red-500 mt-1">{formErrors.saleId}</p>
+                        )}
 
                         {selectedSale && (
                           <Card className="border-primary/20 bg-primary/5">
@@ -282,10 +336,11 @@ export default function InvoiceGenerator({
                           value={formData.customNumber}
                           onChange={(e) => setFormData({ ...formData, customNumber: e.target.value })}
                           placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
+                          error={formErrors.number}
                         />
 
                         <div className="flex flex-col gap-2">
-                          <Label>Date d'échéance</Label>
+                          <Label>Date d'échéance *</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
@@ -311,6 +366,9 @@ export default function InvoiceGenerator({
                               />
                             </PopoverContent>
                           </Popover>
+                          {formErrors.dueDate && (
+                            <p className="text-sm text-red-500 mt-1">{formErrors.dueDate}</p>
+                          )}
                         </div>
 
                         <EntitySelect

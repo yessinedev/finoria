@@ -11,6 +11,24 @@ interface ElectronAPI {
   updateClient: (id: number, client: any) => Promise<any>;
   deleteClient: (id: number) => Promise<boolean>;
 
+  // Suppliers
+  getSuppliers: () => Promise<any[]>;
+  createSupplier: (supplier: any) => Promise<any>;
+  updateSupplier: (id: number, supplier: any) => Promise<any>;
+  deleteSupplier: (id: number) => Promise<boolean>;
+
+  // Supplier Orders
+  getSupplierOrders: () => Promise<any[]>;
+  createSupplierOrder: (order: any) => Promise<any>;
+  updateSupplierOrder: (id: number, order: any) => Promise<any>;
+  deleteSupplierOrder: (id: number) => Promise<boolean>;
+
+  // Supplier Invoices
+  getSupplierInvoices: () => Promise<any[]>;
+  createSupplierInvoice: (invoice: any) => Promise<any>;
+  updateSupplierInvoice: (id: number, invoice: any) => Promise<any>;
+  deleteSupplierInvoice: (id: number) => Promise<boolean>;
+
   // Products
   getProducts: () => Promise<any[]>;
   getProductById: (id: number) => Promise<any>;
@@ -41,6 +59,14 @@ interface ElectronAPI {
   updateQuote: (id: number, quote: any) => Promise<any>;
   deleteQuote: (id: number) => Promise<boolean>;
   
+  // Stock Movements
+  getStockMovements: () => Promise<any[]>;
+  createStockMovement: (movement: any) => Promise<any>;
+  getStockMovementsByProduct: (productId: number) => Promise<any[]>;
+
+  // Enterprise Settings
+  getEnterpriseSettings: () => Promise<any>;
+  updateEnterpriseSettings: (settings: any) => Promise<any>;
 
   // PDF Generation
   generateInvoicePDF: (invoiceId: number) => Promise<any>;
@@ -93,6 +119,14 @@ class DatabaseService {
   // --- Error Handling Wrapper ---
   private async handle<T>(operation: () => Promise<T>, name: string): Promise<{ success: boolean; data?: T; error?: string }> {
     try {
+      // Check if we're in a browser environment and electronAPI is available
+      if (typeof window === "undefined" || !window.electronAPI) {
+        console.warn(`Electron API not available for operation: ${name}`);
+        return {
+          success: false,
+          error: "Electron API not available",
+        };
+      }
       const data = await operation();
       return { success: true, data };
     } catch (error) {
@@ -118,6 +152,30 @@ class DatabaseService {
     create: (client: any) => this.handle(() => window.electronAPI?.createClient(client) || Promise.resolve(null), "createClient"),
     update: (id: number, client: any) => this.handle(() => window.electronAPI?.updateClient(id, client) || Promise.resolve(null), "updateClient"),
     delete: (id: number) => this.handle(() => window.electronAPI?.deleteClient(id) || Promise.resolve(false), "deleteClient"),
+  };
+
+  // --- Suppliers API ---
+  suppliers = {
+    getAll: () => this.handle(() => window.electronAPI?.getSuppliers() || Promise.resolve([]), "getSuppliers"),
+    create: (supplier: any) => this.handle(() => window.electronAPI?.createSupplier(supplier) || Promise.resolve(null), "createSupplier"),
+    update: (id: number, supplier: any) => this.handle(() => window.electronAPI?.updateSupplier(id, supplier) || Promise.resolve(null), "updateSupplier"),
+    delete: (id: number) => this.handle(() => window.electronAPI?.deleteSupplier(id) || Promise.resolve(false), "deleteSupplier"),
+  };
+
+  // --- Supplier Orders API ---
+  supplierOrders = {
+    getAll: () => this.handle(() => window.electronAPI?.getSupplierOrders() || Promise.resolve([]), "getSupplierOrders"),
+    create: (order: any) => this.handle(() => window.electronAPI?.createSupplierOrder(order) || Promise.resolve(null), "createSupplierOrder"),
+    update: (id: number, order: any) => this.handle(() => window.electronAPI?.updateSupplierOrder(id, order) || Promise.resolve(null), "updateSupplierOrder"),
+    delete: (id: number) => this.handle(() => window.electronAPI?.deleteSupplierOrder(id) || Promise.resolve(false), "deleteSupplierOrder"),
+  };
+
+  // --- Supplier Invoices API ---
+  supplierInvoices = {
+    getAll: () => this.handle(() => window.electronAPI?.getSupplierInvoices() || Promise.resolve([]), "getSupplierInvoices"),
+    create: (invoice: any) => this.handle(() => window.electronAPI?.createSupplierInvoice(invoice) || Promise.resolve(null), "createSupplierInvoice"),
+    update: (id: number, invoice: any) => this.handle(() => window.electronAPI?.updateSupplierInvoice(id, invoice) || Promise.resolve(null), "updateSupplierInvoice"),
+    delete: (id: number) => this.handle(() => window.electronAPI?.deleteSupplierInvoice(id) || Promise.resolve(false), "deleteSupplierInvoice"),
   };
 
   // --- Products API ---
@@ -153,6 +211,28 @@ class DatabaseService {
     generatePDF: (invoiceId: number) => this.handle(() => window.electronAPI?.generateInvoicePDF(invoiceId) || Promise.resolve(null), "generateInvoicePDF"),
     openPDF: (filePath: string) => this.handle(() => window.electronAPI?.openPDF(filePath) || Promise.resolve(null), "openPDF"),
   };
+
+  // --- Quotes API ---
+  quotes = {
+    getAll: () => this.handle(() => window.electronAPI?.getQuotes() || Promise.resolve([]), "getQuotes"),
+    create: (quote: any) => this.handle(() => window.electronAPI?.createQuote(quote) || Promise.resolve(null), "createQuote"),
+    update: (id: number, quote: any) => this.handle(() => window.electronAPI?.updateQuote(id, quote) || Promise.resolve(null), "updateQuote"),
+    delete: (id: number) => this.handle(() => window.electronAPI?.deleteQuote(id) || Promise.resolve(false), "deleteQuote"),
+  };
+
+  // --- Stock Movements API ---
+  stockMovements = {
+    getAll: () => this.handle(() => window.electronAPI?.getStockMovements() || Promise.resolve([]), "getStockMovements"),
+    create: (movement: any) => this.handle(() => window.electronAPI?.createStockMovement(movement) || Promise.resolve(null), "createStockMovement"),
+    getByProduct: (productId: number) => this.handle(() => window.electronAPI?.getStockMovementsByProduct(productId) || Promise.resolve([]), "getStockMovementsByProduct"),
+  };
+
+  // --- Enterprise Settings API ---
+  settings = {
+    get: () => this.handle(() => window.electronAPI?.getEnterpriseSettings() || Promise.resolve({}), "getEnterpriseSettings"),
+    update: (settings: any) => this.handle(() => window.electronAPI?.updateEnterpriseSettings(settings) || Promise.resolve(null), "updateEnterpriseSettings"),
+  };
+
 }
 
 export const db = new DatabaseService();

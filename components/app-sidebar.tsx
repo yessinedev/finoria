@@ -17,8 +17,8 @@ import {
   Package,
   ChevronDown,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import Link from "next/link";
 
 export type NavigationItem =
   | "dashboard"
@@ -26,7 +26,10 @@ export type NavigationItem =
   | "products"
   | "sales"
   | "quotes"
-  | "invoices";
+  | "invoices"
+  | "inventory"
+  | "stock-movements"
+  | "settings";
 
 const navigationItems = [
   { id: "dashboard", label: "Tableau de bord", icon: BarChart3 },
@@ -49,7 +52,6 @@ const navigationItems = [
     children: [
       { id: "purchase-order", label: "Commande fournisseur" },
       { id: "supplier-invoice", label: "Facture fournisseur" },
-      { id: "supplier-delivery", label: "Bon de livraison fournisseur" },
     ],
   },
   {
@@ -73,12 +75,17 @@ const navigationItems = [
   { id: "clients", label: "Clients", icon: Users },
   { id: "suppliers", label: "Fournisseurs", icon: Building2 },
   { id: "products", label: "Produits", icon: Package },
+  // Add settings section
+  { id: "settings", label: "Paramètres", icon: FileText },
 ];
 
-export function AppSidebar() {
-  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+export interface AppSidebarProps {
+  activeView: NavigationItem;
+  setActiveView: (view: NavigationItem) => void;
+}
+
+export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
+  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
 
   const handleToggle = (id: string) => {
     setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -99,6 +106,22 @@ export function AppSidebar() {
         return "/quotes";
       case "invoices":
         return "/invoices";
+      case "delivery":
+        return "/sales/delivery";
+      case "output":
+        return "/sales/output";
+      case "purchase-order":
+        return "/suppliers/orders";
+      case "supplier-invoice":
+        return "/suppliers/invoices";
+      case "suppliers":
+        return "/suppliers";
+      case "inventory":
+        return "/inventory/inventory";
+      case "stock-movements":
+        return "/inventory/movements";
+      case "settings":
+        return "/settings";
       default:
         return "#";
     }
@@ -113,6 +136,7 @@ export function AppSidebar() {
         </div>
         <p className="text-xs text-muted-foreground">Gestion & Facturation</p>
       </SidebarHeader>
+
       <SidebarContent className="py-4 px-4">
         <SidebarMenu>
           {navigationItems.map((item) => (
@@ -121,6 +145,7 @@ export function AppSidebar() {
                 <>
                   <SidebarMenuButton
                     onClick={() => handleToggle(item.id)}
+                    isActive={activeView === item.id}
                     className="w-full justify-start gap-3 px-3 py-2.5 flex items-center hover:cursor-pointer font-semibold"
                   >
                     <item.icon className="h-4 w-4" />
@@ -131,12 +156,17 @@ export function AppSidebar() {
                       }`}
                     />
                   </SidebarMenuButton>
+
                   {openGroups[item.id] && (
                     <SidebarMenu className="ml-4 border-muted-foreground/10 pl-2 mt-1">
                       {item.children.map((sub) => (
                         <SidebarMenuItem key={sub.id}>
                           <Link href={getRoute(sub.id)} passHref>
                             <SidebarMenuButton
+                              onClick={() =>
+                                setActiveView(sub.id as NavigationItem)
+                              }
+                              isActive={activeView === sub.id}
                               className="w-full justify-start gap-3 px-3 py-2.5 hover:cursor-pointer"
                             >
                               <span>{sub.label}</span>
@@ -150,6 +180,8 @@ export function AppSidebar() {
               ) : (
                 <Link href={getRoute(item.id)} passHref>
                   <SidebarMenuButton
+                    onClick={() => setActiveView(item.id as NavigationItem)}
+                    isActive={activeView === item.id}
                     className="w-full justify-start gap-3 px-3 py-2.5"
                   >
                     <item.icon className="h-4 w-4" />

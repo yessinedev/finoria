@@ -4,12 +4,21 @@ import type { Client } from "@/types/types";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Users, AlertCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Users, AlertCircle, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
 import ClientFormModal from "@/components/clients/ClientFormModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -18,6 +27,10 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -45,9 +58,12 @@ export default function Clients() {
       sortable: true,
       filterable: true,
       render: (value: string, client: Client) => (
-        <div>
-          <div className="font-medium">{value}</div>
-          <div className="text-sm text-muted-foreground">{client.company}</div>
+        <div className="flex items-center gap-1">
+          <Users className="h-4 w-4" />
+          <div>
+            <div className="font-medium">{value}</div>
+            <div className="text-sm text-muted-foreground">{client.company}</div>
+          </div>
         </div>
       ),
     },
@@ -140,16 +156,33 @@ export default function Clients() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce client ?")) {
-      return;
-    }
+  const handleDelete = (client: Client) => {
+    setClientToDelete(client);
+    setIsDeleteDialogOpen(true);
+  };
 
-    const result = await db.clients.delete(id);
-    if (result.success) {
-      await loadClients();
-    } else {
-      setError(result.error || "Erreur lors de la suppression");
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
+
+    try {
+      const result = await db.clients.delete(clientToDelete.id);
+      if (result.success) {
+        await loadClients();
+        setIsDeleteDialogOpen(false);
+        setClientToDelete(null);
+        toast({
+          title: "Succès",
+          description: "Client supprimé avec succès",
+        });
+      } else {
+        throw new Error(result.error || "Erreur lors de la suppression");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la suppression du client",
+        variant: "destructive",
+      });
     }
   };
 
@@ -161,12 +194,23 @@ export default function Clients() {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => handleDelete(client.id)}
+        onClick={() => handleDelete(client)}
       >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
   );
+
+  if (loading && !isDialogOpen) {
+    return (
+      <div className="p-6 flex flex-col gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">Gestion des clients</h1>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 flex flex-col gap-2">
@@ -224,6 +268,36 @@ export default function Clients() {
           />
         </CardContent>
       </Card>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le client "{clientToDelete?.name}" ? 
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

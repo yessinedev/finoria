@@ -36,11 +36,11 @@ function initDatabase() {
   db.pragma("cache_size = 10000"); // Increase cache size
   db.pragma("temp_store = MEMORY"); // Store temporary tables in memory
 
+  // Create tables first
+  createTables(db);
+
   // Create indexes for better query performance
   createIndexes(db);
-
-  // Create tables
-  createTables(db);
 }
 
 function createWindow() {
@@ -92,6 +92,7 @@ app.whenReady().then(() => {
   const invoicesHandlers = require("./ipc-handlers/invoices");
   const pdfHandlers = require("./ipc-handlers/pdf");
   const quotesHandlers = require("./ipc-handlers/quotes");
+  const suppliersHandlers = require("./ipc-handlers/suppliers");
 
   categoriesHandlers(ipcMain, db, notifyDataChange);
   clientsHandlers(ipcMain, db, notifyDataChange);
@@ -101,6 +102,7 @@ app.whenReady().then(() => {
   invoicesHandlers(ipcMain, db, notifyDataChange);
   quotesHandlers(ipcMain, db, notifyDataChange);
   pdfHandlers(ipcMain, db, mainWindow);
+  suppliersHandlers(ipcMain, db, notifyDataChange);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

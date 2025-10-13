@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,8 @@ import { FormField } from "@/components/common/FormField";
 import { EntitySelect } from "@/components/common/EntitySelect";
 import { Label } from "@/components/ui/label";
 import type { Category, Product } from "@/types/types";
+import { productSchema } from "@/lib/validation/schemas";
+import { z } from "zod";
 
 interface ProductFormModalProps {
   open: boolean;
@@ -31,7 +34,50 @@ export default function ProductFormModal({
   setFormData,
   onReset,
 }: ProductFormModalProps) {
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const activeCategories = categories.filter((cat) => cat.isActive);
+  
+  // Clear error when form fields change
+  useEffect(() => {
+    setErrors({});
+  }, [formData]);
+
+  const validateForm = () => {
+    try {
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        category: formData.category,
+        stock: formData.stock,
+        isActive: formData.isActive,
+      };
+      
+      productSchema.parse(productData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            newErrors[err.path[0]] = err.message;
+          }
+        });
+        setErrors(newErrors);
+        return false;
+      }
+      return false;
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      onSubmit(formData, editingProduct);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -43,17 +89,18 @@ export default function ProductFormModal({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData, editingProduct); }} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <FormField
-              label="Nom du produit"
+              label="Nom du produit *"
               id="productName"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+              error={errors.name}
             />
             <EntitySelect
-              label="Catégorie"
+              label="Catégorie *"
               id="category"
               value={formData.category}
               onChange={(value) => setFormData({ ...formData, category: value })}
@@ -61,6 +108,7 @@ export default function ProductFormModal({
               getOptionLabel={(cat) => cat.name}
               getOptionValue={(cat) => cat.name}
               required
+              error={errors.category}
             />
           </div>
           <FormField
@@ -69,15 +117,17 @@ export default function ProductFormModal({
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             textarea
+            error={errors.description}
           />
           <div className="grid grid-cols-2 gap-4">
             <FormField
-              label="Prix unitaire (€)"
+              label="Prix unitaire (€) *"
               id="price"
               type="number"
               value={formData.price.toString()}
               onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
               required
+              error={errors.price}
             />
             <FormField
               label="Stock (0 pour les services)"
@@ -85,6 +135,7 @@ export default function ProductFormModal({
               type="number"
               value={formData.stock.toString()}
               onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
+              error={errors.stock}
             />
           </div>
           <div className="flex items-center space-x-2">
