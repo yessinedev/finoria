@@ -50,6 +50,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { pdf } from "@react-pdf/renderer";
 import SupplierInvoicePDF from "./supplier-invoice-pdf";
+import SupplierInvoicePreview from "./supplier-invoice-preview";
 import {
   Command,
   CommandEmpty,
@@ -286,7 +287,8 @@ export default function SupplierInvoices() {
 
       const response = await db.supplierInvoices.create(invoiceData);
       if (response.success && response.data) {
-        setInvoices([...invoices, response.data]);
+        // Refresh invoices to get the complete data with supplier information
+        await loadInvoices();
         resetForm();
         setIsDialogOpen(false);
         toast({
@@ -335,9 +337,8 @@ export default function SupplierInvoices() {
 
       const response = await db.supplierInvoices.update(currentInvoice.id, invoiceData);
       if (response.success && response.data) {
-        setInvoices(
-          invoices.map((i) => (i.id === currentInvoice.id ? response.data : i))
-        );
+        // Refresh invoices to get the complete data with supplier information
+        await loadInvoices();
         resetForm();
         setIsDialogOpen(false);
         toast({
@@ -1001,6 +1002,18 @@ export default function SupplierInvoices() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {selectedInvoice && (
+        <SupplierInvoicePreview
+          invoice={selectedInvoice}
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          onPrint={(invoice) => {
+            // Handle print functionality if needed
+            setIsPreviewOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

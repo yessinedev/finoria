@@ -120,6 +120,10 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/inventory/inventory";
       case "stock-movements":
         return "/inventory/movements";
+      case "client-payments":
+        return "/payments/clients";
+      case "supplier-payments":
+        return "/payments/suppliers";
       case "settings":
         return "/settings";
       default:
