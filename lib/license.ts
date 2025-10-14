@@ -9,7 +9,7 @@ export async function verifyLicense() {
   const fingerprint = await db.device.getFingerprint();
 
   try {
-    const res = await fetch("https://your-server.com/api/verify", {
+    const res = await fetch("https://license.etudionet.life/api/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ licenseKey, fingerprint }),

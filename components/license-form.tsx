@@ -34,7 +34,7 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
       const result = await db.device.getFingerprint();
       const fingerprint = result.data;
 
-      const res = await fetch("https://your-server.com/api/activate", {
+      const res = await fetch("https://license.etudionet.life/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
