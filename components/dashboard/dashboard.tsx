@@ -70,7 +70,7 @@ export default function Dashboard() {
       key: "amount" as keyof (typeof stats.recentSales)[0],
       label: "Montant",
       sortable: true,
-      render: (value: number) => `${value.toFixed(3)} TND`,
+      render: (value: number) => `${(value || 0).toFixed(3)} TND`,
     },
     {
       key: "date" as keyof (typeof stats.recentSales)[0],
@@ -91,7 +91,7 @@ export default function Dashboard() {
       ],
       render: (value: string) => (
         <Badge variant={value === "Payée" ? "default" : value === "En retard" ? "destructive" : "secondary"}>
-          {value}
+          {value || "Inconnu"}
         </Badge>
       ),
     },
@@ -120,25 +120,38 @@ export default function Dashboard() {
     setLoading(true)
     setError(null)
 
-    // Pass the dateRange parameter to the IPC call
-    const result = await db.dashboard.getStats(dateRange)
-    if (result.success) {
-      // Use real stats from database
-      const baseStats = result.data || {}
+    try {
+      // Pass the dateRange parameter to the IPC call
+      const result = await db.dashboard.getStats(dateRange)
+      if (result.success) {
+        // Use real stats from database
+        const baseStats = result.data || {}
 
-      // Enhanced stats with additional calculations
-      const enhancedStats = {
-        ...baseStats,
-        activeClients: Math.floor(baseStats.totalClients * 0.7), // This could be improved with real data
-        salesByMonth: baseStats.salesByMonth || [],
-        topProducts: baseStats.topProducts || [],
-        clientDistribution: baseStats.clientDistribution || [],
+        // Ensure all required fields have default values
+        const enhancedStats: DashboardStats = {
+          todayRevenue: baseStats.todayRevenue || 0,
+          monthlyRevenue: baseStats.monthlyRevenue || 0,
+          totalClients: baseStats.totalClients || 0,
+          activeClients: baseStats.activeClients || Math.floor((baseStats.totalClients || 0) * 0.7),
+          totalProducts: baseStats.totalProducts || 0,
+          lowStockProducts: baseStats.lowStockProducts || 0,
+          totalSales: baseStats.totalSales || 0,
+          pendingInvoices: baseStats.pendingInvoices || 0,
+          overdueInvoices: baseStats.overdueInvoices || 0,
+          recentSales: baseStats.recentSales || [],
+          salesByMonth: baseStats.salesByMonth || [],
+          topProducts: baseStats.topProducts || [],
+          clientDistribution: baseStats.clientDistribution || [],
+        }
+
+        setStats(enhancedStats)
+        setLastUpdated(new Date())
+      } else {
+        setError(result.error || "Erreur lors du chargement des statistiques")
       }
-
-      setStats(enhancedStats)
-      setLastUpdated(new Date())
-    } else {
-      setError(result.error || "Erreur lors du chargement des statistiques")
+    } catch (err) {
+      setError("Erreur inattendue lors du chargement des statistiques")
+      console.error("Dashboard stats error:", err)
     }
 
     setLoading(false)
@@ -216,7 +229,7 @@ export default function Dashboard() {
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.todayRevenue.toFixed(3)} TND</div>
+            <div className="text-2xl font-bold">{(stats.todayRevenue || 0).toFixed(3)} TND</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
               +12.5% vs hier
@@ -230,7 +243,7 @@ export default function Dashboard() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.monthlyRevenue.toFixed(3)} TND</div>
+            <div className="text-2xl font-bold">{(stats.monthlyRevenue || 0).toFixed(3)} TND</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <Target className="h-3 w-3 mr-1" />
               Objectif: 50 000 TND
@@ -244,8 +257,8 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeClients}</div>
-            <div className="text-xs text-muted-foreground">sur {stats.totalClients} clients</div>
+            <div className="text-2xl font-bold">{stats.activeClients || 0}</div>
+            <div className="text-xs text-muted-foreground">sur {stats.totalClients || 0} clients</div>
           </CardContent>
         </Card>
 
@@ -255,10 +268,10 @@ export default function Dashboard() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSales}</div>
+            <div className="text-2xl font-bold">{stats.totalSales || 0}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <Clock className="h-3 w-3 mr-1" />
-              {stats.pendingInvoices} en attente
+              {stats.pendingInvoices || 0} en attente
             </div>
           </CardContent>
         </Card>
@@ -273,9 +286,9 @@ export default function Dashboard() {
           <CardContent>
             <ChartContainer>
               <LineChart
-                data={stats.salesByMonth.map((item) => ({
-                  name: item.month,
-                  value: item.revenue,
+                data={(stats.salesByMonth || []).map((item) => ({
+                  name: item.month || "Inconnu",
+                  value: item.revenue || 0,
                 }))}
                 height={250}
               />
@@ -289,7 +302,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ChartContainer>
-              <PieChart data={stats.clientDistribution} size={250} />
+              <PieChart data={stats.clientDistribution || []} size={250} />
             </ChartContainer>
           </CardContent>
         </Card>
@@ -304,9 +317,9 @@ export default function Dashboard() {
           <CardContent>
             <ChartContainer>
               <BarChart
-                data={stats.topProducts.map((product) => ({
-                  name: product.name.split(" ")[0], // Shortened name
-                  value: product.revenue,
+                data={(stats.topProducts || []).map((product) => ({
+                  name: (product.name || "Inconnu").split(" ")[0], // Shortened name
+                  value: product.revenue || 0,
                   color: "bg-blue-500",
                 }))}
                 height={200}
@@ -322,9 +335,9 @@ export default function Dashboard() {
           <CardContent>
             <ChartContainer>
               <BarChart
-                data={stats.salesByMonth.map((item) => ({
-                  name: item.month,
-                  value: item.sales,
+                data={(stats.salesByMonth || []).map((item) => ({
+                  name: item.month || "Inconnu",
+                  value: item.sales || 0,
                   color: "bg-green-500",
                 }))}
                 height={200}
@@ -376,23 +389,27 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.topProducts.map((product, index) => (
-                <div key={index} className="flex items-center justify-between border-b pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <Package className="h-4 w-4 text-primary" />
+              {stats.topProducts && stats.topProducts.length > 0 ? (
+                stats.topProducts.map((product, index) => (
+                  <div key={index} className="flex items-center justify-between border-b pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <Package className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{product.name || "Produit inconnu"}</p>
+                        <p className="text-sm text-muted-foreground">{product.quantity || 0} vendus</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">{product.quantity} vendus</p>
+                    <div className="text-right">
+                      <p className="font-medium">{(product.revenue || 0).toFixed(3)} TND</p>
+                      <p className="text-sm text-muted-foreground">Revenu</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{product.revenue.toFixed(3)} TND</p>
-                    <p className="text-sm text-muted-foreground">Revenu</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-muted-foreground text-center py-4">Aucun produit vendu</p>
+              )}
             </div>
           </CardContent>
         </Card>

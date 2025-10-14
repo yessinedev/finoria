@@ -145,11 +145,13 @@ export default function Invoices() {
         { label: "En retard", value: "En retard" },
         { label: "Annulée", value: "Annulée" },
       ],
-      render: (value: Invoice["status"]) => (
-        <Badge variant={getStatusVariant(value)} className="flex items-center gap-1 w-fit">
-          {getStatusIcon(value)}
-          {value}
-        </Badge>
+      render: (value: Invoice["status"], invoice: Invoice) => (
+        <div className="flex items-center gap-2">
+          <Badge variant={getStatusVariant(value)} className="flex items-center gap-1 w-fit">
+            {getStatusIcon(value)}
+            {value}
+          </Badge>
+        </div>
       ),
     },
   ]
@@ -287,7 +289,7 @@ export default function Invoices() {
       const result = await db.invoices.updateStatus(invoiceId, newStatus)
       if (result.success) {
         await loadData()
-        setIsPreviewOpen(false)
+        // Don't close the preview modal since we're updating directly from the table
       } else {
         setError(result.error || "Erreur lors de la mise à jour")
       }
@@ -314,7 +316,19 @@ export default function Invoices() {
   )
 
   const renderActions = (invoice: Invoice) => (
-    <div className="flex justify-end gap-2">
+    <div className="flex justify-end gap-2 items-center">
+      {/* Status dropdown for direct update */}
+      <select
+        value={invoice.status}
+        onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
+        className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="En attente">En attente</option>
+        <option value="Payée">Payée</option>
+        <option value="En retard">En retard</option>
+        <option value="Annulée">Annulée</option>
+      </select>
+      
       <Button variant="outline" size="sm" onClick={() => handleViewInvoice(invoice)}>
         <Eye className="h-4 w-4" />
       </Button>

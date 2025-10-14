@@ -161,33 +161,50 @@ module.exports = (ipcMain, db) => {
       
       // Convert to the expected format
       const clientDistribution = clientDistributionRaw.map(item => ({
-        name: item.clientType,
-        value: item.count
+        name: item.clientType || 'Inconnu',
+        value: item.count || 0
       }));
       
-      // Add "Associations" with 0 if not present
-      const existingTypes = clientDistribution.map(item => item.name);
-      if (!existingTypes.includes('Associations')) {
-        clientDistribution.push({ name: 'Associations', value: 0 });
-      }
+      // Ensure we have all client types
+      const clientTypes = ['Entreprises', 'Particuliers', 'Associations'];
+      clientTypes.forEach(type => {
+        if (!clientDistribution.find(item => item.name === type)) {
+          clientDistribution.push({ name: type, value: 0 });
+        }
+      });
       
+      // Return properly formatted data
       return {
-        todayRevenue: todayRevenue.revenue,
-        monthlyRevenue: monthlyRevenue.revenue,
-        totalClients: totalClients.count,
-        totalProducts: totalProducts.count,
-        lowStockProducts: lowStockProducts.count,
-        totalSales: totalSales.count,
-        pendingInvoices: pendingInvoices.count,
-        overdueInvoices: overdueInvoices.count,
-        recentSales,
-        salesByMonth,
-        topProducts,
-        clientDistribution,
+        todayRevenue: todayRevenue.revenue || 0,
+        monthlyRevenue: monthlyRevenue.revenue || 0,
+        totalClients: totalClients.count || 0,
+        totalProducts: totalProducts.count || 0,
+        lowStockProducts: lowStockProducts.count || 0,
+        totalSales: totalSales.count || 0,
+        pendingInvoices: pendingInvoices.count || 0,
+        overdueInvoices: overdueInvoices.count || 0,
+        recentSales: recentSales || [],
+        salesByMonth: salesByMonth || [],
+        topProducts: topProducts || [],
+        clientDistribution: clientDistribution || [],
       };
     } catch (error) {
       console.error("Error getting dashboard stats:", error);
-      throw new Error("Erreur lors de la récupération des statistiques");
+      // Return default values in case of error
+      return {
+        todayRevenue: 0,
+        monthlyRevenue: 0,
+        totalClients: 0,
+        totalProducts: 0,
+        lowStockProducts: 0,
+        totalSales: 0,
+        pendingInvoices: 0,
+        overdueInvoices: 0,
+        recentSales: [],
+        salesByMonth: [],
+        topProducts: [],
+        clientDistribution: [],
+      };
     }
   });
 };
