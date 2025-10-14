@@ -28,6 +28,7 @@ interface ElectronAPI {
   createSupplierInvoice: (invoice: any) => Promise<any>;
   updateSupplierInvoice: (id: number, invoice: any) => Promise<any>;
   deleteSupplierInvoice: (id: number) => Promise<boolean>;
+  updateSupplierInvoiceStatus: (id: number, status: string) => Promise<any>;
 
   // Products
   getProducts: () => Promise<any[]>;
@@ -188,6 +189,7 @@ class DatabaseService {
     create: (invoice: any) => this.handle(() => window.electronAPI?.createSupplierInvoice(invoice) || Promise.resolve(null), "createSupplierInvoice"),
     update: (id: number, invoice: any) => this.handle(() => window.electronAPI?.updateSupplierInvoice(id, invoice) || Promise.resolve(null), "updateSupplierInvoice"),
     delete: (id: number) => this.handle(() => window.electronAPI?.deleteSupplierInvoice(id) || Promise.resolve(false), "deleteSupplierInvoice"),
+    updateStatus: (id: number, status: string) => this.handle(() => window.electronAPI?.updateSupplierInvoiceStatus(id, status) || Promise.resolve(null), "updateSupplierInvoiceStatus"),
   };
 
   // --- Products API ---

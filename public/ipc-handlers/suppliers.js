@@ -192,15 +192,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         WHERE id = ?
       `);
       
-      const deleteItems = db.prepare("DELETE FROM supplier_order_items WHERE orderId = ?");
-      const insertItem = db.prepare(`
-        INSERT INTO supplier_order_items (
-          orderId, productId, productName, quantity, unitPrice, totalPrice
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      
       // Update order
-      updateOrder.run(
+      const updateResult = updateOrder.run(
         order.supplierId,
         order.orderNumber,
         order.totalAmount,
@@ -211,19 +204,34 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         id
       );
       
-      // Delete existing items
-      deleteItems.run(id);
+      // Check if the update was successful
+      if (updateResult.changes === 0) {
+        throw new Error("Aucune commande trouvée avec cet ID");
+      }
       
-      // Insert new items
-      for (const item of order.items) {
-        insertItem.run(
-          id,
-          item.productId,
-          item.productName,
-          item.quantity,
-          item.unitPrice,
-          item.totalPrice
-        );
+      // Only process items if they exist
+      if (order.items && Array.isArray(order.items)) {
+        const deleteItems = db.prepare("DELETE FROM supplier_order_items WHERE orderId = ?");
+        const insertItem = db.prepare(`
+          INSERT INTO supplier_order_items (
+            orderId, productId, productName, quantity, unitPrice, totalPrice
+          ) VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        
+        // Delete existing items
+        deleteItems.run(id);
+        
+        // Insert new items
+        for (const item of order.items) {
+          insertItem.run(
+            id,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.totalPrice
+          );
+        }
       }
       
       const updatedOrder = {
@@ -236,7 +244,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return updatedOrder;
     } catch (error) {
       console.error("Error updating supplier order:", error);
-      throw new Error("Erreur lors de la mise à jour de la commande fournisseur");
+      throw new Error(`Erreur lors de la mise à jour de la commande fournisseur: ${error.message}`);
     }
   });
 
@@ -376,6 +384,18 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     } catch (error) {
       console.error("Error deleting supplier invoice:", error);
       throw error;
+    }
+  });
+
+  ipcMain.handle("update-supplier-invoice-status", async (event, id, status) => {
+    try {
+      const stmt = db.prepare("UPDATE supplier_invoices SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?");
+      stmt.run(status, id);
+      notifyDataChange("supplier_invoices", "update", { id, status });
+      return { id, status };
+    } catch (error) {
+      console.error("Error updating supplier invoice status:", error);
+      throw new Error("Erreur lors de la mise à jour du statut de facture fournisseur");
     }
   });
 

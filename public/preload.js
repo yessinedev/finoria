@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createSupplierInvoice: (invoice) => ipcRenderer.invoke("create-supplier-invoice", invoice),
   updateSupplierInvoice: (id, invoice) => ipcRenderer.invoke("update-supplier-invoice", id, invoice),
   deleteSupplierInvoice: (id) => ipcRenderer.invoke("delete-supplier-invoice", id),
+  updateSupplierInvoiceStatus: (id, status) => ipcRenderer.invoke("update-supplier-invoice-status", id, status),
 
   // --- Products API ---
   getProducts: () => ipcRenderer.invoke("get-products"),
