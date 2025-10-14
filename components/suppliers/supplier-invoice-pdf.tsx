@@ -1,195 +1,255 @@
-import React from 'react';
-import { Page, Text, View, Document, StyleSheet, Font } from '@react-pdf/renderer';
+import React from "react"
+import {
+  Document,
+  Page,
+  View,
+  Text,
+  StyleSheet,
+} from "@react-pdf/renderer"
+import type { SupplierInvoice } from "@/types/types";
 
-// Register font
-Font.register({
-  family: 'Roboto',
-  src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-light-webfont.ttf',
-  fontWeight: 'normal',
-});
+function formatDate(dateString: string) {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
-Font.register({
-  family: 'Roboto',
-  src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-bold-webfont.ttf',
-  fontWeight: 'bold',
-});
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'TND',
+  })
+    .format(amount)
+    .replace(/\u202F/g, ' ')
+}
 
-// Create styles
 const styles = StyleSheet.create({
   page: {
-    flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
-    padding: 40,
-    fontFamily: 'Roboto',
+    fontSize: 11,
+    padding: 32,
+    backgroundColor: '#fff',
+    color: '#222',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#e0e7ff',
+    paddingBottom: 8,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#6366f1',
+    fontWeight: 700,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  logoBox: {
+    backgroundColor: '#eef2ff',
+    borderRadius: 8,
+    padding: 8,
+    marginRight: 8,
   },
   section: {
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 8,
   },
-  heading: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  card: {
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#f8fafc',
   },
-  row: {
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#6366f1',
+    marginBottom: 4,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
+    alignItems: 'center',
   },
-  label: {
-    fontSize: 12,
-    fontWeight: 'normal',
-  },
-  value: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  cardContent: {
+    fontSize: 11,
+    color: '#222',
   },
   table: {
-    width: '100%',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: '#000',
-    marginBottom: 20,
+    width: 'auto',
+    marginTop: 8,
+    marginBottom: 8,
   },
   tableRow: {
     flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    alignItems: 'center',
   },
-  tableColHeader: {
-    width: '25%',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: '#000',
-    backgroundColor: '#f0f0f0',
-    padding: 5,
-  },
-  tableCol: {
-    width: '25%',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: '#000',
-    padding: 5,
-  },
-  tableCellHeader: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  tableHeader: {
+    backgroundColor: '#eef2ff',
+    fontWeight: 700,
   },
   tableCell: {
+    padding: 6,
+    fontSize: 11,
+    flexGrow: 1,
+  },
+  tableCellRight: {
+    textAlign: 'right',
+    flexGrow: 1,
+  },
+  totalsBox: {
+    marginTop: 12,
+    marginLeft: 'auto',
+    width: 220,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 10,
+  },
+  totalsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  totalsLabel: {
+    color: '#64748b',
+  },
+  totalsValue: {
+    fontWeight: 700,
+  },
+  notes: {
+    marginTop: 12,
     fontSize: 10,
+    color: '#64748b',
   },
   footer: {
     position: 'absolute',
-    bottom: 40,
-    left: 40,
-    right: 40,
-    textAlign: 'center',
-    fontSize: 10,
+    bottom: 32,
+    left: 32,
+    right: 32,
+    fontSize: 9,
     color: '#888',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingTop: 8,
+    textAlign: 'center',
   },
-});
+})
 
-interface SupplierInvoicePDFProps {
-  invoice: any; // Replace with proper type
-}
-
-const SupplierInvoicePDF: React.FC<SupplierInvoicePDFProps> = ({ invoice }) => {
+export function SupplierInvoicePDFDocument({ invoice }: { invoice: SupplierInvoice }) {
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={styles.page} wrap>
+        {/* Header */}
         <View style={styles.header}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.logoBox}>
+              <Text style={{ fontSize: 20, fontWeight: 700, color: '#6366f1' }}>GV</Text>
+            </View>
+            <View>
+              <Text style={styles.title}>FACTURE FOURNISSEUR</Text>
+              <Text style={styles.subtitle}>Gestion & Facturation</Text>
+            </View>
+          </View>
           <View>
-            <Text style={styles.title}>FACTURE FOURNISSEUR</Text>
-            <Text style={styles.label}>Numéro: {invoice.invoiceNumber}</Text>
-            <Text style={styles.label}>Date: {new Date(invoice.issueDate).toLocaleDateString('fr-FR')}</Text>
-          </View>
-          <View>
-            <Text style={styles.heading}>Fournisseur</Text>
-            <Text style={styles.label}>{invoice.supplierName}</Text>
-            {invoice.supplierCompany && <Text style={styles.label}>{invoice.supplierCompany}</Text>}
+            <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{invoice.invoiceNumber}</Text>
+            <Text style={styles.subtitle}>Date: {formatDate(invoice.issueDate)}</Text>
+            <Text style={styles.subtitle}>Échéance: {formatDate(invoice.dueDate || '')}</Text>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Date d'émission:</Text>
-            <Text style={styles.value}>{new Date(invoice.issueDate).toLocaleDateString('fr-FR')}</Text>
+        {/* Company & Supplier Info */}
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+          <View style={[styles.card, { flex: 1 }]}> {/* Company */}
+            <Text style={styles.cardTitle}>Émetteur</Text>
+            <Text style={styles.cardContent}>GestVente SARL</Text>
+            <Text style={styles.cardContent}>123 Rue de l'Entreprise, 75001 Paris</Text>
+            <Text style={styles.cardContent}>Tél: 01 23 45 67 89</Text>
+            <Text style={styles.cardContent}>contact@gestvente.fr</Text>
+            <Text style={styles.cardContent}>SIRET: 123 456 789 00012</Text>
+            <Text style={styles.cardContent}>TVA: FR12345678901</Text>
           </View>
-          {invoice.dueDate && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Date d'échéance:</Text>
-              <Text style={styles.value}>{new Date(invoice.dueDate).toLocaleDateString('fr-FR')}</Text>
-            </View>
-          )}
-          <View style={styles.row}>
-            <Text style={styles.label}>Statut:</Text>
-            <Text style={styles.value}>{invoice.status}</Text>
+          <View style={[styles.card, { flex: 1 }]}> {/* Supplier */}
+            <Text style={styles.cardTitle}>Fournisseur</Text>
+            <Text style={styles.cardContent}>{invoice.supplierName}</Text>
+            {invoice.supplierCompany && <Text style={styles.cardContent}>{invoice.supplierCompany}</Text>}
+            {/* Add supplier contact info if available in your data model */}
           </View>
         </View>
 
+        {/* Invoice Details */}
         <View style={styles.section}>
-          <Text style={styles.heading}>Détails de la facture</Text>
-          <View style={styles.table}>
-            <View style={styles.tableRow}>
-              <View style={styles.tableColHeader}>
-                <Text style={styles.tableCellHeader}>Description</Text>
-              </View>
-              <View style={styles.tableColHeader}>
-                <Text style={styles.tableCellHeader}>Quantité</Text>
-              </View>
-              <View style={styles.tableColHeader}>
-                <Text style={styles.tableCellHeader}>Prix unitaire</Text>
-              </View>
-              <View style={styles.tableColHeader}>
-                <Text style={styles.tableCellHeader}>Total</Text>
-              </View>
+          <Text style={[styles.cardTitle, { color: '#222', marginBottom: 2 }]}>Détails de la facture</Text>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.totalsLabel}>Date d'émission</Text>
+              <Text style={styles.cardContent}>{formatDate(invoice.issueDate)}</Text>
             </View>
-            {/* In a real app, you would map through invoice items here */}
-            <View style={styles.tableRow}>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>Service de consultation</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>1</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>{invoice.amount.toFixed(3)} TND</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text style={styles.tableCell}>{invoice.amount.toFixed(3)} TND</Text>
-              </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.totalsLabel}>Date d'échéance</Text>
+              <Text style={styles.cardContent}>{formatDate(invoice.dueDate || '')}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.totalsLabel}>Conditions de paiement</Text>
+              <Text style={styles.cardContent}>30 jours net</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Sous-total:</Text>
-            <Text style={styles.value}>{invoice.amount.toFixed(3)} TND</Text>
+        {/* Items Table */}
+        <View style={styles.table}>
+          <View style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>Description</Text>
+            <Text style={styles.tableCell}>Qté</Text>
+            <Text style={styles.tableCell}>Prix unitaire</Text>
+            <Text style={styles.tableCell}>Total HT</Text>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>TVA ({((invoice.taxAmount / invoice.amount) * 100).toFixed(1)}%):</Text>
-            <Text style={styles.value}>{invoice.taxAmount.toFixed(3)} TND</Text>
+          {invoice.items && invoice.items.map((item: any, idx: number) => (
+            <View style={styles.tableRow} key={item.id}>
+              <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
+              <Text style={styles.tableCell}>{item.quantity}</Text>
+              <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
+              <Text style={styles.tableCell}>{formatCurrency(item.totalPrice)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Totals */}
+        <View style={styles.totalsBox}>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>Sous-total HT:</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(invoice.amount)}</Text>
           </View>
-          <View style={styles.row}>
-            <Text style={[styles.label, { fontWeight: 'bold' }]}>Total:</Text>
-            <Text style={[styles.value, { fontWeight: 'bold' }]}>{invoice.totalAmount.toFixed(3)} TND</Text>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>TVA (19%):</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(invoice.taxAmount)}</Text>
+          </View>
+          <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
+            <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
+            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(invoice.totalAmount)}</Text>
           </View>
         </View>
 
-        <Text style={styles.footer}>
-          Merci pour votre confiance. Cette facture a été générée automatiquement par VentePro.
+        {/* Notes */}
+        <Text style={styles.notes}>Facture générée par GestVente - Solution de gestion commerciale</Text>
+
+        {/* Footer */}
+        <Text style={styles.footer} fixed>
+          Conditions de paiement : Paiement à 30 jours par virement bancaire. En cas de retard de paiement, des pénalités de 3% par mois seront appliquées.\n
+          Coordonnées bancaires : IBAN: FR76 1234 5678 9012 3456 7890 123 | BIC: ABCDEFGH | Banque: Crédit Exemple\n
+          GestVente SARL - Capital social: 10 000€ - RCS Paris 123 456 789
         </Text>
       </Page>
     </Document>
-  );
-};
+  )
+}
 
-export default SupplierInvoicePDF;
+export default SupplierInvoicePDFDocument

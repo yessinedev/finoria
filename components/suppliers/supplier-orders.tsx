@@ -285,7 +285,8 @@ export default function SupplierOrders() {
           }
         }
         
-        setOrders([...orders, response.data]);
+        // Refresh orders to get the complete data with supplier information
+        await loadOrders();
         resetForm();
         setIsDialogOpen(false);
         toast({
@@ -445,9 +446,8 @@ export default function SupplierOrders() {
           }
         }
         
-        setOrders(
-          orders.map((o) => (o.id === currentOrder.id ? response.data : o))
-        );
+        // Refresh orders to get the complete data with supplier information
+        await loadOrders();
         resetForm();
         setIsDialogOpen(false);
         toast({
