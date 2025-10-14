@@ -64,6 +64,18 @@ interface ElectronAPI {
   createStockMovement: (movement: any) => Promise<any>;
   getStockMovementsByProduct: (productId: number) => Promise<any[]>;
 
+  // Client Payments
+  getClientPayments: () => Promise<any[]>;
+  createClientPayment: (payment: any) => Promise<any>;
+  updateClientPayment: (id: number, payment: any) => Promise<any>;
+  deleteClientPayment: (id: number) => Promise<boolean>;
+
+  // Supplier Payments
+  getSupplierPayments: () => Promise<any[]>;
+  createSupplierPayment: (payment: any) => Promise<any>;
+  updateSupplierPayment: (id: number, payment: any) => Promise<any>;
+  deleteSupplierPayment: (id: number) => Promise<boolean>;
+
   // Enterprise Settings
   getEnterpriseSettings: () => Promise<any>;
   updateEnterpriseSettings: (settings: any) => Promise<any>;
@@ -232,6 +244,23 @@ class DatabaseService {
     get: () => this.handle(() => window.electronAPI?.getEnterpriseSettings() || Promise.resolve({}), "getEnterpriseSettings"),
     update: (settings: any) => this.handle(() => window.electronAPI?.updateEnterpriseSettings(settings) || Promise.resolve(null), "updateEnterpriseSettings"),
   };
+
+  // --- Client Payments API ---
+  clientPayments = {
+    getAll: () => this.handle(() => window.electronAPI?.getClientPayments() || Promise.resolve([]), "getClientPayments"),
+    create: (payment: any) => this.handle(() => window.electronAPI?.createClientPayment(payment) || Promise.resolve(null), "createClientPayment"),
+    update: (id: number, payment: any) => this.handle(() => window.electronAPI?.updateClientPayment(id, payment) || Promise.resolve(null), "updateClientPayment"),
+    delete: (id: number) => this.handle(() => window.electronAPI?.deleteClientPayment(id) || Promise.resolve(false), "deleteClientPayment"),
+  };
+
+  // --- Supplier Payments API ---
+  supplierPayments = {
+    getAll: () => this.handle(() => window.electronAPI?.getSupplierPayments() || Promise.resolve([]), "getSupplierPayments"),
+    create: (payment: any) => this.handle(() => window.electronAPI?.createSupplierPayment(payment) || Promise.resolve(null), "createSupplierPayment"),
+    update: (id: number, payment: any) => this.handle(() => window.electronAPI?.updateSupplierPayment(id, payment) || Promise.resolve(null), "updateSupplierPayment"),
+    delete: (id: number) => this.handle(() => window.electronAPI?.deleteSupplierPayment(id) || Promise.resolve(false), "deleteSupplierPayment"),
+  };
+
 
 }
 

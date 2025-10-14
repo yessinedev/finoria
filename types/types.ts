@@ -233,3 +233,33 @@ export interface StockMovement {
   reason: string;
   createdAt: string;
 }
+
+export interface ClientPayment {
+  id: number;
+  clientId: number;
+  clientName?: string;
+  clientCompany?: string;
+  invoiceId?: number;
+  invoiceNumber?: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod?: string;
+  reference?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface SupplierPayment {
+  id: number;
+  supplierId: number;
+  supplierName?: string;
+  supplierCompany?: string;
+  invoiceId?: number;
+  invoiceNumber?: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod?: string;
+  reference?: string;
+  notes?: string;
+  createdAt: string;
+}

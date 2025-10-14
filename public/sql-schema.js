@@ -212,6 +212,40 @@ function createTables(db) {
     )
   `);
 
+  // Client payments table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS client_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clientId INTEGER NOT NULL,
+      invoiceId INTEGER,
+      amount REAL NOT NULL,
+      paymentDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paymentMethod TEXT,
+      reference TEXT,
+      notes TEXT,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (clientId) REFERENCES clients(id),
+      FOREIGN KEY (invoiceId) REFERENCES invoices(id)
+    )
+  `);
+
+  // Supplier payments table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS supplier_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplierId INTEGER NOT NULL,
+      invoiceId INTEGER,
+      amount REAL NOT NULL,
+      paymentDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paymentMethod TEXT,
+      reference TEXT,
+      notes TEXT,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (supplierId) REFERENCES suppliers(id),
+      FOREIGN KEY (invoiceId) REFERENCES supplier_invoices(id)
+    )
+  `);
+
   // Insert default settings if table is empty
   const settingsCount = db.prepare("SELECT COUNT(*) as count FROM enterprise_settings").get();
   if (settingsCount.count === 0) {
@@ -246,6 +280,12 @@ function createIndexes(db) {
       CREATE INDEX IF NOT EXISTS idx_supplier_invoices_supplier ON supplier_invoices(supplierId);
       CREATE INDEX IF NOT EXISTS idx_supplier_invoices_date ON supplier_invoices(issueDate);
       CREATE INDEX IF NOT EXISTS idx_supplier_invoices_status ON supplier_invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_client_payments_client ON client_payments(clientId);
+      CREATE INDEX IF NOT EXISTS idx_client_payments_invoice ON client_payments(invoiceId);
+      CREATE INDEX IF NOT EXISTS idx_client_payments_date ON client_payments(paymentDate);
+      CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier ON supplier_payments(supplierId);
+      CREATE INDEX IF NOT EXISTS idx_supplier_payments_invoice ON supplier_payments(invoiceId);
+      CREATE INDEX IF NOT EXISTS idx_supplier_payments_date ON supplier_payments(paymentDate);
     `);
   } catch (error) {
     console.error("Error creating indexes:", error);
