@@ -245,7 +245,7 @@ export function SupplierInvoicePDFDocument({ invoice }: { invoice: SupplierInvoi
         <Text style={styles.footer} fixed>
           Conditions de paiement : Paiement à 30 jours par virement bancaire. En cas de retard de paiement, des pénalités de 3% par mois seront appliquées.\n
           Coordonnées bancaires : IBAN: FR76 1234 5678 9012 3456 7890 123 | BIC: ABCDEFGH | Banque: Crédit Exemple\n
-          GestVente SARL - Capital social: 10 000€ - RCS Paris 123 456 789
+          GestVente SARL - Capital social: 10 000TND - RCS Paris 123 456 789
         </Text>
       </Page>
     </Document>

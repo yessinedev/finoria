@@ -45,7 +45,7 @@ interface ElectronAPI {
   updateSaleStatus: (id: number, status: string) => Promise<any>;
 
   // Dashboard
-  getDashboardStats: () => Promise<any>;
+  getDashboardStats: (dateRange?: string) => Promise<any>;
 
   // Invoices
   getInvoices: () => Promise<any[]>;
@@ -211,7 +211,7 @@ class DatabaseService {
 
   // --- Dashboard API ---
   dashboard = {
-    getStats: () => this.handle(() => window.electronAPI?.getDashboardStats() || Promise.resolve({}), "getDashboardStats"),
+    getStats: (dateRange?: string) => this.handle(() => window.electronAPI?.getDashboardStats(dateRange) || Promise.resolve({}), "getDashboardStats"),
   };
 
   // --- Invoices API ---

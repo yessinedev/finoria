@@ -18,12 +18,12 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
         <div className="space-y-2">
           <div><strong>Client:</strong> {sale.clientName}</div>
           <div><strong>Date:</strong> {new Date(sale.saleDate).toLocaleDateString("fr-FR")}</div>
-          <div><strong>Montant TTC:</strong> {sale.totalAmount + sale.taxAmount} €</div>
+          <div><strong>Montant TTC:</strong> {sale.totalAmount + sale.taxAmount} TND</div>
           <div><strong>Statut:</strong> {sale.status}</div>
           <div><strong>Articles:</strong>
             <ul className="list-disc ml-6">
               {sale.items?.map((item) => (
-                <li key={item.id}>{item.productName} x{item.quantity} ({item.unitPrice} €)</li>
+                <li key={item.id}>{item.productName} x{item.quantity} ({item.unitPrice} TND)</li>
               ))}
             </ul>
           </div>
