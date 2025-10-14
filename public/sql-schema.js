@@ -192,23 +192,21 @@ function createTables(db) {
     )
   `);
 
-  // Enterprise settings table
+  // Companies table
   db.exec(`
-    CREATE TABLE IF NOT EXISTS enterprise_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1), -- Only one row
-      companyName TEXT,
-      address TEXT,
-      city TEXT,
-      postalCode TEXT,
-      country TEXT,
-      phone TEXT,
-      email TEXT,
-      taxId TEXT,
-      invoicePrefix TEXT DEFAULT 'INV',
-      nextInvoiceNumber INTEGER DEFAULT 1001,
-      paymentDueDays INTEGER DEFAULT 30,
-      defaultTaxRate REAL DEFAULT 19.0,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    CREATE TABLE IF NOT EXISTS companies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      address TEXT NOT NULL,
+      city TEXT NOT NULL,
+      country TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT NOT NULL,
+      website TEXT,
+      taxId TEXT NOT NULL,
+      taxStatus TEXT,
+      tvaNumber INTEGER,
+      tvaRate INTEGER
     )
   `);
 
@@ -246,11 +244,12 @@ function createTables(db) {
     )
   `);
 
-  // Insert default settings if table is empty
-  const settingsCount = db.prepare("SELECT COUNT(*) as count FROM enterprise_settings").get();
-  if (settingsCount.count === 0) {
+  // Insert default company if table is empty
+  const companiesCount = db.prepare("SELECT COUNT(*) as count FROM companies").get();
+  if (companiesCount.count === 0) {
     db.exec(`
-      INSERT INTO enterprise_settings (id) VALUES (1)
+      INSERT INTO companies (id, name, address, city, country, phone, email, taxId) 
+      VALUES (1, '', '', '', '', '', '', '')
     `);
   }
 }

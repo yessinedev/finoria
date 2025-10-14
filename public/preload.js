@@ -89,12 +89,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // --- Enterprise Settings API ---
   getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),
-  updateEnterpriseSettings: (settings) => ipcRenderer.invoke("update-enterprise-settings", settings),
+  createEnterpriseSettings: (settings) => ipcRenderer.invoke("create-enterprise-settings", settings),
+  updateEnterpriseSettings: (id, settings) => ipcRenderer.invoke("update-enterprise-settings", id, settings),
 
   // --- PDF Generation API ---
   generateInvoicePDF: (invoiceId) =>
     ipcRenderer.invoke("generate-invoice-pdf", invoiceId),
   openPDF: (filePath) => ipcRenderer.invoke("open-pdf", filePath),
+
+  // --- Device API ---
+  getFingerprint: () => ipcRenderer.invoke("get-machine-fingerprint"),
 
   // --- Real-time Data Updates ---
   onDataChange: (callback) => {

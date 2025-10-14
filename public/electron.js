@@ -94,6 +94,8 @@ app.whenReady().then(() => {
   const quotesHandlers = require("./ipc-handlers/quotes");
   const suppliersHandlers = require("./ipc-handlers/suppliers");
   const paymentsHandlers = require("./ipc-handlers/payments");
+  const enterpriseSettingsHandlers = require("./ipc-handlers/enterprise-settings");
+  const deviceHandlers = require("./ipc-handlers/device");
 
   categoriesHandlers(ipcMain, db, notifyDataChange);
   clientsHandlers(ipcMain, db, notifyDataChange);
@@ -105,6 +107,8 @@ app.whenReady().then(() => {
   pdfHandlers(ipcMain, db, mainWindow);
   suppliersHandlers(ipcMain, db, notifyDataChange);
   paymentsHandlers(ipcMain, db, notifyDataChange);
+  enterpriseSettingsHandlers(ipcMain, db, notifyDataChange);
+  deviceHandlers(ipcMain);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
