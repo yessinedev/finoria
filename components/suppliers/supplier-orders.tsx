@@ -79,6 +79,11 @@ export default function SupplierOrders() {
     direction: 'desc' 
   });
   
+  // Inline editing state
+  const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -199,7 +204,6 @@ export default function SupplierOrders() {
       const mainData = {
         ...formData,
         supplierId: Number(formData.supplierId),
-        items: orderItems,
       };
       
       supplierOrderSchema.parse(mainData);
@@ -328,7 +332,7 @@ export default function SupplierOrders() {
         supplierId: Number(formData.supplierId),
         totalAmount: Number(totalAmount.toFixed(3)),
         taxAmount: Number(taxAmount.toFixed(2)),
-        items: orderItems,
+        items: orderItems, // This can be empty array
       };
 
       const response = await db.supplierOrders.update(currentOrder.id, orderData);
@@ -338,7 +342,7 @@ export default function SupplierOrders() {
         const newStatus = formData.status;
         
         // If status changed to "Livrée", update stock
-        if (previousStatus !== "Livrée" && newStatus === "Livrée") {
+        if (previousStatus !== "Livrée" && newStatus === "Livrée" && orderItems.length > 0) {
           // Update product stock for each item in the order
           for (const item of orderItems) {
             try {
@@ -368,7 +372,7 @@ export default function SupplierOrders() {
         }
         
         // Handle stock updates for order items when not related to status change
-        if (previousStatus !== "Livrée" && newStatus !== "Livrée") {
+        if (previousStatus !== "Livrée" && newStatus !== "Livrée" && orderItems.length > 0) {
           // Handle quantity changes for non-delivered orders
           // First, we need to get the original order to understand what changed
           const originalOrder = orders.find(o => o.id === currentOrder.id);
@@ -547,11 +551,11 @@ export default function SupplierOrders() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "En attente":
-        return <Badge variant="secondary">En attente</Badge>;
+        return <Badge variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">En attente</Badge>;
       case "Confirmée":
         return <Badge variant="default">Confirmée</Badge>;
       case "Livrée":
-        return <Badge variant="default" className="bg-green-500">Livrée</Badge>;
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Livrée</Badge>;
       case "Annulée":
         return <Badge variant="destructive">Annulée</Badge>;
       default:
@@ -603,6 +607,115 @@ export default function SupplierOrders() {
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  const handleStatusChange = async (orderId: number, newStatus: string) => {
+    try {
+      // Find the order to update
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      // Update the order status
+      const updatedOrder = { ...order, status: newStatus };
+      const result = await db.supplierOrders.update(orderId, updatedOrder);
+      
+      if (result.success) {
+        // Check if status changed to "Livrée" and update stock if needed
+        const previousStatus = order.status;
+        if (previousStatus !== "Livrée" && newStatus === "Livrée") {
+          // Update product stock for each item in the order
+          for (const item of (order.items || [])) {
+            try {
+              // Get current stock
+              const stockResponse = await db.products.getStock(item.productId);
+              const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
+              
+              // Update stock (add quantity from purchase order)
+              const newStock = currentStock + item.quantity;
+              await db.products.updateStock(item.productId, newStock);
+              
+              // Create stock movement record
+              await db.stockMovements.create({
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                movementType: 'IN',
+                sourceType: 'supplier_order',
+                sourceId: orderId,
+                reference: order.orderNumber,
+                reason: 'Purchase order delivered'
+              });
+            } catch (stockError) {
+              console.error(`Failed to update stock for product ${item.productId}:`, stockError);
+            }
+          }
+        }
+        
+        await loadOrders();
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la mise à jour du statut",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Inline editing functions
+  const startEditing = (orderId: number, field: string, value: string) => {
+    setEditingOrderId(orderId);
+    setEditingField(field);
+    setEditingValue(value);
+  };
+
+  const saveEditing = async () => {
+    if (editingOrderId === null || editingField === null) return;
+
+    try {
+      // Find the order to update
+      const order = orders.find(o => o.id === editingOrderId);
+      if (!order) return;
+
+      // Update the specific field
+      const updatedOrder = { ...order, [editingField]: editingValue };
+      const result = await db.supplierOrders.update(editingOrderId, updatedOrder);
+      
+      if (result.success) {
+        await loadOrders();
+        setEditingOrderId(null);
+        setEditingField(null);
+        setEditingValue("");
+        toast({
+          title: "Succès",
+          description: "Commande mise à jour avec succès",
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la mise à jour",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingOrderId(null);
+    setEditingField(null);
+    setEditingValue("");
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -821,25 +934,7 @@ export default function SupplierOrders() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Statut</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="En attente">En attente</SelectItem>
-                      <SelectItem value="Confirmée">Confirmée</SelectItem>
-                      <SelectItem value="Livrée">Livrée</SelectItem>
-                      <SelectItem value="Annulée">Annulée</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+
 
               <div className="flex justify-end space-x-2">
                 <Button
@@ -849,7 +944,7 @@ export default function SupplierOrders() {
                 >
                   Annuler
                 </Button>
-                <Button type="submit" disabled={orderItems.length === 0}>
+                <Button type="submit">
                   {currentOrder ? "Mettre à jour" : "Créer"}
                 </Button>
               </div>
@@ -934,18 +1029,61 @@ export default function SupplierOrders() {
             ) : (
               currentOrders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                  <TableCell className="font-medium">
+                    {editingOrderId === order.id && editingField === 'orderNumber' ? (
+                      <Input
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={saveEditing}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+                        autoFocus
+                      />
+                    ) : (
+                      <div 
+                        onClick={() => startEditing(order.id, 'orderNumber', order.orderNumber)}
+                        className="cursor-pointer hover:underline"
+                      >
+                        {order.orderNumber}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {order.supplierName} {order.supplierCompany && `(${order.supplierCompany})`}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: fr })}
+                    {editingOrderId === order.id && editingField === 'orderDate' ? (
+                      <Input
+                        type="date"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={saveEditing}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+                        autoFocus
+                      />
+                    ) : (
+                      <div 
+                        onClick={() => startEditing(order.id, 'orderDate', order.orderDate.split('T')[0])}
+                        className="cursor-pointer hover:underline"
+                      >
+                        {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: fr })}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     {order.totalAmount.toFixed(3)} TND
                   </TableCell>
                   <TableCell>
-                    {getStatusBadge(order.status)}
+                    {/* Status dropdown for direct update */}
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="En attente">En attente</option>
+                      <option value="Confirmée">Confirmée</option>
+                      <option value="Livrée">Livrée</option>
+                      <option value="Annulée">Annulée</option>
+                    </select>
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">

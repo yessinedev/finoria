@@ -28,6 +28,7 @@ interface ElectronAPI {
   createSupplierInvoice: (invoice: any) => Promise<any>;
   updateSupplierInvoice: (id: number, invoice: any) => Promise<any>;
   deleteSupplierInvoice: (id: number) => Promise<boolean>;
+  updateSupplierInvoiceStatus: (id: number, status: string) => Promise<any>;
 
   // Products
   getProducts: () => Promise<any[]>;

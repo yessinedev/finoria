@@ -86,6 +86,11 @@ export default function SupplierInvoices() {
     direction: 'desc' 
   });
   
+  // Inline editing state
+  const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -226,7 +231,6 @@ export default function SupplierInvoices() {
         ...formData,
         supplierId: Number(formData.supplierId),
         orderId: formData.orderId ? Number(formData.orderId) : undefined,
-        items: invoiceItems,
       };
       
       supplierInvoiceSchema.parse(mainData);
@@ -444,9 +448,9 @@ export default function SupplierInvoices() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "En attente":
-        return <Badge variant="secondary">En attente</Badge>;
+        return <Badge variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">En attente</Badge>;
       case "Payée":
-        return <Badge variant="default">Payée</Badge>;
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Payée</Badge>;
       case "En retard":
         return <Badge variant="destructive">En retard</Badge>;
       case "Annulée":
@@ -479,6 +483,77 @@ export default function SupplierInvoices() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleStatusChange = async (invoiceId: number, newStatus: string) => {
+    try {
+      const result = await db.supplierInvoices.updateStatus(invoiceId, newStatus);
+      if (result.success) {
+        await loadInvoices();
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la mise à jour du statut",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Inline editing functions
+  const startEditing = (invoiceId: number, field: string, value: string) => {
+    setEditingInvoiceId(invoiceId);
+    setEditingField(field);
+    setEditingValue(value);
+  };
+
+  const saveEditing = async () => {
+    if (editingInvoiceId === null || editingField === null) return;
+
+    try {
+      // Find the invoice to update
+      const invoice = invoices.find(i => i.id === editingInvoiceId);
+      if (!invoice) return;
+
+      // Update the specific field
+      const updatedInvoice = { ...invoice, [editingField]: editingValue };
+      const result = await db.supplierInvoices.update(editingInvoiceId, updatedInvoice);
+      
+      if (result.success) {
+        await loadInvoices();
+        setEditingInvoiceId(null);
+        setEditingField(null);
+        setEditingValue("");
+        toast({
+          title: "Succès",
+          description: "Facture mise à jour avec succès",
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la mise à jour",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingInvoiceId(null);
+    setEditingField(null);
+    setEditingValue("");
   };
 
   const addInvoiceItem = () => {
@@ -772,23 +847,7 @@ export default function SupplierInvoices() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="status">Statut</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="En attente">En attente</SelectItem>
-                    <SelectItem value="Payée">Payée</SelectItem>
-                    <SelectItem value="En retard">En retard</SelectItem>
-                    <SelectItem value="Annulée">Annulée</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="paymentDate">Date de paiement</Label>
                 <Input
@@ -806,7 +865,7 @@ export default function SupplierInvoices() {
                 >
                   Annuler
                 </Button>
-                <Button type="submit" disabled={invoiceItems.length === 0}>
+                <Button type="submit">
                   {currentInvoice ? "Mettre à jour" : "Créer"}
                 </Button>
               </div>
@@ -860,11 +919,10 @@ export default function SupplierInvoices() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </div>
               </TableHead>
-              <TableHead className="cursor-pointer" onClick={() => requestSort('status')}>
+              <TableHead>
                 <div className="flex items-center gap-1">
                   <FileText className="h-4 w-4" />
                   <span>Statut</span>
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead>
@@ -891,18 +949,61 @@ export default function SupplierInvoices() {
             ) : (
               currentInvoices.map((invoice) => (
                 <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                  <TableCell className="font-medium">
+                    {editingInvoiceId === invoice.id && editingField === 'invoiceNumber' ? (
+                      <Input
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={saveEditing}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+                        autoFocus
+                      />
+                    ) : (
+                      <div 
+                        onClick={() => startEditing(invoice.id, 'invoiceNumber', invoice.invoiceNumber)}
+                        className="cursor-pointer hover:underline"
+                      >
+                        {invoice.invoiceNumber}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {invoice.supplierName} {invoice.supplierCompany && `(${invoice.supplierCompany})`}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(invoice.issueDate), "dd/MM/yyyy", { locale: fr })}
+                    {editingInvoiceId === invoice.id && editingField === 'issueDate' ? (
+                      <Input
+                        type="date"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={saveEditing}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+                        autoFocus
+                      />
+                    ) : (
+                      <div 
+                        onClick={() => startEditing(invoice.id, 'issueDate', invoice.issueDate.split('T')[0])}
+                        className="cursor-pointer hover:underline"
+                      >
+                        {format(new Date(invoice.issueDate), "dd/MM/yyyy", { locale: fr })}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     {invoice.totalAmount.toFixed(3)} TND
                   </TableCell>
                   <TableCell>
-                    {getStatusBadge(invoice.status)}
+                    {/* Status dropdown for direct update */}
+                    <select
+                      value={invoice.status}
+                      onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
+                      className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="En attente">En attente</option>
+                      <option value="Payée">Payée</option>
+                      <option value="En retard">En retard</option>
+                      <option value="Annulée">Annulée</option>
+                    </select>
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
@@ -938,6 +1039,7 @@ export default function SupplierInvoices() {
                   </TableCell>
                 </TableRow>
               ))
+
             )}
           </TableBody>
         </Table>

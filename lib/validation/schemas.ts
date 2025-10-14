@@ -25,7 +25,7 @@ export const supplierOrderSchema = z.object({
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
     totalPrice: z.number().min(0, "Le total doit être positif"),
-  })).min(1, "Au moins un article est requis"),
+  })).optional(), // Make items optional
 });
 
 // Supplier invoice validation schema
@@ -46,7 +46,7 @@ export const supplierInvoiceSchema = z.object({
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
     totalPrice: z.number().min(0, "Le total doit être positif"),
-  })).min(1, "Au moins un article est requis"),
+  })).optional(), // Make items optional
 });
 
 // Product validation schema
