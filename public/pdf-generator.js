@@ -183,7 +183,7 @@ class InvoicePDFGenerator {
         })
         .text(item.quantity.toString(), tableLeft + 220, currentRowY + 7)
         .text(
-          `${item.unitPrice.toFixed(2)} €`,
+          `${item.unitPrice.toFixed(3)} TND`,
           tableLeft + 270,
           currentRowY + 7
         )
@@ -193,7 +193,7 @@ class InvoicePDFGenerator {
           currentRowY + 7
         )
         .text(
-          `${item.totalPrice.toFixed(2)} €`,
+          `${item.totalPrice.toFixed(3)} TND`,
           tableLeft + 430,
           currentRowY + 7
         );
@@ -214,12 +214,12 @@ class InvoicePDFGenerator {
       .fillColor("#222")
       .font("Helvetica")
       .text("Sous-total HT:", totalsX + 12, boxY + 14)
-      .text(`${invoiceData.amount.toFixed(2)} €`, totalsX + 120, boxY + 14, {
+      .text(`${invoiceData.amount.toFixed(3)} TND`, totalsX + 120, boxY + 14, {
         align: "right",
         width: 80,
       })
       .text("TVA (20%):", totalsX + 12, boxY + 30)
-      .text(`${invoiceData.taxAmount.toFixed(2)} €`, totalsX + 120, boxY + 30, {
+      .text(`${invoiceData.taxAmount.toFixed(3)} TND`, totalsX + 120, boxY + 30, {
         align: "right",
         width: 80,
       });
@@ -235,7 +235,7 @@ class InvoicePDFGenerator {
       .font("Helvetica-Bold")
       .text("Total TTC:", totalsX + 12, boxY + 54)
       .text(
-        `${invoiceData.totalAmount.toFixed(2)} €`,
+        `${invoiceData.totalAmount.toFixed(3)} TND`,
         totalsX + 120,
         boxY + 54,
         { align: "right", width: 80 }
@@ -292,7 +292,7 @@ class InvoicePDFGenerator {
       .fontSize(8)
       .fillColor("#888")
       .text(
-        "GestVente SARL - Capital social: 10 000€ - RCS Paris 123 456 789",
+        "GestVente SARL - Capital social: 10 000TND - RCS Paris 123 456 789",
         40,
         footerY + 40,
         { align: "center", width: 500 }

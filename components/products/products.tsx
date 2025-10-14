@@ -97,7 +97,7 @@ export default function Products() {
       key: "price" as keyof Product,
       label: "Prix",
       sortable: true,
-      render: (value: number) => `${value.toFixed(2)} €`,
+      render: (value: number) => `${value.toFixed(3)} TND`,
     },
     {
       key: "stock" as keyof Product,

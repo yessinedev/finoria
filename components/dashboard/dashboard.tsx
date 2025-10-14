@@ -70,7 +70,7 @@ export default function Dashboard() {
       key: "amount" as keyof (typeof stats.recentSales)[0],
       label: "Montant",
       sortable: true,
-      render: (value: number) => `${value.toFixed(2)} €`,
+      render: (value: number) => `${value.toFixed(3)} TND`,
     },
     {
       key: "date" as keyof (typeof stats.recentSales)[0],
@@ -120,23 +120,19 @@ export default function Dashboard() {
     setLoading(true)
     setError(null)
 
-    const result = await db.dashboard.getStats()
+    // Pass the dateRange parameter to the IPC call
+    const result = await db.dashboard.getStats(dateRange)
     if (result.success) {
-      // Enhanced stats with additional calculations
+      // Use real stats from database
       const baseStats = result.data || {}
 
-      // Generate mock data for charts (in real app, this would come from database)
+      // Enhanced stats with additional calculations
       const enhancedStats = {
         ...baseStats,
-        monthlyRevenue: baseStats.todayRevenue * 30, // Mock calculation
-        activeClients: Math.floor(baseStats.totalClients * 0.7),
-        lowStockProducts: Math.floor(baseStats.totalProducts * 0.1),
-        totalSales: baseStats.recentSales?.length || 0,
-        pendingInvoices: 5, // Mock data
-        overdueInvoices: 2, // Mock data
-        salesByMonth: generateMonthlySalesData(),
-        topProducts: generateTopProductsData(),
-        clientDistribution: generateClientDistributionData(),
+        activeClients: Math.floor(baseStats.totalClients * 0.7), // This could be improved with real data
+        salesByMonth: baseStats.salesByMonth || [],
+        topProducts: baseStats.topProducts || [],
+        clientDistribution: baseStats.clientDistribution || [],
       }
 
       setStats(enhancedStats)
@@ -147,29 +143,6 @@ export default function Dashboard() {
 
     setLoading(false)
   }
-
-  // Mock data generators (in real app, these would be database queries)
-  const generateMonthlySalesData = () => {
-    const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun"]
-    return months.map((month) => ({
-      month,
-      revenue: Math.floor(Math.random() * 10000) + 5000,
-      sales: Math.floor(Math.random() * 50) + 20,
-    }))
-  }
-
-  const generateTopProductsData = () => [
-    { name: "Consultation technique", quantity: 25, revenue: 3000 },
-    { name: "Formation web", quantity: 8, revenue: 20000 },
-    { name: "Ordinateur Dell", quantity: 12, revenue: 10788 },
-    { name: "Licence Adobe", quantity: 15, revenue: 9000 },
-  ]
-
-  const generateClientDistributionData = () => [
-    { name: "Entreprises", value: 60 },
-    { name: "Particuliers", value: 25 },
-    { name: "Associations", value: 15 },
-  ]
 
   const handleRefresh = () => {
     loadDashboardStats()
@@ -243,7 +216,7 @@ export default function Dashboard() {
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.todayRevenue.toFixed(2)} €</div>
+            <div className="text-2xl font-bold">{stats.todayRevenue.toFixed(3)} TND</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
               +12.5% vs hier
@@ -257,10 +230,10 @@ export default function Dashboard() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.monthlyRevenue.toFixed(0)} €</div>
+            <div className="text-2xl font-bold">{stats.monthlyRevenue.toFixed(3)} TND</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <Target className="h-3 w-3 mr-1" />
-              Objectif: 50 000 €
+              Objectif: 50 000 TND
             </div>
           </CardContent>
         </Card>
@@ -322,7 +295,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Top Products and Alerts */}
+      {/* Additional KPI Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -342,6 +315,27 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance des ventes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer>
+              <BarChart
+                data={stats.salesByMonth.map((item) => ({
+                  name: item.month,
+                  value: item.sales,
+                  color: "bg-green-500",
+                }))}
+                height={200}
+              />
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Products and Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Alertes et notifications</CardTitle>
@@ -373,6 +367,33 @@ export default function Dashboard() {
                 </AlertDescription>
               </Alert>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Détails des produits populaires</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {stats.topProducts.map((product, index) => (
+                <div key={index} className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Package className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-sm text-muted-foreground">{product.quantity} vendus</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{product.revenue.toFixed(3)} TND</p>
+                    <p className="text-sm text-muted-foreground">Revenu</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>

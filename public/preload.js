@@ -52,7 +52,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-sale-status", id, status),
 
   // --- Dashboard API ---
-  getDashboardStats: () => ipcRenderer.invoke("get-dashboard-stats"),
+  getDashboardStats: (dateRange) => ipcRenderer.invoke("get-dashboard-stats", dateRange),
 
   // --- Invoices API ---
   getInvoices: () => ipcRenderer.invoke("get-invoices"),

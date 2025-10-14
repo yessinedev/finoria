@@ -215,7 +215,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
                   {lineItems.map((item) => (
                     <div key={item.id} className="flex items-center justify-between px-2 py-1 text-sm">
                       <span>{item.name} x{item.quantity}</span>
-                      <span>{item.total.toFixed(2)} TND</span>
+                      <span>{item.total.toFixed(3)} TND</span>
                       <Button variant="ghost" size="sm" onClick={() => removeLineItem(item.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -260,23 +260,23 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Sous-total</span>
-                  <span>{subtotal.toFixed(2)} TND</span>
+                  <span>{subtotal.toFixed(3)} TND</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Remise globale</span>
-                  <span>-{globalDiscountAmount.toFixed(2)} TND</span>
+                  <span>-{globalDiscountAmount.toFixed(3)} TND</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Sous-total remisé</span>
-                  <span>{discountedSubtotal.toFixed(2)} TND</span>
+                  <span>{discountedSubtotal.toFixed(3)} TND</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>TVA ({taxRate}%)</span>
-                  <span>+{taxAmount.toFixed(2)} TND</span>
+                  <span>+{taxAmount.toFixed(3)} TND</span>
                 </div>
                 <div className="flex justify-between font-bold text-base border-t pt-2">
                   <span>Total TTC</span>
-                  <span>{finalTotal.toFixed(2)} TND</span>
+                  <span>{finalTotal.toFixed(3)} TND</span>
                 </div>
               </CardContent>
             </Card>

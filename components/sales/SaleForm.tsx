@@ -243,7 +243,7 @@ export default function SaleForm(props: SaleFormProps) {
                                   </Badge>
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                  {product.price.toFixed(2)} € • {product.description}
+                                  {product.price.toFixed(3)} TND • {product.description}
                                 </span>
                               </div>
                             </CommandItem>
@@ -287,8 +287,8 @@ export default function SaleForm(props: SaleFormProps) {
                   {selectedProduct
                     ? products
                         .find((p) => p.id === selectedProduct)
-                        ?.price.toFixed(2) + " €"
-                    : "0.00 €"}
+                        ?.price.toFixed(3) + " TND"
+                    : "0.000 TND"}
                 </div>
               </div>
               <div className="col-span-1">
@@ -370,7 +370,7 @@ export default function SaleForm(props: SaleFormProps) {
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {item.total.toFixed(2)} €
+                        {item.total.toFixed(3)} TND
                       </TableCell>
                       <TableCell>
                         <Button
@@ -439,26 +439,26 @@ export default function SaleForm(props: SaleFormProps) {
             <div className="space-y-2 pt-4 border-t">
               <div className="flex justify-between text-sm">
                 <span>Sous-total:</span>
-                <span>{subtotal.toFixed(2)} €</span>
+                <span>{subtotal.toFixed(3)} TND</span>
               </div>
               {globalDiscount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Remise globale ({globalDiscount}%):</span>
-                  <span>-{globalDiscountAmount.toFixed(2)} €</span>
+                  <span>-{globalDiscountAmount.toFixed(3)} TND</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span>Sous-total après remise:</span>
-                <span>{discountedSubtotal.toFixed(2)} €</span>
+                <span>{discountedSubtotal.toFixed(3)} TND</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>TVA ({taxRate}%):</span>
-                <span>{taxAmount.toFixed(2)} €</span>
+                <span>{taxAmount.toFixed(3)} TND</span>
               </div>
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total TTC:</span>
-                  <span>{finalTotal.toFixed(2)} €</span>
+                  <span>{finalTotal.toFixed(3)} TND</span>
                 </div>
               </div>
             </div>

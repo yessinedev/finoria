@@ -279,9 +279,9 @@ export default function SupplierInvoices() {
         ...formData,
         supplierId: Number(formData.supplierId),
         orderId: formData.orderId ? Number(formData.orderId) : null,
-        amount: Number(subtotal.toFixed(2)),
-        taxAmount: Number(taxAmount.toFixed(2)),
-        totalAmount: Number(totalAmount.toFixed(2)),
+        amount: Number(subtotal.toFixed(3)),
+        taxAmount: Number(taxAmount.toFixed(3)),
+        totalAmount: Number(totalAmount.toFixed(3)),
         items: invoiceItems,
       };
 
@@ -329,9 +329,9 @@ export default function SupplierInvoices() {
         ...formData,
         supplierId: Number(formData.supplierId),
         orderId: formData.orderId ? Number(formData.orderId) : null,
-        amount: Number(subtotal.toFixed(2)),
-        taxAmount: Number(taxAmount.toFixed(2)),
-        totalAmount: Number(totalAmount.toFixed(2)),
+        amount: Number(subtotal.toFixed(3)),
+        taxAmount: Number(taxAmount.toFixed(3)),
+        totalAmount: Number(totalAmount.toFixed(3)),
         items: invoiceItems,
       };
 
@@ -495,7 +495,7 @@ export default function SupplierInvoices() {
       productName: product.name,
       quantity: itemQuantity,
       unitPrice: itemUnitPrice,
-      totalPrice: parseFloat(totalPrice.toFixed(2)),
+      totalPrice: parseFloat(totalPrice.toFixed(3)),
     };
 
     setInvoiceItems([...invoiceItems, newItem]);
@@ -685,7 +685,7 @@ export default function SupplierInvoices() {
                                       </span>
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                      {product.price.toFixed(2)} TND • Stock: {product.stock}
+                                      {product.price.toFixed(3)} TND • Stock: {product.stock}
                                     </span>
                                   </div>
                                 </CommandItem>
@@ -720,7 +720,7 @@ export default function SupplierInvoices() {
                   <div className="md:col-span-2">
                     <Label>Total</Label>
                     <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {(itemQuantity * itemUnitPrice).toFixed(2)} TND
+                      {(itemQuantity * itemUnitPrice).toFixed(3)} TND
                     </div>
                   </div>
                   <div className="md:col-span-1">
@@ -754,8 +754,8 @@ export default function SupplierInvoices() {
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.productName}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{item.unitPrice.toFixed(2)} TND</TableCell>
-                          <TableCell>{item.totalPrice.toFixed(2)} TND</TableCell>
+                          <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
+                          <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
                           <TableCell>
                             <Button
                               variant="outline"

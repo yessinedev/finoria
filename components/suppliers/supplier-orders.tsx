@@ -251,7 +251,7 @@ export default function SupplierOrders() {
       const orderData = {
         ...formData,
         supplierId: Number(formData.supplierId),
-        totalAmount: Number(totalAmount.toFixed(2)),
+        totalAmount: Number(totalAmount.toFixed(3)),
         taxAmount: Number(taxAmount.toFixed(2)),
         items: orderItems,
       };
@@ -326,7 +326,7 @@ export default function SupplierOrders() {
       const orderData = {
         ...formData,
         supplierId: Number(formData.supplierId),
-        totalAmount: Number(totalAmount.toFixed(2)),
+        totalAmount: Number(totalAmount.toFixed(3)),
         taxAmount: Number(taxAmount.toFixed(2)),
         items: orderItems,
       };
@@ -734,7 +734,7 @@ export default function SupplierOrders() {
                                       </span>
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                      {product.price.toFixed(2)} TND • Stock: {product.stock}
+                                      {product.price.toFixed(3)} TND • Stock: {product.stock}
                                     </span>
                                   </div>
                                 </CommandItem>
@@ -769,7 +769,7 @@ export default function SupplierOrders() {
                   <div className="md:col-span-2">
                     <Label>Total</Label>
                     <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {(itemQuantity * itemUnitPrice).toFixed(2)} TND
+                      {(itemQuantity * itemUnitPrice).toFixed(3)} TND
                     </div>
                   </div>
                   <div className="md:col-span-1">
@@ -803,8 +803,8 @@ export default function SupplierOrders() {
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.productName}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{item.unitPrice.toFixed(2)} TND</TableCell>
-                          <TableCell>{item.totalPrice.toFixed(2)} TND</TableCell>
+                          <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
+                          <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
                           <TableCell>
                             <Button
                               variant="outline"

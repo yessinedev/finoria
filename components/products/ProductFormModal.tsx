@@ -121,7 +121,7 @@ export default function ProductFormModal({
           />
           <div className="grid grid-cols-2 gap-4">
             <FormField
-              label="Prix unitaire (€) *"
+              label="Prix unitaire (TND) *"
               id="price"
               type="number"
               value={formData.price.toString()}
