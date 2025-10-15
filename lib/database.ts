@@ -54,11 +54,12 @@ interface ElectronAPI {
   updateInvoiceStatus: (id: number, status: string) => Promise<any>;
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
 
-  //Quotes
+  // --- Quotes API ---
   getQuotes: () => Promise<any[]>;
   createQuote: (quote: any) => Promise<any>;
   updateQuote: (id: number, quote: any) => Promise<any>;
   deleteQuote: (id: number) => Promise<boolean>;
+  getQuoteItems: (quoteId: number) => Promise<any[]>;
 
   // Stock Movements
   getStockMovements: () => Promise<any[]>;
@@ -442,6 +443,11 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.deleteQuote(id) || Promise.resolve(false),
         "deleteQuote"
+      ),
+    getItems: (quoteId: number) =>
+      this.handle(
+        () => window.electronAPI?.getQuoteItems(quoteId) || Promise.resolve([]),
+        "getQuoteItems"
       ),
   };
 

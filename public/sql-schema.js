@@ -175,6 +175,22 @@ function createTables(db) {
     )
   `);
 
+  // Quote items table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS quote_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quoteId INTEGER NOT NULL,
+      productId INTEGER NOT NULL,
+      productName TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      unitPrice REAL NOT NULL,
+      discount REAL DEFAULT 0,
+      totalPrice REAL NOT NULL,
+      FOREIGN KEY (quoteId) REFERENCES quotes(id) ON DELETE CASCADE,
+      FOREIGN KEY (productId) REFERENCES products(id)
+    )
+  `);
+
   // Stock movements table
   db.exec(`
     CREATE TABLE IF NOT EXISTS stock_movements (
@@ -285,6 +301,7 @@ function createIndexes(db) {
       CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier ON supplier_payments(supplierId);
       CREATE INDEX IF NOT EXISTS idx_supplier_payments_invoice ON supplier_payments(invoiceId);
       CREATE INDEX IF NOT EXISTS idx_supplier_payments_date ON supplier_payments(paymentDate);
+      CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items(quoteId);
     `);
   } catch (error) {
     console.error("Error creating indexes:", error);

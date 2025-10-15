@@ -132,10 +132,12 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
     }
     
     setSaving(true);
-    // Minimal quote object for demo
+    // Generate quote number
+    const quoteNumber = `DEV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    
+    // Quote object with number included
     const quote = {
-      id: Date.now(),
-      number: `DEV-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000)}`,
+      number: quoteNumber,
       clientId: Number(selectedClient),
       clientName: clients.find((c) => c.id.toString() === selectedClient)?.name || "",
       clientCompany: clients.find((c) => c.id.toString() === selectedClient)?.company || "",
@@ -148,7 +150,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
       issueDate: new Date().toISOString(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       status: "Brouillon",
-      items: lineItems,
+      items: lineItems, // Pass the items array
       notes,
       paymentTerms: "30 jours net",
     };

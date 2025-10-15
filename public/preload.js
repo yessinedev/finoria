@@ -66,9 +66,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // --- Quotes API ---
   getQuotes: () => ipcRenderer.invoke("get-quotes"),
   createQuote: (quote) => ipcRenderer.invoke("create-quote", quote),
-  updateQuoteStatus: (id, status) =>
-    ipcRenderer.invoke("update-quote-status", id, status),
+  updateQuote: (id, quote) => ipcRenderer.invoke("update-quote", id, quote),
   deleteQuote: (id) => ipcRenderer.invoke("delete-quote", id),
+  getQuoteItems: (quoteId) => ipcRenderer.invoke("get-quote-items", quoteId),
   
   // --- Stock Movements API ---
   getStockMovements: () => ipcRenderer.invoke("get-stock-movements"),

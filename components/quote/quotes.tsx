@@ -161,7 +161,12 @@ export default function Quotes() {
       // Load quotes from database
       const quotesResult = await db.quotes.getAll();
       if (quotesResult.success) {
-        setQuotes(quotesResult.data || []);
+        // Ensure each quote has an items array
+        const quotesWithItems = (quotesResult.data || []).map(quote => ({
+          ...quote,
+          items: Array.isArray(quote.items) ? quote.items : []
+        }));
+        setQuotes(quotesWithItems);
       } else {
         setError(quotesResult.error || "Erreur lors du chargement des devis");
         toast({
@@ -242,13 +247,50 @@ export default function Quotes() {
     }
   };
 
-  const handleViewQuote = (quote: Quote) => {
-    setPreviewQuote(quote);
+  const handleViewQuote = async (quote: Quote) => {
+    // If the quote doesn't have items, fetch them
+    if (!quote.items || !Array.isArray(quote.items)) {
+      try {
+        const itemsResult = await db.quotes.getItems(quote.id);
+        if (itemsResult.success) {
+          const updatedQuote = {
+            ...quote,
+            items: itemsResult.data || []
+          };
+          setPreviewQuote(updatedQuote);
+        } else {
+          // If fetching items fails, still show the quote without items
+          setPreviewQuote(quote);
+        }
+      } catch (error) {
+        console.error("Error fetching quote items:", error);
+        // Still show the quote without items
+        setPreviewQuote(quote);
+      }
+    } else {
+      setPreviewQuote(quote);
+    }
     setIsPreviewOpen(true);
   };
 
   const handleDownloadQuote = async (quote: Quote) => {
-    const blob = await pdf(<QuotePDFDocument quote={quote} />).toBlob();
+    // If the quote doesn't have items, fetch them
+    let quoteWithItems = quote;
+    if (!quote.items || !Array.isArray(quote.items)) {
+      try {
+        const itemsResult = await db.quotes.getItems(quote.id);
+        if (itemsResult.success) {
+          quoteWithItems = {
+            ...quote,
+            items: itemsResult.data || []
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching quote items:", error);
+      }
+    }
+    
+    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
