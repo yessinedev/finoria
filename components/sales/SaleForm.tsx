@@ -109,12 +109,12 @@ export default function SaleForm(props: SaleFormProps) {
         saleDate: new Date().toISOString(),
         items: lineItems.map(item => ({
           productId: item.productId,
-          name: item.name,
+          productName: item.name,
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discount: item.discount,
-          total: item.total,
+          totalPrice: item.total,
         })),
       };
       

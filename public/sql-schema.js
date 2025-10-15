@@ -64,6 +64,7 @@ function createTables(db) {
       clientId INTEGER NOT NULL,
       totalAmount REAL NOT NULL,
       taxAmount REAL NOT NULL,
+      discountAmount REAL DEFAULT 0,
       status TEXT DEFAULT 'En attente',
       saleDate DATETIME DEFAULT CURRENT_TIMESTAMP,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -264,9 +265,19 @@ function createTables(db) {
   const companiesCount = db.prepare("SELECT COUNT(*) as count FROM companies").get();
   if (companiesCount.count === 0) {
     db.exec(`
-      INSERT INTO companies (id, name, address, city, country, phone, email, taxId) 
-      VALUES (1, '', '', '', '', '', '', '')
+      INSERT INTO companies (name, address, city, country, phone, email, taxId) 
+      VALUES ('Nom de votre entreprise', 'Adresse de votre entreprise', 'Ville', 'Pays', 'Téléphone', 'email@entreprise.com', 'Numéro fiscal')
     `);
+  }
+  
+  // Add discountAmount column to sales table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE sales ADD COLUMN discountAmount REAL DEFAULT 0");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding discountAmount column:", error);
+    }
   }
 }
 

@@ -5,16 +5,19 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       try {
         // Insert sale
         const saleStmt = db.prepare(`
-          INSERT INTO sales (clientId, totalAmount, taxAmount, status) 
-          VALUES (?, ?, ?, ?)
+          INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, status, saleDate) 
+          VALUES (?, ?, ?, ?, ?, ?)
         `);
         const saleResult = saleStmt.run(
           saleData.clientId,
           saleData.totalAmount,
           saleData.taxAmount,
-          saleData.status || "En attente"
+          saleData.discountAmount || 0,
+          saleData.status || "En attente",
+          saleData.saleDate || new Date().toISOString()
         );
         const saleId = saleResult.lastInsertRowid;
+        
         // Insert sale items
         const itemStmt = db.prepare(`
           INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, totalPrice) 
@@ -24,10 +27,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           itemStmt.run(
             saleId,
             item.productId,
-            item.name,
+            item.productName,
             item.quantity,
             item.unitPrice,
-            item.total
+            item.totalPrice
           );
         });
         return saleId;
