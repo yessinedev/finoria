@@ -108,7 +108,7 @@ app.whenReady().then(() => {
   suppliersHandlers(ipcMain, db, notifyDataChange);
   paymentsHandlers(ipcMain, db, notifyDataChange);
   enterpriseSettingsHandlers(ipcMain, db, notifyDataChange);
-  deviceHandlers(ipcMain);
+  deviceHandlers(ipcMain, db, notifyDataChange);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -2,10 +2,19 @@
 module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("get-enterprise-settings", async () => {
     try {
-      // Fetch the first company record ordered by id
-      const settings = db
-        .prepare("SELECT * FROM companies ORDER BY id LIMIT 1")
+      // Try to get a company with actual data first
+      let settings = db
+        .prepare("SELECT * FROM companies WHERE (name != '' OR address != '' OR email != '' OR phone != '') ORDER BY id LIMIT 1")
         .get();
+      
+      // If no company with data found, get the first company (might be default empty record)
+      if (!settings) {
+        settings = db
+          .prepare("SELECT * FROM companies ORDER BY id LIMIT 1")
+          .get();
+      }
+      
+      console.log("Company settings retrieved:", settings);
       return settings || null;
     } catch (error) {
       console.error("Error getting enterprise settings:", error);
@@ -32,7 +41,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.tvaNumber,
         settings.tvaRate
       );
+      
+      console.log("Insert result:", result);
+      
       const newSettings = { id: result.lastInsertRowid, ...settings };
+      console.log("New settings:", newSettings);
+      
       notifyDataChange("companies", "create", newSettings);
       return newSettings;
     } catch (error) {
@@ -48,7 +62,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         SET name = ?, address = ?, city = ?, country = ?, phone = ?, email = ?, website = ?, taxId = ?, taxStatus = ?, tvaNumber = ?, tvaRate = ?
         WHERE id = ?
       `);
-      stmt.run(
+      const result = stmt.run(
         settings.name,
         settings.address,
         settings.city,
@@ -62,7 +76,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.tvaRate,
         id
       );
-      const updatedSettings = { id, ...settings };
+      
+      // Verify the update was successful by fetching the updated record
+      const updatedSettings = db
+        .prepare("SELECT * FROM companies WHERE id = ?")
+        .get(id);
+        
+      console.log("Update result:", result);
+      console.log("Updated settings:", updatedSettings);
+      
       notifyDataChange("companies", "update", updatedSettings);
       return updatedSettings;
     } catch (error) {

@@ -7,12 +7,12 @@ export async function verifyLicense() {
   // Ask preload script for machine fingerprint
   if (!db.device?.getFingerprint) return false;
   const fingerprint = await db.device.getFingerprint();
-
+  console.log(fingerprint)
   try {
     const res = await fetch("https://license.etudionet.life/api/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ licenseKey, fingerprint }),
+      body: JSON.stringify({ licenseKey, fingerprint: fingerprint.data }),
     });
 
     const data = await res.json();

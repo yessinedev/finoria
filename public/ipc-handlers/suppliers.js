@@ -459,55 +459,5 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
-  // Enterprise Settings CRUD
-  ipcMain.handle("get-enterprise-settings", async () => {
-    try {
-      const settings = db.prepare(`
-        SELECT * FROM enterprise_settings WHERE id = 1
-      `).get();
-      return settings || {};
-    } catch (error) {
-      console.error("Error getting enterprise settings:", error);
-      throw new Error("Erreur lors de la récupération des paramètres de l'entreprise");
-    }
-  });
 
-  ipcMain.handle("update-enterprise-settings", async (event, settings) => {
-    try {
-      const stmt = db.prepare(`
-        UPDATE enterprise_settings 
-        SET companyName = ?, address = ?, city = ?, postalCode = ?, country = ?,
-            phone = ?, email = ?, taxId = ?, invoicePrefix = ?, 
-            nextInvoiceNumber = ?, paymentDueDays = ?, defaultTaxRate = ?,
-            updatedAt = CURRENT_TIMESTAMP
-        WHERE id = 1
-      `);
-      
-      stmt.run(
-        settings.companyName,
-        settings.address,
-        settings.city,
-        settings.postalCode,
-        settings.country,
-        settings.phone,
-        settings.email,
-        settings.taxId,
-        settings.invoicePrefix,
-        settings.nextInvoiceNumber,
-        settings.paymentDueDays,
-        settings.defaultTaxRate
-      );
-      
-      const updatedSettings = {
-        id: 1,
-        ...settings,
-        updatedAt: new Date().toISOString(),
-      };
-      
-      return updatedSettings;
-    } catch (error) {
-      console.error("Error updating enterprise settings:", error);
-      throw new Error("Erreur lors de la mise à jour des paramètres de l'entreprise");
-    }
-  });
 };

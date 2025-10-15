@@ -1,3 +1,4 @@
+'use client'
 import { FormInput } from "@/components/ui/form-input";
 import {
   Select,

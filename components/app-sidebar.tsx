@@ -23,7 +23,6 @@ import Link from "next/link";
 export type NavigationItem =
   | "dashboard"
   | "clients"
-  | "products"
   | "sales"
   | "quotes"
   | "invoices"
@@ -40,9 +39,7 @@ const navigationItems = [
     children: [
       { id: "quotes", label: "Devis" },
       { id: "sales", label: "Commande client" },
-      { id: "delivery", label: "Bon de livraison" },
       { id: "invoices", label: "Facture" },
-      { id: "output", label: "Bon de sortie" },
     ],
   },
   {
@@ -74,7 +71,6 @@ const navigationItems = [
   },
   { id: "clients", label: "Clients", icon: Users },
   { id: "suppliers", label: "Fournisseurs", icon: Building2 },
-  { id: "products", label: "Produits", icon: Package },
   // Add settings section
   { id: "settings", label: "Paramètres", icon: FileText },
 ];
@@ -98,8 +94,6 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/";
       case "clients":
         return "/clients";
-      case "products":
-        return "/products";
       case "sales":
         return "/sales";
       case "quotes":
@@ -117,9 +111,9 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
       case "suppliers":
         return "/suppliers";
       case "inventory":
-        return "/inventory/inventory";
+        return "/inventory";
       case "stock-movements":
-        return "/inventory/movements";
+        return "/movements";
       case "client-payments":
         return "/payments/clients";
       case "supplier-payments":
@@ -136,7 +130,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
       <SidebarHeader className="border-b px-6 py-4 flex items-start gap-2">
         <div className="flex items-center gap-2">
           <Building2 className="h-6 w-6 text-primary" />
-          <h1 className="font-semibold text-lg">VentePro</h1>
+          <h1 className="font-semibold text-lg">Finoria</h1>
         </div>
         <p className="text-xs text-muted-foreground">Gestion & Facturation</p>
       </SidebarHeader>

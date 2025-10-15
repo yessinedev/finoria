@@ -53,11 +53,13 @@ export default function SettingsPage() {
   useEffect(() => {
   const fetchCompany = async () => {
     const res = await db.settings.get();
+    console.log("Raw response from db.settings.get():", res);
 
     // If your IPC returns { data: company }
     const c = res?.data;
-
+    console.log("company: ", res)
     if (c) {
+      console.log("Company data received:", c);
       setCompany(c);
       setCompanyFields({
         name: c.name || "",
@@ -71,9 +73,11 @@ export default function SettingsPage() {
       setTaxFields({
         taxId: c.taxId || "",
         taxStatus: c.taxStatus || "",
-        tvaNumber: c.tvaNumber ? String(c.tvaNumber) : "",
-        tvaRate: c.tvaRate ? String(c.tvaRate) : "",
+        tvaNumber: c.tvaNumber !== null && c.tvaNumber !== undefined ? String(c.tvaNumber) : "",
+        tvaRate: c.tvaRate !== null && c.tvaRate !== undefined ? String(c.tvaRate) : "",
       });
+    } else {
+      console.log("No company data received");
     }
   };
 
@@ -97,13 +101,21 @@ export default function SettingsPage() {
     if (!companyChanged && !taxChanged) return;
 
     setIsSubmitting(true);
-    await db.settings.update(company.id, {
+    
+    // Prepare the data for update
+    const updateData = {
       ...companyFields,
-      ...taxFields,
-      tvaNumber:
-        taxFields.tvaNumber !== "" ? parseInt(taxFields.tvaNumber) : null,
-      tvaRate: taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) : null,
-    });
+      taxId: taxFields.taxId,
+      taxStatus: taxFields.taxStatus,
+      tvaNumber: taxFields.tvaNumber !== "" ? parseInt(taxFields.tvaNumber) || null : null,
+      tvaRate: taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) || null : null,
+    };
+    
+    console.log("Updating company with data:", updateData);
+    
+    const result = await db.settings.update(company.id, updateData);
+    console.log("Update result:", result);
+    
     console.log("Company Settings:", companyFields);
     console.log("Tax Settings:", taxFields);
     console.log("Notification Settings:", notifications);

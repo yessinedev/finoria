@@ -17,6 +17,7 @@ export default function LicensePage() {
   useEffect(() => {
     (async () => {
       const valid = await verifyLicense();
+      console.log(valid)
       if (valid) {
         router.push("/dashboard");
       } else {

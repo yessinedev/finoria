@@ -1,7 +1,7 @@
 // Device IPC handlers
 const { machineId } = require("node-machine-id");
 
-module.exports = (ipcMain) => {
+module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("get-machine-fingerprint", async () => {
     try {
       // Get stable machine ID
