@@ -5,9 +5,13 @@
     "output": "dist"
   },
   "files": [
-    "out/**/*", 
-    "public/electron.js", 
-    "public/preload.js",
+    "out/**/*",
+    "main/electron.js",
+    "main/preload.js",
+    "main/sql-schema.js",
+    "main/icon.png",
+    "main/icon.ico",
+    "main/ipc-handlers/**/*",
     "!node_modules/.cache/**/*"
   ],
   "extraResources": [

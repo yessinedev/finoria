@@ -1,9 +1,7 @@
-const { app, BrowserWindow, ipcMain} = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
-const isDev = require("electron-is-dev");
 const Database = require("better-sqlite3");
-const { createTables, createIndexes } = require("./sql-schema");
-
+const { createTables, createIndexes } = require("./sql-schema.js");
 
 let mainWindow;
 let db;
@@ -23,9 +21,9 @@ function notifyDataChange(table, action, data) {
 
 // Initialize SQLite database with optimizations
 function initDatabase() {
-  const dbPath = isDev
-    ? path.join(__dirname, "..", "database.db")
-    : path.join(process.resourcesPath, "database.db");
+  const dbPath = app.isPackaged
+    ? path.join(process.resourcesPath, "database.db")
+    : path.join(__dirname, "..", "database.db");
 
   db = new Database(dbPath);
 
@@ -60,9 +58,14 @@ function createWindow() {
     show: false,
   });
 
-  const startUrl = isDev
-    ? "http://localhost:3000"
-    : `file://${path.join(__dirname, "../out/index.html")}`;
+  const startUrl = app.isPackaged
+    ? `file://${path.join(
+        process.resourcesPath,
+        "app.asar",
+        "out",
+        "index.html"
+      )}`
+    : "http://localhost:3000";
 
   mainWindow.loadURL(startUrl);
 
@@ -74,10 +77,35 @@ function createWindow() {
     mainWindow = null;
   });
 
-  if (isDev) {
+  if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();
   }
+
+  return mainWindow;
 }
+
+const startNextJSServer = async () => {
+  try {
+    const nextJSPort = 3000;
+    const webDir = join(app.getAppPath(), "app");
+
+    await startServer({
+      dir: webDir,
+      isDev: false,
+      hostname: "localhost",
+      port: nextJSPort,
+      customServer: true,
+      allowRetry: false,
+      keepAliveTimeout: 5000,
+      minimalMode: true,
+    });
+
+    return nextJSPort;
+  } catch (error) {
+    console.error("Error starting Next.js server:", error);
+    throw error;
+  }
+};
 
 app.whenReady().then(() => {
   initDatabase();

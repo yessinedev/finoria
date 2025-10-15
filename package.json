@@ -4,7 +4,7 @@
   "description": "A business management application for sales, inventory, and invoicing",
   "author": "Finoria Team",
   "private": true,
-  "main": "public/electron.js",
+  "main": "main/electron.js",
   "scripts": {
   "dev": "next dev --turbopack",
   "build": "next build",
