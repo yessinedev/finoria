@@ -146,18 +146,7 @@ export default function CategoryManager({
     setLocalCategories(categories);
   }, [categories]);
 
-  useEffect((): (() => void) => {
-    loadCategories();
-
-    // Subscribe to real-time updates
-    const unsubscribe = db.subscribe((table, action, data) => {
-      if (table === "categories") {
-        loadCategories();
-      }
-    });
-
-    return unsubscribe;
-  }, []);
+  
 
   const loadCategories = async () => {
     setLoading(true);
@@ -173,6 +162,19 @@ export default function CategoryManager({
 
     setLoading(false);
   };
+
+  useEffect((): (() => void) => {
+    loadCategories();
+
+    // Subscribe to real-time updates
+    const unsubscribe = db.subscribe((table) => {
+      if (table === "categories") {
+        loadCategories();
+      }
+    });
+
+    return unsubscribe;
+  }, [loadCategories]);
 
   // Modularize form modal logic
   const handleCategoryFormSubmit = async (

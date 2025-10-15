@@ -91,7 +91,7 @@ export default function Clients() {
     loadClients();
 
     // Subscribe to real-time updates
-    const unsubscribe = db.subscribe((table, action, data) => {
+    const unsubscribe = db.subscribe((table) => {
       if (table === "clients") {
         loadClients(); // Refresh data when clients change
       }
@@ -131,7 +131,7 @@ export default function Clients() {
         setError(result.error || "Erreur lors de la sauvegarde");
       }
     } catch (error) {
-      setError("Erreur inattendue lors de la sauvegarde");
+      setError(String(error));
     } finally {
       setSaving(false);
     }
@@ -278,7 +278,7 @@ export default function Clients() {
               Confirmer la suppression
             </DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer le client "{clientToDelete?.name}" ? 
+              Êtes-vous sûrs de vouloir supprimer le client &quot;{clientToDelete?.name}&quot; ? 
               Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>

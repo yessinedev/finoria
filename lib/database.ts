@@ -54,7 +54,7 @@ interface ElectronAPI {
   updateInvoiceStatus: (id: number, status: string) => Promise<any>;
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
 
-  // --- Quotes API ---
+  //Quotes
   getQuotes: () => Promise<any[]>;
   createQuote: (quote: any) => Promise<any>;
   updateQuote: (id: number, quote: any) => Promise<any>;
@@ -296,6 +296,13 @@ class DatabaseService {
           window.electronAPI?.deleteSupplierInvoice(id) ||
           Promise.resolve(false),
         "deleteSupplierInvoice"
+      ),
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.updateSupplierInvoiceStatus(id, status) ||
+          Promise.resolve(null),
+        "updateSupplierInvoiceStatus"
       ),
   };
 

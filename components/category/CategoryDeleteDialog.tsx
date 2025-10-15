@@ -30,7 +30,7 @@ export default function CategoryDeleteDialog({ category, onDelete }: CategoryDel
         <AlertDialogHeader>
           <AlertDialogTitle>Supprimer la catégorie</AlertDialogTitle>
           <AlertDialogDescription>
-            Êtes-vous sûr de vouloir supprimer la catégorie "{category.name}" ? Cette action est irréversible. Les produits utilisant cette catégorie devront être mis à jour manuellement.
+            Êtes-vous sûr de vouloir supprimer la catégorie &quot;{category.name}&quot; ? Cette action est irréversible. Les produits utilisant cette catégorie devront être mis à jour manuellement.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

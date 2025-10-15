@@ -47,7 +47,7 @@ export default function LicensePage() {
             </span>
           </div>
           <p className="text-muted-foreground">
-            Bienvenue dans votre solution de gestion d'entreprise
+            Bienvenue dans votre solution de gestion d&apos;entreprise
           </p>
         </div>
 
