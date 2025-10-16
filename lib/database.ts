@@ -83,10 +83,6 @@ interface ElectronAPI {
   createEnterpriseSettings: (settings: any) => Promise<any>;
   updateEnterpriseSettings: (id: number, settings: any) => Promise<any>;
 
-  // PDF Generation
-  generateInvoicePDF: (invoiceId: number) => Promise<any>;
-  openPDF: (filePath: string) => Promise<any>;
-
   // Device
   getFingerprint: () => Promise<string>;
 
@@ -95,7 +91,6 @@ interface ElectronAPI {
     callback: (table: string, action: string, data: any) => void
   ) => void;
   removeDataListener: (callback: Function) => void;
-
 }
 
 declare global {
@@ -414,18 +409,6 @@ class DatabaseService {
           Promise.resolve(null),
         "generateInvoiceFromSale"
       ),
-    generatePDF: (invoiceId: number) =>
-      this.handle(
-        () =>
-          window.electronAPI?.generateInvoicePDF(invoiceId) ||
-          Promise.resolve(null),
-        "generateInvoicePDF"
-      ),
-    openPDF: (filePath: string) =>
-      this.handle(
-        () => window.electronAPI?.openPDF(filePath) || Promise.resolve(null),
-        "openPDF"
-      ),
   };
 
   // --- Quotes API ---
@@ -536,17 +519,42 @@ class DatabaseService {
 
   // --- Supplier Payments API ---
   supplierPayments = {
-    getAll: () => this.handle(() => window.electronAPI?.getSupplierPayments() || Promise.resolve([]), "getSupplierPayments"),
-    create: (payment: any) => this.handle(() => window.electronAPI?.createSupplierPayment(payment) || Promise.resolve(null), "createSupplierPayment"),
-    update: (id: number, payment: any) => this.handle(() => window.electronAPI?.updateSupplierPayment(id, payment) || Promise.resolve(null), "updateSupplierPayment"),
-    delete: (id: number) => this.handle(() => window.electronAPI?.deleteSupplierPayment(id) || Promise.resolve(false), "deleteSupplierPayment"),
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getSupplierPayments() || Promise.resolve([]),
+        "getSupplierPayments"
+      ),
+    create: (payment: any) =>
+      this.handle(
+        () =>
+          window.electronAPI?.createSupplierPayment(payment) ||
+          Promise.resolve(null),
+        "createSupplierPayment"
+      ),
+    update: (id: number, payment: any) =>
+      this.handle(
+        () =>
+          window.electronAPI?.updateSupplierPayment(id, payment) ||
+          Promise.resolve(null),
+        "updateSupplierPayment"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () =>
+          window.electronAPI?.deleteSupplierPayment(id) ||
+          Promise.resolve(false),
+        "deleteSupplierPayment"
+      ),
   };
 
   // --- Device API ---
   device = {
-    getFingerprint: () => this.handle(() => window.electronAPI?.getFingerprint() || Promise.resolve(""), "getFingerprint"),
+    getFingerprint: () =>
+      this.handle(
+        () => window.electronAPI?.getFingerprint() || Promise.resolve(""),
+        "getFingerprint"
+      ),
   };
-
 }
 
 export const db = new DatabaseService();
