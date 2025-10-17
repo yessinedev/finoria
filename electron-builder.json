@@ -4,22 +4,9 @@
   "directories": {
     "output": "dist"
   },
-  "files": [
-    "out/**/*",
-    "main/electron.js",
-    "main/preload.js",
-    "main/sql-schema.js",
-    "main/icon.png",
-    "main/icon.ico",
-    "main/ipc-handlers/**/*",
-    "!node_modules/.cache/**/*"
-  ],
-  "extraResources": [
-    {
-      "from": "database.db",
-      "to": "database.db"
-    }
-  ],
+  "asar": true,
+  "asarUnpack": ["**/*.node"],
+  "files": ["main/**/*"],
   "win": {
     "target": "nsis",
     "icon": "public/icon.ico"

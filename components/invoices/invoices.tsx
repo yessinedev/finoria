@@ -265,18 +265,7 @@ export default function Invoices() {
 
   const handleDownloadPDF = async (invoice: Invoice) => {
     setGeneratingPDF(invoice.id)
-    try {
-      const result = await db.invoices.generatePDF(invoice.id)
-      if (result.success) {
-        await db.invoices.openPDF(result.data)
-      } else {
-        alert("Erreur lors de la génération du PDF")
-      }
-    } catch (error) {
-      alert("Erreur lors de la génération du PDF")
-    } finally {
-      setGeneratingPDF(null)
-    }
+    
   }
 
   const handlePrintInvoice = (invoice: Invoice) => {
