@@ -17,7 +17,7 @@
     "build:next": "next build",
     "build:electron": "electron-builder",
     "prepare:resources": "node scripts/prepare-build.js",
-    "dist": "npm run build:next && npm run build:electron && npm run prepare:resources",
+    "dist": "npm run build:next && npm run build:electron",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
@@ -99,5 +99,8 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.0",
     "typescript": "^5"
+  },
+  "build": {
+    "extends": "./electron-builder.config.js"
   }
 }
