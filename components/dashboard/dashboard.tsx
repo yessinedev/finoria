@@ -101,7 +101,7 @@ export default function Dashboard() {
     loadDashboardStats()
 
     // Subscribe to real-time updates
-    const unsubscribe = db.subscribe((table, action, data) => {
+    const unsubscribe = db.subscribe((table) => {
       if (["sales", "clients", "products", "invoices"].includes(table)) {
         loadDashboardStats()
       }

@@ -263,3 +263,31 @@ export interface SupplierPayment {
   notes?: string;
   createdAt: string;
 }
+
+export interface CompanyInfo {
+  name: string
+  address: string
+  phone: string
+  email: string
+  website?: string
+  city: string
+  country: string
+}
+
+export interface TaxInfo {
+  taxId: string
+  taxStatus: string
+  tvaNumber?: number
+  tvaRate?: number
+}
+
+export interface CreateCompanyData extends CompanyInfo, TaxInfo {}
+export interface CompanyData extends CompanyInfo, TaxInfo {
+  id: number
+}
+
+
+export interface OnboardingData {
+  companyInfo: CompanyInfo
+  taxInfo: TaxInfo
+}

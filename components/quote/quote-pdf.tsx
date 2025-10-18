@@ -169,25 +169,6 @@ export function QuotePDFDocument({ quote }: { quote: Quote }) {
           </View>
         </View>
 
-        {/* Quote Details */}
-        <View style={styles.section}>
-          <Text style={[styles.cardTitle, { color: '#222', marginBottom: 2 }]}>Détails du devis</Text>
-          <View style={{ flexDirection: 'row', gap: 16 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.totalsLabel}>Date d'émission</Text>
-              <Text style={styles.cardContent}>{formatDate(quote.issueDate)}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.totalsLabel}>Date de validité</Text>
-              <Text style={styles.cardContent}>{formatDate(quote.dueDate)}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.totalsLabel}>Conditions de paiement</Text>
-              <Text style={styles.cardContent}>{quote.paymentTerms || '30 jours net'}</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Items Table */}
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]}>
@@ -197,8 +178,8 @@ export function QuotePDFDocument({ quote }: { quote: Quote }) {
             <Text style={styles.tableCell}>Remise</Text>
             <Text style={styles.tableCell}>Total HT</Text>
           </View>
-          {quote.items.map((item: LineItem, idx: number) => (
-            <View style={styles.tableRow} key={item.id}>
+          {Array.isArray(quote.items) && quote.items.map((item: LineItem, idx: number) => (
+            <View style={styles.tableRow} key={item.id || idx}>
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.name}</Text>
               <Text style={styles.tableCell}>{item.quantity}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
@@ -211,27 +192,27 @@ export function QuotePDFDocument({ quote }: { quote: Quote }) {
         {/* Totals */}
         <View style={styles.totalsBox}>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Sous-total HT:</Text>
+            <Text style={styles.totalsLabel}>Sous-total HT</Text>
             <Text style={styles.totalsValue}>{formatCurrency(quote.amount)}</Text>
           </View>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>TVA ({quote.taxAmount && quote.amount ? ((quote.taxAmount / quote.amount) * 100).toFixed(0) : '20'}%):</Text>
+            <Text style={styles.totalsLabel}>TVA {quote.taxAmount && quote.amount && quote.amount > 0 ? ((quote.taxAmount / quote.amount) * 100).toFixed(0) : '20'}%</Text>
             <Text style={styles.totalsValue}>{formatCurrency(quote.taxAmount)}</Text>
           </View>
-          <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
-            <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
-            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(quote.totalAmount)}</Text>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>Total TTC</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(quote.totalAmount)}</Text>
           </View>
         </View>
 
         {/* Notes */}
-        {quote.notes && (
+        {quote.notes && quote.notes.trim() !== '' && (
           <Text style={styles.notes}>{quote.notes}</Text>
         )}
 
         {/* Footer */}
-        <Text style={styles.footer} fixed>
-          Ce devis a été généré par GestVente. Merci pour votre confiance.
+        <Text style={styles.footer}>
+          Gestion & Facturation - GestVente SARL - 123 Rue de l'Entreprise, 75001 Paris - Tél: 01 23 45 67 89 - contact@gestvente.fr
         </Text>
       </Page>
     </Document>

@@ -248,16 +248,17 @@ export default function Sales() {
         clientId: Number.parseInt(selectedClient),
         items: lineItems.map((item) => ({
           productId: item.productId,
-          name: item.name,
+          productName: item.name,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          total: item.total,
+          totalPrice: item.total,
         })),
         totalAmount: discountedSubtotal,
         taxAmount: taxAmount,
         discountAmount: globalDiscountAmount,
         finalAmount: finalTotal,
         status: "En attente",
+        saleDate: new Date().toISOString(),
       };
 
       const result = await db.sales.create(saleData);
@@ -276,7 +277,7 @@ export default function Sales() {
             // Create stock movement record
             await db.stockMovements.create({
               productId: item.productId,
-              productName: item.name,
+              productName: item.productName,
               quantity: item.quantity,
               movementType: 'OUT',
               sourceType: 'sale',

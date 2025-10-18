@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Search, 
   Package, 
-  AlertTriangle,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight
