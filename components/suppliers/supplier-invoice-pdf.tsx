@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer"
 import type { SupplierInvoice } from "@/types/types";
+import { formatCurrency, formatQuantity } from "@/lib/utils";
 
 function formatDate(dateString: string) {
   if (!dateString) return ''
@@ -15,15 +16,6 @@ function formatDate(dateString: string) {
     month: 'long',
     day: 'numeric',
   })
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'TND',
-  })
-    .format(amount)
-    .replace(/\u202F/g, ' ')
 }
 
 const styles = StyleSheet.create({
@@ -144,7 +136,7 @@ const styles = StyleSheet.create({
   },
 })
 
-export function SupplierInvoicePDFDocument({ invoice }: { invoice: SupplierInvoice }) {
+export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoice: SupplierInvoice; companySettings?: any }) {
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -170,12 +162,12 @@ export function SupplierInvoicePDFDocument({ invoice }: { invoice: SupplierInvoi
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
           <View style={[styles.card, { flex: 1 }]}> {/* Company */}
             <Text style={styles.cardTitle}>Émetteur</Text>
-            <Text style={styles.cardContent}>GestVente SARL</Text>
-            <Text style={styles.cardContent}>123 Rue de l'Entreprise, 75001 Paris</Text>
-            <Text style={styles.cardContent}>Tél: 01 23 45 67 89</Text>
-            <Text style={styles.cardContent}>contact@gestvente.fr</Text>
-            <Text style={styles.cardContent}>SIRET: 123 456 789 00012</Text>
-            <Text style={styles.cardContent}>TVA: FR12345678901</Text>
+            <Text style={styles.cardContent}>{companySettings?.name || 'GestVente SARL'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.address || '123 Rue de l\'Entreprise, 75001 Paris'}</Text>
+            <Text style={styles.cardContent}>Tél: {companySettings?.phone || '01 23 45 67 89'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.email || 'contact@gestvente.fr'}</Text>
+            {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
+            {companySettings?.tvaNumber && <Text style={styles.cardContent}>TVA: FR{companySettings.tvaNumber}</Text>}
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Supplier */}
             <Text style={styles.cardTitle}>Fournisseur</Text>
@@ -210,13 +202,15 @@ export function SupplierInvoicePDFDocument({ invoice }: { invoice: SupplierInvoi
             <Text style={[styles.tableCell, { flex: 2 }]}>Description</Text>
             <Text style={styles.tableCell}>Qté</Text>
             <Text style={styles.tableCell}>Prix unitaire</Text>
+            <Text style={styles.tableCell}>Remise</Text>
             <Text style={styles.tableCell}>Total HT</Text>
           </View>
           {invoice.items && invoice.items.map((item: any, idx: number) => (
             <View style={styles.tableRow} key={item.id}>
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
-              <Text style={styles.tableCell}>{item.quantity}</Text>
+              <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
+              <Text style={styles.tableCell}>{item.discount > 0 ? `${item.discount}%` : '-'}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.totalPrice)}</Text>
             </View>
           ))}

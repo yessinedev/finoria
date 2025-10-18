@@ -51,15 +51,7 @@ const navigationItems = [
       { id: "supplier-invoice", label: "Facture fournisseur" },
     ],
   },
-  {
-    id: "payments",
-    label: "Gestion de paiements",
-    icon: FileText,
-    children: [
-      { id: "client-payments", label: "Paiements clients" },
-      { id: "supplier-payments", label: "Paiements fournisseurs" },
-    ],
-  },
+
   {
     id: "stock",
     label: "Gestion de stock",

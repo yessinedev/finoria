@@ -30,6 +30,8 @@ import InvoiceGeneratorModal from "@/components/invoices/InvoiceGeneratorModal"
 import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
 import { db } from "@/lib/database"
 import type { Invoice, Sale } from "@/types/types"
+import { pdf } from "@react-pdf/renderer"
+import { InvoicePDFDocument } from "./invoice-pdf"
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -42,6 +44,7 @@ export default function Invoices() {
   const [generatingPDF, setGeneratingPDF] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
+  const [companySettings, setCompanySettings] = useState<any>(null)
 
   // Data table configuration
   const filteredInvoicesByStatus = invoices.filter((invoice) => {
@@ -158,6 +161,7 @@ export default function Invoices() {
 
   useEffect((): (() => void) => {
     loadData()
+    loadCompanySettings()
 
     // Subscribe to real-time updates
     const unsubscribe = db.subscribe((table, action, data) => {
@@ -174,31 +178,60 @@ export default function Invoices() {
     setError(null)
 
     try {
-      const [invoicesResult, salesResult] = await Promise.all([db.invoices.getAll(), db.sales.getAll()])
+      const [invoicesResult, salesResult] = await Promise.all([db.invoices.getAll(), db.sales.getAllWithItems()])
 
       if (invoicesResult.success) {
-        // Mock additional data for preview (in real app, this would come from database)
-        const enhancedInvoices = (invoicesResult.data || []).map((invoice) => ({
+        // Load items for each invoice
+        const invoicesWithItems = await Promise.all(
+          (invoicesResult.data || []).map(async (invoice) => {
+            // If the invoice already has items, use them
+            if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
+              return invoice;
+            }
+            
+            // Otherwise, fetch items from the database
+            try {
+              const itemsResult = await db.invoices.getItems(invoice.id);
+              if (itemsResult.success) {
+                return {
+                  ...invoice,
+                  items: itemsResult.data || [],
+                };
+              }
+            } catch (error) {
+              console.error("Error fetching invoice items:", error);
+            }
+            
+            // Fallback to mock items if fetching fails
+            return {
+              ...invoice,
+              items: [
+                {
+                  id: 1,
+                  productName: "Consultation technique",
+                  description: "Consultation technique d'une heure",
+                  quantity: 1,
+                  unitPrice: invoice.amount,
+                  discount: 0,
+                  totalPrice: invoice.amount,
+                },
+              ],
+            };
+          })
+        );
+        
+        // Add additional mock data for preview
+        const enhancedInvoices = invoicesWithItems.map((invoice) => ({
           ...invoice,
-          items: [
-            {
-              id: 1,
-              productName: "Consultation technique",
-              description: "Consultation technique d'une heure",
-              quantity: 1,
-              unitPrice: invoice.amount,
-              discount: 0,
-              totalPrice: invoice.amount,
-            },
-          ],
-          clientEmail: "client@example.com",
-          clientPhone: "01 23 45 67 89",
-          notes: "Merci pour votre confiance.",
-          paymentTerms: "30 jours net",
-        }))
-        setInvoices(enhancedInvoices)
+          clientEmail: invoice.clientEmail || "client@example.com",
+          clientPhone: invoice.clientPhone || "01 23 45 67 89",
+          notes: invoice.notes || "Merci pour votre confiance.",
+          paymentTerms: invoice.paymentTerms || "30 jours net",
+        }));
+        
+        setInvoices(enhancedInvoices);
       } else {
-        setError(invoicesResult.error || "Erreur lors du chargement des factures")
+        setError(invoicesResult.error || "Erreur lors du chargement des factures");
       }
 
       if (salesResult.success) {
@@ -210,7 +243,6 @@ export default function Invoices() {
           clientEmail: sale.clientEmail || "",
           clientPhone: sale.clientPhone || "",
           clientAddress: sale.clientAddress || "",
-          items: sale.items || [],
         }))
         setSales(enhancedSales)
       }
@@ -221,11 +253,15 @@ export default function Invoices() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "TND",
-    }).format(amount)
+  const loadCompanySettings = async () => {
+    try {
+      const settingsResult = await db.settings.get()
+      if (settingsResult.success && settingsResult.data) {
+        setCompanySettings(settingsResult.data)
+      }
+    } catch (error) {
+      console.error("Error loading company settings:", error)
+    }
   }
 
   const getStatusVariant = (status: Invoice["status"]) => {
@@ -258,14 +294,68 @@ export default function Invoices() {
     }
   }
 
-  const handleViewInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice)
-    setIsPreviewOpen(true)
+  const handleViewInvoice = async (invoice: Invoice) => {
+    // If the invoice doesn't have items or items array is empty, fetch them
+    if (!invoice.items || !Array.isArray(invoice.items) || invoice.items.length === 0) {
+      try {
+        const itemsResult = await db.invoices.getItems(invoice.id);
+        if (itemsResult.success) {
+          const invoiceWithItems = {
+            ...invoice,
+            items: itemsResult.data || [],
+          };
+          setSelectedInvoice(invoiceWithItems);
+        } else {
+          // If fetching items fails, still show the invoice without items
+          setSelectedInvoice(invoice);
+        }
+      } catch (error) {
+        console.error("Error fetching invoice items:", error);
+        // Still show the invoice without items
+        setSelectedInvoice(invoice);
+      }
+    } else {
+      setSelectedInvoice(invoice);
+    }
+    setIsPreviewOpen(true);
   }
 
   const handleDownloadPDF = async (invoice: Invoice) => {
     setGeneratingPDF(invoice.id)
-    
+    try {
+      // If the invoice doesn't have items, we need to add them
+      const invoiceWithItems = {
+        ...invoice,
+        items: invoice.items || [
+          {
+            id: 1,
+            productName: "Consultation technique",
+            description: "Consultation technique d'une heure",
+            quantity: 1,
+            unitPrice: invoice.amount,
+            discount: 0,
+            totalPrice: invoice.amount,
+          },
+        ],
+      };
+      
+      const blob = await pdf(<InvoicePDFDocument invoice={invoiceWithItems} companySettings={companySettings} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `facture-${invoice.number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setError("Erreur lors de la génération du PDF");
+    } finally {
+      setGeneratingPDF(null);
+    }
   }
 
   const handlePrintInvoice = (invoice: Invoice) => {
@@ -318,7 +408,7 @@ export default function Invoices() {
         <option value="Annulée">Annulée</option>
       </select>
       
-      <Button variant="outline" size="sm" onClick={() => handleViewInvoice(invoice)}>
+      <Button variant="outline" size="sm" onClick={async () => await handleViewInvoice(invoice)}>
         <Eye className="h-4 w-4" />
       </Button>
 
@@ -332,6 +422,15 @@ export default function Invoices() {
       </Button>
     </div>
   )
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "TND",
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
+    }).format(amount)
+  }
 
   if (loading) {
     return (
@@ -540,6 +639,7 @@ export default function Invoices() {
         }}
         onPrint={handlePrintInvoice}
         onStatusChange={handleStatusChange}
+        companySettings={companySettings}
       />
     </div>
   )

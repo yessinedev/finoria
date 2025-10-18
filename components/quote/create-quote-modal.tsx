@@ -150,7 +150,11 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
       issueDate: new Date().toISOString(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       status: "Brouillon",
-      items: lineItems, // Pass the items array
+      items: lineItems.map(item => ({
+        ...item,
+        // Ensure the total is correctly calculated
+        total: item.unitPrice * item.quantity * (1 - item.discount / 100)
+      })), // Pass the items array
       notes,
       paymentTerms: "30 jours net",
     };

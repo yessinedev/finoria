@@ -64,6 +64,7 @@ export default function Quotes() {
   const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
+  const [companySettings, setCompanySettings] = useState<any>(null);
   const { toast } = useToast();
 
   // DataTable logic (reuse from invoices)
@@ -151,6 +152,7 @@ export default function Quotes() {
 
   useEffect(() => {
     loadData();
+    loadCompanySettings();
   }, []);
 
   const loadData = async () => {
@@ -212,10 +214,23 @@ export default function Quotes() {
     }
   };
 
+  const loadCompanySettings = async () => {
+    try {
+      const settingsResult = await db.settings.get();
+      if (settingsResult.success && settingsResult.data) {
+        setCompanySettings(settingsResult.data);
+      }
+    } catch (error) {
+      console.error("Error loading company settings:", error);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "TND",
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
     }).format(amount);
   };
 
@@ -290,7 +305,7 @@ export default function Quotes() {
       }
     }
     
-    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} />).toBlob();
+    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={companySettings} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -441,7 +456,7 @@ export default function Quotes() {
           <div className="flex-1 overflow-auto border rounded bg-white" style={{ height: 500, minHeight: 400 }}>
             {previewQuote && (
               <PDFViewer width="100%" height={500} showToolbar={false} style={{ border: "none", backgroundColor: "transparent" }}>
-                <QuotePDFDocument quote={previewQuote} />
+                <QuotePDFDocument quote={previewQuote} companySettings={companySettings} />
               </PDFViewer>
             )}
           </div>

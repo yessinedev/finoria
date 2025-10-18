@@ -64,6 +64,15 @@ export default function InvoiceGenerator({
     }
   }, [selectedSale, error]);
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "TND",
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
+    }).format(amount)
+  }
+
   const paymentTermsOptions = [
     { value: "15 jours net", label: "15 jours net" },
     { value: "30 jours net", label: "30 jours net" },
@@ -164,13 +173,6 @@ export default function InvoiceGenerator({
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "TND",
-    }).format(amount)
-  }
-
   const generatePreviewInvoiceNumber = () => {
     const year = new Date().getFullYear()
     const month = String(new Date().getMonth() + 1).padStart(2, "0")
@@ -254,7 +256,7 @@ export default function InvoiceGenerator({
                           value={selectedSale?.id?.toString() || ""}
                           onChange={handleSaleSelection}
                           options={availableSales}
-                          getOptionLabel={(sale) => `${sale.clientName} (${sale.clientCompany})`}
+                          getOptionLabel={(sale) => `${sale.clientName} (${sale.clientCompany}) - ${new Date(sale.saleDate).toLocaleDateString("fr-FR")} - ${formatCurrency(sale.totalAmount + (sale.taxAmount || 0))}`}
                           getOptionValue={(sale) => sale.id.toString()}
                           required
                         />

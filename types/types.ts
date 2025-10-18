@@ -45,6 +45,7 @@ export interface LineItem {
   id: number;
   productId: number;
   name: string;
+  productName?: string; // For compatibility with database field
   description: string;
   quantity: number;
   unitPrice: number;
@@ -104,6 +105,7 @@ export interface SupplierOrderItem {
   description?: string;
   quantity: number;
   unitPrice: number;
+  discount: number;
   totalPrice: number;
 }
 
@@ -133,6 +135,7 @@ export interface SupplierInvoiceItem {
   description: string;
   quantity: number;
   unitPrice: number;
+  discount: number;
   totalPrice: number;
 }
 

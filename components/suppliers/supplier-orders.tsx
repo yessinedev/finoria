@@ -577,6 +577,7 @@ export default function SupplierOrders() {
       productName: product.name,
       quantity: itemQuantity,
       unitPrice: itemUnitPrice,
+      discount: 0, // Default discount value
       totalPrice: parseFloat(totalPrice.toFixed(2)),
     };
 

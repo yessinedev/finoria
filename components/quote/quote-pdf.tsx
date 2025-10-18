@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { Quote, LineItem } from "@/types/types";
+import { formatCurrency, formatQuantity } from "@/lib/utils";
 
 const styles = StyleSheet.create({
   page: {
@@ -124,14 +125,9 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString("fr-FR");
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "TND",
-  }).format(amount);
-}
+// Removed local formatCurrency function since we're importing it from utils
 
-export function QuotePDFDocument({ quote }: { quote: Quote }) {
+export function QuotePDFDocument({ quote, companySettings }: { quote: Quote; companySettings?: any }) {
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -152,12 +148,12 @@ export function QuotePDFDocument({ quote }: { quote: Quote }) {
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
           <View style={[styles.card, { flex: 1 }]}> {/* Company */}
             <Text style={styles.cardTitle}>Émetteur</Text>
-            <Text style={styles.cardContent}>GestVente SARL</Text>
-            <Text style={styles.cardContent}>123 Rue de l'Entreprise, 75001 Paris</Text>
-            <Text style={styles.cardContent}>Tél: 01 23 45 67 89</Text>
-            <Text style={styles.cardContent}>contact@gestvente.fr</Text>
-            <Text style={styles.cardContent}>SIRET: 123 456 789 00012</Text>
-            <Text style={styles.cardContent}>TVA: FR12345678901</Text>
+            <Text style={styles.cardContent}>{companySettings?.name || 'GestVente SARL'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.address || '123 Rue de l\'Entreprise, 75001 Paris'}</Text>
+            <Text style={styles.cardContent}>Tél: {companySettings?.phone || '01 23 45 67 89'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.email || 'contact@gestvente.fr'}</Text>
+            {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
+            {companySettings?.tvaNumber && <Text style={styles.cardContent}>TVA: FR{companySettings.tvaNumber}</Text>}
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Client */}
             <Text style={styles.cardTitle}>Destinataire</Text>
@@ -180,28 +176,45 @@ export function QuotePDFDocument({ quote }: { quote: Quote }) {
           </View>
           {Array.isArray(quote.items) && quote.items.map((item: LineItem, idx: number) => (
             <View style={styles.tableRow} key={item.id || idx}>
-              <Text style={[styles.tableCell, { flex: 2 }]}>{item.name}</Text>
-              <Text style={styles.tableCell}>{item.quantity}</Text>
+              <Text style={[styles.tableCell, { flex: 2 }]}>{item.name || (item as any).productName || 'N/A'}</Text>
+              <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
-              <Text style={styles.tableCell}>{item.discount > 0 ? `${item.discount}%` : '-'}</Text>
-              <Text style={styles.tableCell}>{formatCurrency(item.total)}</Text>
+              <Text style={styles.tableCell}>{item.discount >= 0 ? `${item.discount}%` : '-'}</Text>
+              <Text style={styles.tableCell}>{formatCurrency(item.unitPrice * item.quantity * (1 - item.discount / 100))}</Text>
             </View>
           ))}
         </View>
 
         {/* Totals */}
         <View style={styles.totalsBox}>
+          {/* Calculate subtotal from items */}
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>Sous-total HT</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(quote.amount)}</Text>
+            <Text style={styles.totalsValue}>
+              {formatCurrency(
+                Array.isArray(quote.items) 
+                  ? quote.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity * (1 - item.discount / 100)), 0)
+                  : 0
+              )}
+            </Text>
           </View>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>TVA {quote.taxAmount && quote.amount && quote.amount > 0 ? ((quote.taxAmount / quote.amount) * 100).toFixed(0) : '20'}%</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(quote.taxAmount)}</Text>
+            {/* Calculate tax percentage from taxAmount and subtotal */}
+            <Text style={styles.totalsLabel}>
+              TVA {
+                Array.isArray(quote.items) && quote.items.length > 0
+                  ? Math.round(
+                      (quote.taxAmount / 
+                       quote.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity * (1 - item.discount / 100)), 0)) * 100
+                    ) || 20
+                  : 20
+              }%
+            </Text>
+            <Text style={styles.totalsValue}>{formatCurrency(quote.taxAmount || 0)}</Text>
           </View>
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>Total TTC</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(quote.totalAmount)}</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(quote.totalAmount || 0)}</Text>
           </View>
         </View>
 

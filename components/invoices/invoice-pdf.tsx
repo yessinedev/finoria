@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer"
 import type { Invoice, InvoiceItem } from "@/types/types";
+import { formatCurrency, formatQuantity } from "@/lib/utils";
 
 const styles = StyleSheet.create({
   page: {
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   },
 })
 
-export function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
+export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invoice; companySettings?: any }) {
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -151,12 +152,12 @@ export function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
           <View style={[styles.card, { flex: 1 }]}> {/* Company */}
             <Text style={styles.cardTitle}>Émetteur</Text>
-            <Text style={styles.cardContent}>GestVente SARL</Text>
-            <Text style={styles.cardContent}>123 Rue de l'Entreprise, 75001 Paris</Text>
-            <Text style={styles.cardContent}>Tél: 01 23 45 67 89</Text>
-            <Text style={styles.cardContent}>contact@gestvente.fr</Text>
-            <Text style={styles.cardContent}>SIRET: 123 456 789 00012</Text>
-            <Text style={styles.cardContent}>TVA: FR12345678901</Text>
+            <Text style={styles.cardContent}>{companySettings?.name || 'GestVente SARL'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.address || '123 Rue de l\'Entreprise, 75001 Paris'}</Text>
+            <Text style={styles.cardContent}>Tél: {companySettings?.phone || '01 23 45 67 89'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.email || 'contact@gestvente.fr'}</Text>
+            {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
+            {companySettings?.tvaNumber && <Text style={styles.cardContent}>TVA: FR{companySettings.tvaNumber}</Text>}
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Client */}
             <Text style={styles.cardTitle}>Facturé à</Text>
@@ -196,10 +197,10 @@ export function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
             <Text style={styles.tableCell}>Remise</Text>
             <Text style={styles.tableCell}>Total HT</Text>
           </View>
-          {invoice.items.map((item: InvoiceItem, idx: number) => (
-            <View style={styles.tableRow} key={item.id}>
+          {Array.isArray(invoice.items) && invoice.items.map((item: InvoiceItem, idx: number) => (
+            <View style={styles.tableRow} key={item.id || idx}>
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
-              <Text style={styles.tableCell}>{item.quantity}</Text>
+              <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
               <Text style={styles.tableCell}>{item.discount > 0 ? `${item.discount}%` : '-'}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.totalPrice)}</Text>
@@ -211,15 +212,21 @@ export function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
         <View style={styles.totalsBox}>
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(invoice.amount)}</Text>
+            <Text style={styles.totalsValue}>
+              {formatCurrency(
+                Array.isArray(invoice.items) 
+                  ? invoice.items.reduce((sum, item) => sum + item.totalPrice, 0)
+                  : 0
+              )}
+            </Text>
           </View>
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>TVA (20%):</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(invoice.taxAmount)}</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(invoice.taxAmount || 0)}</Text>
           </View>
           <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
             <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
-            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(invoice.totalAmount)}</Text>
+            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(invoice.totalAmount || 0)}</Text>
           </View>
         </View>
 
@@ -248,12 +255,6 @@ function formatDate(dateString: string) {
   })
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'TND',
-  })
-    .format(amount)
-    .replace(/\u202F/g, ' ');
-}
+// Removed local formatQuantity function since we're importing it from utils
 
+// Removed local formatCurrency function since we're importing it from utils

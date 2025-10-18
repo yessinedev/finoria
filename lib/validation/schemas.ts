@@ -24,6 +24,7 @@ export const supplierOrderSchema = z.object({
     productName: z.string().min(1, "Le nom du produit est requis"),
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
   })).optional(), // Make items optional
 });
@@ -40,13 +41,15 @@ export const supplierInvoiceSchema = z.object({
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().optional(),
   paymentDate: z.string().optional(),
+  // Items are optional since they can be auto-populated from orders
   items: z.array(z.object({
     productId: z.number().min(1, "Le produit est requis"),
     productName: z.string().min(1, "Le nom du produit est requis"),
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
-  })).optional(), // Make items optional
+  })).optional(),
 });
 
 // Product validation schema
@@ -55,7 +58,7 @@ export const productSchema = z.object({
   description: z.string().optional(),
   price: z.number().min(0, "Le prix doit être positif"),
   category: z.string().min(1, "La catégorie est requise"),
-  stock: z.number().min(0, "Le stock doit être positif"),
+  stock: z.number().min(0, "Le stock doit être positif ou nul"),
 });
 
 // Client validation schema
@@ -72,6 +75,8 @@ export const saleSchema = z.object({
   clientId: z.number().min(1, "Le client est requis"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
+  discountAmount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
+  finalAmount: z.number().min(0, "Le montant final doit être positif").optional(),
   status: z.string().min(1, "Le statut est requis"),
   saleDate: z.string().min(1, "La date de vente est requise"),
   items: z.array(z.object({
@@ -79,6 +84,7 @@ export const saleSchema = z.object({
     productName: z.string().min(1, "Le nom du produit est requis"),
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
   })).min(1, "Au moins un article est requis"),
 });
@@ -97,6 +103,7 @@ export const quoteSchema = z.object({
     productName: z.string().min(1, "Le nom du produit est requis"),
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
   })).min(1, "Au moins un article est requis"),
 });
@@ -112,6 +119,14 @@ export const invoiceSchema = z.object({
   status: z.string().min(1, "Le statut est requis"),
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().min(1, "La date d'échéance est requise"),
+  items: z.array(z.object({
+    productId: z.number().min(1, "Le produit est requis"),
+    productName: z.string().min(1, "Le nom du produit est requis"),
+    quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
+    unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
+    totalPrice: z.number().min(0, "Le total doit être positif"),
+  })).optional(), // Make items optional since they will be fetched from the sale
 });
 
 export type SupplierFormData = z.infer<typeof supplierSchema>;
