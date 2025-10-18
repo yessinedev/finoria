@@ -20,8 +20,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         // Insert sale items
         const itemStmt = db.prepare(`
-          INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, totalPrice) 
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, discount, totalPrice) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
         
         // Update product stock for non-service products
@@ -38,6 +38,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.productName,
             item.quantity,
             item.unitPrice,
+            item.discount || 0,
             item.totalPrice
           );
           
@@ -82,6 +83,36 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     } catch (error) {
       console.error("Error getting sales:", error);
       throw new Error("Erreur lors de la récupération des ventes");
+    }
+  });
+
+  ipcMain.handle("get-sales-with-items", async () => {
+    try {
+      const sales = db
+        .prepare(
+          `
+        SELECT s.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress
+        FROM sales s
+        JOIN clients c ON s.clientId = c.id
+        ORDER BY s.saleDate DESC
+      `
+        )
+        .all();
+      
+      // Add items to each sale
+      const getItems = db.prepare(`
+        SELECT * FROM sale_items WHERE saleId = ?
+      `);
+      
+      const salesWithItems = sales.map(sale => ({
+        ...sale,
+        items: getItems.all(sale.id)
+      }));
+      
+      return salesWithItems;
+    } catch (error) {
+      console.error("Error getting sales with items:", error);
+      throw new Error("Erreur lors de la récupération des ventes avec articles");
     }
   });
 

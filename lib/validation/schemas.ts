@@ -24,6 +24,7 @@ export const supplierOrderSchema = z.object({
     productName: z.string().min(1, "Le nom du produit est requis"),
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
   })).optional(), // Make items optional
 });
@@ -46,6 +47,7 @@ export const supplierInvoiceSchema = z.object({
     productName: z.string().min(1, "Le nom du produit est requis"),
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
   })).optional(),
 });
@@ -101,6 +103,7 @@ export const quoteSchema = z.object({
     productName: z.string().min(1, "Le nom du produit est requis"),
     quantity: z.number().min(1, "La quantité doit être supérieure à 0"),
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
+    discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
   })).min(1, "Au moins un article est requis"),
 });

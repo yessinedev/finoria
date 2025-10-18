@@ -34,7 +34,9 @@ import {
   AlertTriangle,
   ArrowUpDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckCircle,
+  Clock
 } from "lucide-react";
 import { db } from "@/lib/database";
 import { SupplierInvoice, Supplier, SupplierOrder, Product } from "@/types/types";
@@ -178,6 +180,7 @@ export default function SupplierInvoices() {
           productName: item.productName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          discount: item.discount || 0,
           totalPrice: item.totalPrice,
         }));
         console.log('Invoice items from order:', invoiceItemsFromOrder); // Debug log
@@ -643,6 +646,7 @@ export default function SupplierInvoices() {
       productName: product.name,
       quantity: itemQuantity,
       unitPrice: itemUnitPrice,
+      discount: 0, // Default discount value
       totalPrice: parseFloat(totalPrice.toFixed(3)),
     };
 
@@ -674,267 +678,134 @@ export default function SupplierInvoices() {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
+  // Calculate statistics
+  const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+  const paidAmount = filteredInvoices
+    .filter((invoice) => invoice.status === "Payée")
+    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+  const pendingAmount = filteredInvoices
+    .filter((invoice) => invoice.status === "En attente")
+    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+  const overdueAmount = filteredInvoices
+    .filter((invoice) => invoice.status === "En retard")
+    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "TND",
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
+    }).format(amount);
+  };
+
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileText className="h-8 w-8 text-primary" />
-            Factures Fournisseurs
-          </h1>
+          <h1 className="text-2xl font-semibold">Gestion des factures fournisseurs</h1>
           <p className="text-muted-foreground">
-            Gérez les factures de vos fournisseurs
+            Consultez et gérez toutes vos factures fournisseurs ({invoices.length} facture{invoices.length > 1 ? "s" : ""})
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreateDialog}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nouvelle facture
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {currentInvoice ? "Modifier la facture" : "Nouvelle facture"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="supplierId">Fournisseur *</Label>
-                  <Select
-                    value={formData.supplierId.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, supplierId: Number(value) })}
-                  >
-                    <SelectTrigger className={errors.supplierId ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Sélectionner un fournisseur" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                          {supplier.name} {supplier.company && `(${supplier.company})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.supplierId && (
-                    <p className="text-sm text-red-500">{errors.supplierId}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="orderId">Commande associée</Label>
-                  <Select
-                    value={formData.orderId.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, orderId: Number(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une commande" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">Aucune</SelectItem>
-                      {orders
-                        .filter(order => order.supplierId === formData.supplierId && order.status === "Livrée")
-                        .map((order) => (
-                          <SelectItem key={order.id} value={order.id.toString()}>
-                            {order.orderNumber} - {new Date(order.orderDate).toLocaleDateString('fr-FR')} - {order.totalAmount?.toFixed(3) || '0.000'} TND
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="invoiceNumber">Numéro de facture *</Label>
-                  <Input
-                    id="invoiceNumber"
-                    value={formData.invoiceNumber}
-                    onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
-                    className={errors.invoiceNumber ? "border-red-500" : ""}
-                    required
-                    readOnly={!!currentInvoice} // Read-only when editing existing invoice
-                  />
-                  {errors.invoiceNumber && (
-                    <p className="text-sm text-red-500">{errors.invoiceNumber}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="issueDate">Date d'émission *</Label>
-                  <Input
-                    id="issueDate"
-                    type="date"
-                    value={formData.issueDate}
-                    onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
-                    className={errors.issueDate ? "border-red-500" : ""}
-                    required
-                  />
-                  {errors.issueDate && (
-                    <p className="text-sm text-red-500">{errors.issueDate}</p>
-                  )}
-                </div>
-              </div>
+        <Button onClick={openCreateDialog} className="w-fit">
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvelle facture
+        </Button>
+      </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Date d'échéance *</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    className={errors.dueDate ? "border-red-500" : ""}
-                    required
-                  />
-                  {errors.dueDate && (
-                    <p className="text-sm text-red-500">{errors.dueDate}</p>
-                  )}
-                </div>
-              </div>
-
+      {/* Dialog for creating/editing invoices */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {currentInvoice ? "Modifier la facture" : "Nouvelle facture"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Articles</Label>
-                {/* Only show manual item addition when no order is selected */}
-                {!formData.orderId || formData.orderId === 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                    <div className="md:col-span-5">
-                      <Label>Produit</Label>
-                      <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={productSearchOpen}
-                            className="w-full justify-between"
-                          >
-                            {selectedProduct
-                              ? products.find((product) => product.id === selectedProduct)?.name
-                              : "Sélectionner un produit..."}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Rechercher un produit..." />
-                            <CommandList>
-                              <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
-                              <CommandGroup>
-                                {products.map((product) => (
-                                  <CommandItem
-                                    key={product.id}
-                                    value={product.name}
-                                    onSelect={() => {
-                                      setSelectedProduct(product.id);
-                                      setItemUnitPrice(product.price);
-                                      setProductSearchOpen(false);
-                                    }}
-                                  >
-                                    <div className="flex flex-col flex-1">
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-medium">
-                                          {product.name}
-                                        </span>
-                                      </div>
-                                      <span className="text-sm text-muted-foreground">
-                                        {product.price.toFixed(3)} TND • Stock: {product.stock}
-                                      </span>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label htmlFor="itemQuantity">Quantité</Label>
-                      <Input
-                        id="itemQuantity"
-                        type="number"
-                        min="1"
-                        value={itemQuantity}
-                        onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
-                      <Input
-                        id="itemUnitPrice"
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        value={itemUnitPrice}
-                        onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label>Total</Label>
-                      <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                        {(itemQuantity * itemUnitPrice).toFixed(3)} TND
-                      </div>
-                    </div>
-                    <div className="md:col-span-1">
-                      <Button
-                        type="button"
-                        onClick={addInvoiceItem}
-                        className="w-full"
-                        disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  // When an order is selected, show a message
-                  <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
-                    Les articles sont automatiquement remplis à partir de la commande sélectionnée.
-                    Pour modifier les articles, veuillez sélectionner "Aucune" commande.
-                  </div>
+                <Label htmlFor="supplierId">Fournisseur *</Label>
+                <Select
+                  value={formData.supplierId.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, supplierId: Number(value) })}
+                >
+                  <SelectTrigger className={errors.supplierId ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Sélectionner un fournisseur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                        {supplier.name} {supplier.company && `(${supplier.company})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.supplierId && (
+                  <p className="text-sm text-red-500">{errors.supplierId}</p>
                 )}
               </div>
-
-              {/* Invoice Items Table */}
-              <div className="border rounded-md overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produit</TableHead>
-                      <TableHead className="w-20">Quantité</TableHead>
-                      <TableHead className="w-24">Prix unit.</TableHead>
-                      <TableHead className="w-24">Total</TableHead>
-                      {/* Only show delete button when no order is selected */}
-                      {(!formData.orderId || formData.orderId === 0) && (
-                        <TableHead className="w-16"></TableHead>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoiceItems.map((item, index) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.productName}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
-                        <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
-                        {/* Only show delete button when no order is selected */}
-                        {(!formData.orderId || formData.orderId === 0) && (
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => removeInvoiceItem(item.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="space-y-2">
+                <Label htmlFor="invoiceNumber">Numéro de facture *</Label>
+                <Input
+                  id="invoiceNumber"
+                  value={formData.invoiceNumber}
+                  onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
+                  className={errors.invoiceNumber ? "border-red-500" : ""}
+                  required
+                />
+                {errors.invoiceNumber && (
+                  <p className="text-sm text-red-500">{errors.invoiceNumber}</p>
+                )}
               </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="orderId">Commande associée</Label>
+                <Select
+                  value={formData.orderId.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, orderId: Number(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner une commande (optionnel)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Aucune</SelectItem>
+                    {orders.map((order) => (
+                      <SelectItem key={order.id} value={order.id.toString()}>
+                        {order.orderNumber} - {order.supplierName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issueDate">Date d'émission *</Label>
+                <Input
+                  id="issueDate"
+                  type="date"
+                  value={formData.issueDate}
+                  onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
+                  className={errors.issueDate ? "border-red-500" : ""}
+                  required
+                />
+                {errors.issueDate && (
+                  <p className="text-sm text-red-500">{errors.issueDate}</p>
+                )}
+              </div>
+            </div>
 
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Date d'échéance</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="paymentDate">Date de paiement</Label>
                 <Input
@@ -944,21 +815,240 @@ export default function SupplierInvoices() {
                   onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
                 />
               </div>
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Annuler
-                </Button>
-                <Button type="submit">
-                  {currentInvoice ? "Mettre à jour" : "Créer"}
-                </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Statut</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="En attente">En attente</SelectItem>
+                  <SelectItem value="Payée">Payée</SelectItem>
+                  <SelectItem value="En retard">En retard</SelectItem>
+                  <SelectItem value="Annulée">Annulée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Articles</Label>
+              {/* Only show product selection when no order is selected */}
+              {!formData.orderId || formData.orderId === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                  <div className="md:col-span-5">
+                    <Label>Produit</Label>
+                    <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={productSearchOpen}
+                          className="w-full justify-between"
+                        >
+                          {selectedProduct
+                            ? products.find((product) => product.id === selectedProduct)?.name
+                            : "Sélectionner un produit..."}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Rechercher un produit..." />
+                          <CommandList>
+                            <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
+                            <CommandGroup>
+                              {products.map((product) => (
+                                <CommandItem
+                                  key={product.id}
+                                  value={product.name}
+                                  onSelect={() => {
+                                    setSelectedProduct(product.id);
+                                    setItemUnitPrice(product.price);
+                                    setProductSearchOpen(false);
+                                  }}
+                                >
+                                  <div className="flex flex-col flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium">
+                                        {product.name}
+                                      </span>
+                                    </div>
+                                    <span className="text-sm text-muted-foreground">
+                                      {product.price.toFixed(3)} TND • Stock: {product.stock}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="itemQuantity">Quantité</Label>
+                    <Input
+                      id="itemQuantity"
+                      type="number"
+                      min="1"
+                      value={itemQuantity}
+                      onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
+                    <Input
+                      id="itemUnitPrice"
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={itemUnitPrice}
+                      onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Total</Label>
+                    <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                      {(itemQuantity * itemUnitPrice).toFixed(3)} TND
+                    </div>
+                  </div>
+                  <div className="md:col-span-1">
+                    <Button
+                      type="button"
+                      onClick={addInvoiceItem}
+                      className="w-full"
+                      disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // When an order is selected, show a message
+                <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
+                  Les articles sont automatiquement remplis à partir de la commande sélectionnée.
+                  Pour modifier les articles, veuillez sélectionner "Aucune" commande.
+                </div>
+              )}
+            </div>
+
+            {/* Invoice Items Table */}
+            <div className="border rounded-md overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produit</TableHead>
+                    <TableHead className="w-20">Quantité</TableHead>
+                    <TableHead className="w-24">Prix unit.</TableHead>
+                    <TableHead className="w-24">Total</TableHead>
+                    {/* Only show delete button when no order is selected */}
+                    {(!formData.orderId || formData.orderId === 0) && (
+                      <TableHead className="w-16"></TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoiceItems.map((item, index) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.productName}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
+                      <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
+                      {/* Only show delete button when no order is selected */}
+                      {(!formData.orderId || formData.orderId === 0) && (
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeInvoiceItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button type="submit">
+                {currentInvoice ? "Mettre à jour" : "Créer"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-blue-600 font-medium">Total facturé</p>
+              <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalAmount)}</p>
+              <div className="flex items-center text-xs text-blue-600 mt-1">
+                <ArrowUpDown className="h-3 w-3 mr-1" />
+                +12% ce mois
               </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </div>
+            <FileText className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="border rounded-lg p-4 bg-green-50 border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-600 font-medium">Montant payé</p>
+              <p className="text-2xl font-bold text-green-900">{formatCurrency(paidAmount)}</p>
+              <div className="flex items-center text-xs text-green-600 mt-1">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                {((paidAmount / totalAmount) * 100 || 0).toFixed(1)}% du total
+              </div>
+            </div>
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-600 font-medium">En attente</p>
+              <p className="text-2xl font-bold text-orange-900">{formatCurrency(pendingAmount)}</p>
+              <div className="flex items-center text-xs text-orange-600 mt-1">
+                <Clock className="h-3 w-3 mr-1" />
+                {invoices.filter((i) => i.status === "En attente").length} facture(s)
+              </div>
+            </div>
+            <Clock className="h-8 w-8 text-orange-600" />
+          </div>
+        </div>
+
+        <div className="border rounded-lg p-4 bg-red-50 border-red-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-red-600 font-medium">En retard</p>
+              <p className="text-2xl font-bold text-red-900">{formatCurrency(overdueAmount)}</p>
+              <div className="flex items-center text-xs text-red-600 mt-1">
+                <ArrowUpDown className="h-3 w-3 mr-1" />
+                {invoices.filter((i) => i.status === "En retard").length} facture(s)
+              </div>
+            </div>
+            <AlertTriangle className="h-8 w-8 text-red-600" />
+          </div>
+        </div>
       </div>
 
       <div className="mb-6">

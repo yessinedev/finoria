@@ -178,7 +178,7 @@ export default function Invoices() {
     setError(null)
 
     try {
-      const [invoicesResult, salesResult] = await Promise.all([db.invoices.getAll(), db.sales.getAll()])
+      const [invoicesResult, salesResult] = await Promise.all([db.invoices.getAll(), db.sales.getAllWithItems()])
 
       if (invoicesResult.success) {
         // Load items for each invoice
@@ -243,7 +243,6 @@ export default function Invoices() {
           clientEmail: sale.clientEmail || "",
           clientPhone: sale.clientPhone || "",
           clientAddress: sale.clientAddress || "",
-          items: sale.items || [],
         }))
         setSales(enhancedSales)
       }

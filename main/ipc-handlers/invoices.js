@@ -38,8 +38,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       `);
       
       const insertItem = db.prepare(`
-        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, totalPrice)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       const result = insertInvoice.run(
@@ -70,6 +70,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.productName,
             item.quantity,
             item.unitPrice,
+            item.discount || 0,
             item.totalPrice
           );
         }

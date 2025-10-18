@@ -151,8 +151,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const insertItem = db.prepare(`
         INSERT INTO supplier_order_items (
-          orderId, productId, productName, quantity, unitPrice, totalPrice
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          orderId, productId, productName, quantity, unitPrice, discount, totalPrice
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       const updateProductStock = db.prepare(`
@@ -179,6 +179,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           item.productName,
           item.quantity,
           item.unitPrice,
+          item.discount || 0,
           item.totalPrice
         );
         
@@ -233,8 +234,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         const deleteItems = db.prepare("DELETE FROM supplier_order_items WHERE orderId = ?");
         const insertItem = db.prepare(`
           INSERT INTO supplier_order_items (
-            orderId, productId, productName, quantity, unitPrice, totalPrice
-          ) VALUES (?, ?, ?, ?, ?, ?)
+            orderId, productId, productName, quantity, unitPrice, discount, totalPrice
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
         
         // Delete existing items
@@ -248,6 +249,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.productName,
             item.quantity,
             item.unitPrice,
+            item.discount || 0,
             item.totalPrice
           );
         }
@@ -342,8 +344,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const insertItem = db.prepare(`
         INSERT INTO supplier_invoice_items (
-          invoiceId, productId, productName, quantity, unitPrice, totalPrice
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       const invoiceResult = insertInvoice.run(
@@ -370,6 +372,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.productName,
             item.quantity,
             item.unitPrice,
+            item.discount || 0,
             item.totalPrice
           );
         }
@@ -404,8 +407,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const deleteItems = db.prepare("DELETE FROM supplier_invoice_items WHERE invoiceId = ?");
       const insertItem = db.prepare(`
         INSERT INTO supplier_invoice_items (
-          invoiceId, productId, productName, quantity, unitPrice, totalPrice
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       updateInvoice.run(
@@ -432,6 +435,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.productName,
             item.quantity,
             item.unitPrice,
+            item.discount || 0,
             item.totalPrice
           );
         }

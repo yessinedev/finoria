@@ -202,8 +202,8 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
               <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
-              <Text style={styles.tableCell}>{item.discount >= 0 ? `${item.discount}%` : '-'}</Text>
-              <Text style={styles.tableCell}>{formatCurrency(item.unitPrice * item.quantity * (1 - item.discount / 100))}</Text>
+              <Text style={styles.tableCell}>{item.discount > 0 ? `${item.discount}%` : '-'}</Text>
+              <Text style={styles.tableCell}>{formatCurrency(item.totalPrice)}</Text>
             </View>
           ))}
         </View>
@@ -215,7 +215,7 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
             <Text style={styles.totalsValue}>
               {formatCurrency(
                 Array.isArray(invoice.items) 
-                  ? invoice.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity * (1 - item.discount / 100)), 0)
+                  ? invoice.items.reduce((sum, item) => sum + item.totalPrice, 0)
                   : 0
               )}
             </Text>

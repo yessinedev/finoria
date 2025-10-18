@@ -202,6 +202,7 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
             <Text style={[styles.tableCell, { flex: 2 }]}>Description</Text>
             <Text style={styles.tableCell}>Qté</Text>
             <Text style={styles.tableCell}>Prix unitaire</Text>
+            <Text style={styles.tableCell}>Remise</Text>
             <Text style={styles.tableCell}>Total HT</Text>
           </View>
           {invoice.items && invoice.items.map((item: any, idx: number) => (
@@ -209,6 +210,7 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
               <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
+              <Text style={styles.tableCell}>{item.discount > 0 ? `${item.discount}%` : '-'}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.totalPrice)}</Text>
             </View>
           ))}

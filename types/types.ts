@@ -105,6 +105,7 @@ export interface SupplierOrderItem {
   description?: string;
   quantity: number;
   unitPrice: number;
+  discount: number;
   totalPrice: number;
 }
 
@@ -134,6 +135,7 @@ export interface SupplierInvoiceItem {
   description: string;
   quantity: number;
   unitPrice: number;
+  discount: number;
   totalPrice: number;
 }
 

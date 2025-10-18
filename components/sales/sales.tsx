@@ -251,6 +251,7 @@ export default function Sales() {
           productName: item.name,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          discount: item.discount,
           totalPrice: item.total,
         })),
         totalAmount: discountedSubtotal,

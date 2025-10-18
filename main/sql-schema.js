@@ -81,6 +81,7 @@ function createTables(db) {
       productName TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       unitPrice REAL NOT NULL,
+      discount REAL DEFAULT 0,
       totalPrice REAL NOT NULL,
       FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE,
       FOREIGN KEY (productId) REFERENCES products(id)
@@ -113,6 +114,7 @@ function createTables(db) {
       productName TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       unitPrice REAL NOT NULL,
+      discount REAL DEFAULT 0,
       totalPrice REAL NOT NULL,
       FOREIGN KEY (orderId) REFERENCES supplier_orders(id) ON DELETE CASCADE,
       FOREIGN KEY (productId) REFERENCES products(id)
@@ -149,6 +151,7 @@ function createTables(db) {
       productName TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       unitPrice REAL NOT NULL,
+      discount REAL DEFAULT 0,
       totalPrice REAL NOT NULL,
       FOREIGN KEY (invoiceId) REFERENCES supplier_invoices(id) ON DELETE CASCADE,
       FOREIGN KEY (productId) REFERENCES products(id)
@@ -183,6 +186,7 @@ function createTables(db) {
       productName TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       unitPrice REAL NOT NULL,
+      discount REAL DEFAULT 0,
       totalPrice REAL NOT NULL,
       FOREIGN KEY (invoiceId) REFERENCES invoices(id) ON DELETE CASCADE,
       FOREIGN KEY (productId) REFERENCES products(id)
@@ -299,6 +303,46 @@ function createTables(db) {
     // Column might already exist, which is fine
     if (!error.message.includes("duplicate column name")) {
       console.error("Error adding discountAmount column:", error);
+    }
+  }
+  
+  // Add discount column to sale_items table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE sale_items ADD COLUMN discount REAL DEFAULT 0");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding discount column to sale_items:", error);
+    }
+  }
+  
+  // Add discount column to invoice_items table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE invoice_items ADD COLUMN discount REAL DEFAULT 0");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding discount column to invoice_items:", error);
+    }
+  }
+  
+  // Add discount column to supplier_invoice_items table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE supplier_invoice_items ADD COLUMN discount REAL DEFAULT 0");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding discount column to supplier_invoice_items:", error);
+    }
+  }
+  
+  // Add discount column to supplier_order_items table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE supplier_order_items ADD COLUMN discount REAL DEFAULT 0");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding discount column to supplier_order_items:", error);
     }
   }
 }
