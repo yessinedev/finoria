@@ -9,9 +9,7 @@ module.exports = {
   },
   asar: true,
   asarUnpack: ["**/*.node"],
-  files: [
-    "main/**/*"
-  ],
+  files: ["main/**/*"],
   win: {
     target: "nsis",
     icon: "public/icon.ico",
@@ -27,27 +25,28 @@ module.exports = {
     const resourcesPath = path.join(appOutDir, "resources");
     const targetAppFolder = path.join(resourcesPath, "app");
 
-    const projectRoot = packager.info.metadata.buildResources || process.cwd(); 
+    const projectRoot = packager.info.metadata.buildResources || process.cwd();
     // or just process.cwd()
 
     const standaloneDir = path.join(projectRoot, ".next", "standalone");
     const staticDir = path.join(projectRoot, ".next", "static");
     const publicDir = path.join(projectRoot, "public");
-    const dbFile = path.join(projectRoot, "database.db");
 
     // Remove old if exists
     await fs.remove(targetAppFolder);
     // Copy standalone build (including node_modules) into resources/app
     await fs.copy(standaloneDir, targetAppFolder, { dereference: true });
     // Copy static
-    await fs.copy(staticDir, path.join(targetAppFolder, ".next", "static"), { dereference: true });
+    await fs.copy(staticDir, path.join(targetAppFolder, ".next", "static"), {
+      dereference: true,
+    });
     // Copy public
-    await fs.copy(publicDir, path.join(targetAppFolder, "public"), { dereference: true });
-    // Copy database
-    if (await fs.pathExists(dbFile)) {
-      await fs.copy(dbFile, path.join(targetAppFolder, "database.db"));
-    }
+    await fs.copy(publicDir, path.join(targetAppFolder, "public"), {
+      dereference: true,
+    });
 
-    console.log("✅ afterPack: injected resources/app folder into built package");
-  }
+    console.log(
+      "✅ afterPack: injected resources/app folder into built package"
+    );
+  },
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { LicenseForm } from "@/components/license-form";
+import { db } from "@/lib/database";
 import { verifyLicense } from "@/lib/license";
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -16,7 +17,9 @@ export default function LicensePage() {
 
   useEffect(() => {
     (async () => {
-      const valid = await verifyLicense();
+      const fingerprint = await db.device.getFingerprint();
+      const licenseKey = localStorage.getItem("licenseKey");
+      const valid = await verifyLicense(licenseKey, fingerprint.data);
       if (valid) {
         router.push("/dashboard");
       } else {
@@ -32,8 +35,6 @@ export default function LicensePage() {
       </div>
     );
   }
-
- 
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

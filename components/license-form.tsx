@@ -15,6 +15,8 @@ import { CheckCircle, XCircle, Key } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormInput } from "./ui/form-input";
 import { db } from "@/lib/database";
+import { verifyLicense } from "@/lib/license";
+import { useRouter } from "next/navigation";
 
 interface LicenseFormProps {
   onSuccess?: () => void;
@@ -25,6 +27,7 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
   const [licenseKey, setLicenseKey] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +36,13 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
     try {
       const result = await db.device.getFingerprint();
       const fingerprint = result.data;
+      const verified = verifyLicense(licenseKey, fingerprint);
 
+      if (verified) {
+        localStorage.setItem("licenseKey", licenseKey);
+        onSuccess?.();
+        return;
+      }
       const res = await fetch("https://license.etudionet.life/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

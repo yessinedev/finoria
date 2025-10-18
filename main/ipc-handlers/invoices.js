@@ -55,9 +55,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const invoiceId = result.lastInsertRowid;
       
-      // Insert invoice items
-      if (invoice.items && Array.isArray(invoice.items)) {
-        for (const item of invoice.items) {
+      // Get sale items and convert them to invoice items
+      if (invoice.saleId) {
+        const getSaleItems = db.prepare(`
+          SELECT * FROM sale_items WHERE saleId = ?
+        `);
+        const saleItems = getSaleItems.all(invoice.saleId);
+        
+        // Insert sale items as invoice items
+        for (const item of saleItems) {
           insertItem.run(
             invoiceId,
             item.productId,

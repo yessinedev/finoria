@@ -13,6 +13,7 @@ import {
   FileText,
   Package,
   AlertCircle,
+  AlertTriangle,
   RefreshCw,
   Calendar,
   Target,
@@ -22,7 +23,6 @@ import {
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
-import { LineChart, BarChart, PieChart, ChartContainer } from "@/components/ui/chart"
 import { db } from "@/lib/database"
 import type { DashboardStats } from "@/types/types"
 
@@ -277,72 +277,78 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Statistics Cards Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Évolution du chiffre d'affaires</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Produits</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <ChartContainer>
-              <LineChart
-                data={(stats.salesByMonth || []).map((item) => ({
-                  name: item.month || "Inconnu",
-                  value: item.revenue || 0,
-                }))}
-                height={250}
-              />
-            </ChartContainer>
+            <div className="text-2xl font-bold">{stats.totalProducts || 0}</div>
+            <p className="text-xs text-muted-foreground">Total des produits actifs</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Répartition des clients</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stock faible</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <ChartContainer>
-              <PieChart data={stats.clientDistribution || []} size={250} />
-            </ChartContainer>
+            <div className="text-2xl font-bold">{stats.lowStockProducts || 0}</div>
+            <p className="text-xs text-muted-foreground">Produits en rupture de stock</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Paiements en attente</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingInvoices || 0}</div>
+            <p className="text-xs text-muted-foreground">Factures non payées</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Additional KPI Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Additional KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Produits les plus vendus</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Paiements en retard</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <ChartContainer>
-              <BarChart
-                data={(stats.topProducts || []).map((product) => ({
-                  name: (product.name || "Inconnu").split(" ")[0], // Shortened name
-                  value: product.revenue || 0,
-                  color: "bg-blue-500",
-                }))}
-                height={200}
-              />
-            </ChartContainer>
+            <div className="text-2xl font-bold">{stats.overdueInvoices || 0}</div>
+            <p className="text-xs text-muted-foreground">Factures en retard de paiement</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Performance des ventes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Taux de conversion</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <ChartContainer>
-              <BarChart
-                data={(stats.salesByMonth || []).map((item) => ({
-                  name: item.month || "Inconnu",
-                  value: item.sales || 0,
-                  color: "bg-green-500",
-                }))}
-                height={200}
-              />
-            </ChartContainer>
+            <div className="text-2xl font-bold">
+              {stats.totalSales ? Math.round((stats.totalSales - stats.pendingInvoices) / stats.totalSales * 100) : 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">Ventes converties</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Croissance</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              +{Math.round(((stats.monthlyRevenue || 0) / 50000) * 100) || 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">Par rapport à l'objectif mensuel</p>
           </CardContent>
         </Card>
       </div>

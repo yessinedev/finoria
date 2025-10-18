@@ -123,7 +123,7 @@ export const invoiceSchema = z.object({
     unitPrice: z.number().min(0, "Le prix unitaire doit être positif"),
     discount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
     totalPrice: z.number().min(0, "Le total doit être positif"),
-  })).min(1, "Au moins un article est requis"),
+  })).optional(), // Make items optional since they will be fetched from the sale
 });
 
 export type SupplierFormData = z.infer<typeof supplierSchema>;
