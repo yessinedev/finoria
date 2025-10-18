@@ -18,14 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Building2, Save, User, Shield, Bell } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { Building2, Save, User, Shield, Bell, Download } from "lucide-react";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
     invoiceReminders: true,
@@ -131,6 +132,41 @@ export default function SettingsPage() {
     setIsSubmitting(false);
   };
 
+  const handleExportDatabase = async () => {
+    setIsExporting(true);
+    try {
+      const result = await db.database.export();
+      if (result.success && result.data) {
+        if (result.data.success) {
+          toast({
+            title: "Succès",
+            description: `Base de données exportée avec succès: ${result.data.filename}`,
+          });
+        } else {
+          toast({
+            title: "Erreur",
+            description: result.data.error || "Erreur lors de l'export de la base de données",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de l'export de la base de données",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de l'export de la base de données",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const updateNotification = (
     key: keyof typeof notifications,
     value: boolean
@@ -150,16 +186,27 @@ export default function SettingsPage() {
                 Gérez les paramètres et préférences de votre entreprise
               </p>
             </div>
-            <Button
-              onClick={handleSaveSettings}
-              disabled={isSubmitting}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {isSubmitting
-                ? "Enregistrement..."
-                : "Enregistrer les modifications"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleExportDatabase}
+                disabled={isExporting}
+                variant="outline"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? "Export en cours..." : "Exporter base de données"}
+              </Button>
+              <Button
+                onClick={handleSaveSettings}
+                disabled={isSubmitting}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {isSubmitting
+                  ? "Enregistrement..."
+                  : "Enregistrer les modifications"}
+              </Button>
+            </div>
           </div>
 
           {/* Company Information */}

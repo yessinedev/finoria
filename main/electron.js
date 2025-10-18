@@ -108,6 +108,7 @@ app.whenReady().then(() => {
     "payments",
     "enterprise-settings",
     "device",
+    "database",
   ].forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
   });

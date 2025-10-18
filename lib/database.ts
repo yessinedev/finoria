@@ -83,6 +83,9 @@ interface ElectronAPI {
   createEnterpriseSettings: (settings: any) => Promise<any>;
   updateEnterpriseSettings: (id: number, settings: any) => Promise<any>;
 
+  // Database
+  exportDatabase: () => Promise<{ success: boolean; path?: string; filename?: string; error?: string }>;
+
   // Device
   getFingerprint: () => Promise<string>;
 
@@ -544,6 +547,15 @@ class DatabaseService {
           window.electronAPI?.deleteSupplierPayment(id) ||
           Promise.resolve(false),
         "deleteSupplierPayment"
+      ),
+  };
+
+  // --- Database API ---
+  database = {
+    export: () =>
+      this.handle(
+        () => window.electronAPI?.exportDatabase() || Promise.resolve({ success: false, error: "Electron API not available" }),
+        "exportDatabase"
       ),
   };
 

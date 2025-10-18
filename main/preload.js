@@ -92,6 +92,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createEnterpriseSettings: (settings) => ipcRenderer.invoke("create-enterprise-settings", settings),
   updateEnterpriseSettings: (id, settings) => ipcRenderer.invoke("update-enterprise-settings", id, settings),
 
+  // --- Database API ---
+  exportDatabase: () => ipcRenderer.invoke("export-database"),
   
   // --- Device API ---
   getFingerprint: () => ipcRenderer.invoke("get-machine-fingerprint"),
