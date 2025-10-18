@@ -43,7 +43,7 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
         onSuccess?.();
         return;
       }
-      const res = await fetch("http://localhost:4000/api/activate", {
+      const res = await fetch("https://license.etudionet.life/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
