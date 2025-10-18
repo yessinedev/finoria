@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, User, Shield, Bell, Download } from "lucide-react";
+import { Building2, Save, User, Shield, Bell, Download, Upload } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
     invoiceReminders: true,
@@ -167,11 +169,42 @@ export default function SettingsPage() {
     }
   };
 
-  const updateNotification = (
-    key: keyof typeof notifications,
-    value: boolean
-  ) => {
-    setNotifications((prev) => ({ ...prev, [key]: value }));
+  const handleImportDatabase = async () => {
+    setIsImporting(true);
+    try {
+      // Call the import function (opens file dialog)
+      const result = await db.database.import();
+      if (result.success && result.data) {
+        if (result.data.success) {
+          toast({
+            title: "Succès",
+            description: result.data.message || "Base de données importée avec succès",
+          });
+          // Reload the page to reflect the new data
+          window.location.reload();
+        } else {
+          toast({
+            title: "Erreur",
+            description: result.data.error || "Erreur lors de l'import de la base de données",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de l'import de la base de données",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de l'import de la base de données",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -186,7 +219,18 @@ export default function SettingsPage() {
                 Gérez les paramètres et préférences de votre entreprise
               </p>
             </div>
-            <div className="flex gap-2">
+            
+          </div>
+          <div className="flex gap-2">
+              <Button
+                onClick={handleImportDatabase}
+                disabled={isImporting}
+                variant="outline"
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {isImporting ? "Import en cours..." : "Importer base de données"}
+              </Button>
               <Button
                 onClick={handleExportDatabase}
                 disabled={isExporting}
@@ -207,7 +251,6 @@ export default function SettingsPage() {
                   : "Enregistrer les modifications"}
               </Button>
             </div>
-          </div>
 
           {/* Company Information */}
           <Card>

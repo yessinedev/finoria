@@ -85,6 +85,7 @@ interface ElectronAPI {
 
   // Database
   exportDatabase: () => Promise<{ success: boolean; path?: string; filename?: string; error?: string }>;
+  importDatabase: () => Promise<{ success: boolean; backupPath?: string; message?: string; error?: string }>;
 
   // Device
   getFingerprint: () => Promise<string>;
@@ -556,6 +557,11 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.exportDatabase() || Promise.resolve({ success: false, error: "Electron API not available" }),
         "exportDatabase"
+      ),
+    import: () =>
+      this.handle(
+        () => window.electronAPI?.importDatabase() || Promise.resolve({ success: false, error: "Electron API not available" }),
+        "importDatabase"
       ),
   };
 

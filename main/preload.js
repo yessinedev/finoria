@@ -94,6 +94,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // --- Database API ---
   exportDatabase: () => ipcRenderer.invoke("export-database"),
+  importDatabase: () => ipcRenderer.invoke("import-database"),
   
   // --- Device API ---
   getFingerprint: () => ipcRenderer.invoke("get-machine-fingerprint"),
