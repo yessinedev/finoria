@@ -114,7 +114,26 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         JOIN suppliers s ON so.supplierId = s.id
         ORDER BY so.orderDate DESC
       `).all();
-      return orders;
+      
+      console.log('Retrieved orders from database:', orders); // Debug log
+      
+      // Add items to each order
+      const getItems = db.prepare(`
+        SELECT * FROM supplier_order_items WHERE orderId = ?
+      `);
+      
+      const ordersWithItems = orders.map(order => {
+        const items = getItems.all(order.id);
+        console.log(`Items for order ${order.id}:`, items); // Debug log
+        return {
+          ...order,
+          items: items
+        };
+      });
+      
+      console.log('Orders with items:', ordersWithItems); // Debug log
+      
+      return ordersWithItems;
     } catch (error) {
       console.error("Error getting supplier orders:", error);
       throw new Error("Erreur lors de la récupération des commandes fournisseurs");
@@ -293,7 +312,18 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         JOIN suppliers s ON si.supplierId = s.id
         ORDER BY si.issueDate DESC
       `).all();
-      return invoices;
+      
+      // Add items to each invoice
+      const getItems = db.prepare(`
+        SELECT * FROM supplier_invoice_items WHERE invoiceId = ?
+      `);
+      
+      const invoicesWithItems = invoices.map(invoice => ({
+        ...invoice,
+        items: getItems.all(invoice.id)
+      }));
+      
+      return invoicesWithItems;
     } catch (error) {
       console.error("Error getting supplier invoices:", error);
       throw new Error("Erreur lors de la récupération des factures fournisseurs");
@@ -302,14 +332,21 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("create-supplier-invoice", async (event, invoice) => {
     try {
-      const stmt = db.prepare(`
+      // Start transaction
+      const insertInvoice = db.prepare(`
         INSERT INTO supplier_invoices (
           supplierId, orderId, invoiceNumber, amount, taxAmount, totalAmount, 
           status, issueDate, dueDate, paymentDate
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
-      const result = stmt.run(
+      const insertItem = db.prepare(`
+        INSERT INTO supplier_invoice_items (
+          invoiceId, productId, productName, quantity, unitPrice, totalPrice
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      const invoiceResult = insertInvoice.run(
         invoice.supplierId,
         invoice.orderId,
         invoice.invoiceNumber,
@@ -322,8 +359,24 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.paymentDate
       );
       
+      const invoiceId = invoiceResult.lastInsertRowid;
+      
+      // Insert invoice items
+      if (invoice.items && Array.isArray(invoice.items)) {
+        for (const item of invoice.items) {
+          insertItem.run(
+            invoiceId,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.totalPrice
+          );
+        }
+      }
+      
       const newInvoice = {
-        id: result.lastInsertRowid,
+        id: invoiceId,
         ...invoice,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -339,7 +392,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("update-supplier-invoice", async (event, id, invoice) => {
     try {
-      const stmt = db.prepare(`
+      // Start transaction
+      const updateInvoice = db.prepare(`
         UPDATE supplier_invoices 
         SET supplierId = ?, orderId = ?, invoiceNumber = ?, amount = ?, taxAmount = ?, 
             totalAmount = ?, status = ?, issueDate = ?, dueDate = ?, paymentDate = ?, 
@@ -347,7 +401,14 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         WHERE id = ?
       `);
       
-      stmt.run(
+      const deleteItems = db.prepare("DELETE FROM supplier_invoice_items WHERE invoiceId = ?");
+      const insertItem = db.prepare(`
+        INSERT INTO supplier_invoice_items (
+          invoiceId, productId, productName, quantity, unitPrice, totalPrice
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      updateInvoice.run(
         invoice.supplierId,
         invoice.orderId,
         invoice.invoiceNumber,
@@ -360,6 +421,21 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.paymentDate,
         id
       );
+      
+      // Update invoice items
+      if (invoice.items && Array.isArray(invoice.items)) {
+        deleteItems.run(id);
+        for (const item of invoice.items) {
+          insertItem.run(
+            id,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.totalPrice
+          );
+        }
+      }
       
       const updatedInvoice = {
         id,

@@ -49,7 +49,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { pdf } from "@react-pdf/renderer";
-import SupplierInvoicePDF from "./supplier-invoice-pdf";
+import SupplierInvoicePDF, { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
 import SupplierInvoicePreview from "./supplier-invoice-preview";
 import {
   Command,
@@ -85,6 +85,8 @@ export default function SupplierInvoices() {
     key: 'issueDate', 
     direction: 'desc' 
   });
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  
   
   // Inline editing state
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
@@ -127,6 +129,7 @@ export default function SupplierInvoices() {
     loadSuppliers();
     loadOrders();
     loadProducts();
+    loadCompanySettings();
   }, []);
 
   useEffect(() => {
@@ -160,6 +163,31 @@ export default function SupplierInvoices() {
     setFilteredInvoices(filtered);
     setCurrentPage(1); // Reset to first page when filters change
   }, [searchTerm, invoices, sortConfig]);
+
+  // Update form data when order is selected
+  useEffect(() => {
+    if (formData.orderId && formData.orderId !== 0) {
+      const selectedOrder = orders.find(order => order.id === formData.orderId);
+      console.log('Selected order:', selectedOrder); // Debug log
+      if (selectedOrder && selectedOrder.items) {
+        console.log('Order items:', selectedOrder.items); // Debug log
+        // Convert order items to invoice items
+        const invoiceItemsFromOrder = selectedOrder.items.map(item => ({
+          id: Date.now() + Math.random(), // Temporary ID
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        }));
+        console.log('Invoice items from order:', invoiceItemsFromOrder); // Debug log
+        setInvoiceItems(invoiceItemsFromOrder);
+      }
+    } else {
+      // Clear items when no order is selected
+      setInvoiceItems([]);
+    }
+  }, [formData.orderId, orders]);
 
   const loadInvoices = async () => {
     try {
@@ -197,7 +225,9 @@ export default function SupplierInvoices() {
   const loadOrders = async () => {
     try {
       const response = await db.supplierOrders.getAll();
+      console.log('Orders response:', response); // Debug log
       if (response.success && response.data) {
+        console.log('Orders data:', response.data); // Debug log
         setOrders(response.data);
       }
     } catch (error) {
@@ -224,6 +254,17 @@ export default function SupplierInvoices() {
     }
   };
 
+  const loadCompanySettings = async () => {
+    try {
+      const settingsResult = await db.settings.get();
+      if (settingsResult.success && settingsResult.data) {
+        setCompanySettings(settingsResult.data);
+      }
+    } catch (error) {
+      console.error("Error loading company settings:", error);
+    }
+  };
+
   const validateForm = () => {
     try {
       // Validate main form data
@@ -234,6 +275,17 @@ export default function SupplierInvoices() {
       };
       
       supplierInvoiceSchema.parse(mainData);
+      
+      // Additional validation: if no order is selected, we need at least one item
+      if ((!formData.orderId || formData.orderId === 0) && (!invoiceItems || invoiceItems.length === 0)) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez ajouter au moins un article",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
       setErrors({});
       setItemErrors({});
       return true;
@@ -274,10 +326,13 @@ export default function SupplierInvoices() {
     }
 
     try {
+      console.log('Invoice items before calculating totals:', invoiceItems); // Debug log
       // Calculate totals
       const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
       const taxAmount = subtotal * 0.19; // 19% VAT
       const totalAmount = subtotal + taxAmount;
+      
+      console.log('Calculated totals:', { subtotal, taxAmount, totalAmount }); // Debug log
 
       const invoiceData = {
         ...formData,
@@ -288,6 +343,8 @@ export default function SupplierInvoices() {
         totalAmount: Number(totalAmount.toFixed(3)),
         items: invoiceItems,
       };
+
+      console.log('Invoice data to be sent:', invoiceData); // Debug log
 
       const response = await db.supplierInvoices.create(invoiceData);
       if (response.success && response.data) {
@@ -406,8 +463,23 @@ export default function SupplierInvoices() {
     setItemErrors({});
   };
 
+  // Function to generate a unique invoice number
+  const generateInvoiceNumber = () => {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, "0");
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    return `FF-${year}${month}-${random}`;
+  };
+
   const openCreateDialog = () => {
     resetForm();
+    // Generate auto invoice number
+    setFormData(prev => ({
+      ...prev,
+      invoiceNumber: generateInvoiceNumber()
+    }));
     setIsDialogOpen(true);
   };
 
@@ -467,7 +539,7 @@ export default function SupplierInvoices() {
 
   const handleDownloadPDF = async (invoice: SupplierInvoice) => {
     try {
-      const blob = await pdf(<SupplierInvoicePDF invoice={invoice} />).toBlob();
+      const blob = await pdf(<SupplierInvoicePDFDocument invoice={invoice} companySettings={companySettings} />).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -477,6 +549,7 @@ export default function SupplierInvoices() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
+      console.error("PDF generation error:", error);
       toast({
         title: "Erreur",
         description: "Erreur lors du téléchargement du PDF",
@@ -661,10 +734,10 @@ export default function SupplierInvoices() {
                     <SelectContent>
                       <SelectItem value="0">Aucune</SelectItem>
                       {orders
-                        .filter(order => order.supplierId === formData.supplierId)
+                        .filter(order => order.supplierId === formData.supplierId && order.status === "Livrée")
                         .map((order) => (
                           <SelectItem key={order.id} value={order.id.toString()}>
-                            {order.orderNumber}
+                            {order.orderNumber} - {new Date(order.orderDate).toLocaleDateString('fr-FR')} - {order.totalAmount?.toFixed(3) || '0.000'} TND
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -681,6 +754,7 @@ export default function SupplierInvoices() {
                     onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
                     className={errors.invoiceNumber ? "border-red-500" : ""}
                     required
+                    readOnly={!!currentInvoice} // Read-only when editing existing invoice
                   />
                   {errors.invoiceNumber && (
                     <p className="text-sm text-red-500">{errors.invoiceNumber}</p>
@@ -721,116 +795,129 @@ export default function SupplierInvoices() {
 
               <div className="space-y-2">
                 <Label>Articles</Label>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                  <div className="md:col-span-5">
-                    <Label>Produit</Label>
-                    <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={productSearchOpen}
-                          className="w-full justify-between"
-                        >
-                          {selectedProduct
-                            ? products.find((product) => product.id === selectedProduct)?.name
-                            : "Sélectionner un produit..."}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput placeholder="Rechercher un produit..." />
-                          <CommandList>
-                            <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
-                            <CommandGroup>
-                              {products.map((product) => (
-                                <CommandItem
-                                  key={product.id}
-                                  value={product.name}
-                                  onSelect={() => {
-                                    setSelectedProduct(product.id);
-                                    setItemUnitPrice(product.price);
-                                    setProductSearchOpen(false);
-                                  }}
-                                >
-                                  <div className="flex flex-col flex-1">
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-medium">
-                                        {product.name}
+                {/* Only show manual item addition when no order is selected */}
+                {!formData.orderId || formData.orderId === 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                    <div className="md:col-span-5">
+                      <Label>Produit</Label>
+                      <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={productSearchOpen}
+                            className="w-full justify-between"
+                          >
+                            {selectedProduct
+                              ? products.find((product) => product.id === selectedProduct)?.name
+                              : "Sélectionner un produit..."}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput placeholder="Rechercher un produit..." />
+                            <CommandList>
+                              <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
+                              <CommandGroup>
+                                {products.map((product) => (
+                                  <CommandItem
+                                    key={product.id}
+                                    value={product.name}
+                                    onSelect={() => {
+                                      setSelectedProduct(product.id);
+                                      setItemUnitPrice(product.price);
+                                      setProductSearchOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex flex-col flex-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">
+                                          {product.name}
+                                        </span>
+                                      </div>
+                                      <span className="text-sm text-muted-foreground">
+                                        {product.price.toFixed(3)} TND • Stock: {product.stock}
                                       </span>
                                     </div>
-                                    <span className="text-sm text-muted-foreground">
-                                      {product.price.toFixed(3)} TND • Stock: {product.stock}
-                                    </span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="itemQuantity">Quantité</Label>
-                    <Input
-                      id="itemQuantity"
-                      type="number"
-                      min="1"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
-                    <Input
-                      id="itemUnitPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={itemUnitPrice}
-                      onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label>Total</Label>
-                    <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {(itemQuantity * itemUnitPrice).toFixed(3)} TND
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="itemQuantity">Quantité</Label>
+                      <Input
+                        id="itemQuantity"
+                        type="number"
+                        min="1"
+                        value={itemQuantity}
+                        onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
+                      <Input
+                        id="itemUnitPrice"
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={itemUnitPrice}
+                        onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Total</Label>
+                      <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                        {(itemQuantity * itemUnitPrice).toFixed(3)} TND
+                      </div>
+                    </div>
+                    <div className="md:col-span-1">
+                      <Button
+                        type="button"
+                        onClick={addInvoiceItem}
+                        className="w-full"
+                        disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="md:col-span-1">
-                    <Button
-                      type="button"
-                      onClick={addInvoiceItem}
-                      className="w-full"
-                      disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                ) : (
+                  // When an order is selected, show a message
+                  <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
+                    Les articles sont automatiquement remplis à partir de la commande sélectionnée.
+                    Pour modifier les articles, veuillez sélectionner "Aucune" commande.
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Invoice Items Table */}
-              {invoiceItems.length > 0 && (
-                <div className="border rounded-md overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produit</TableHead>
-                        <TableHead className="w-20">Quantité</TableHead>
-                        <TableHead className="w-24">Prix unit.</TableHead>
-                        <TableHead className="w-24">Total</TableHead>
+              <div className="border rounded-md overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produit</TableHead>
+                      <TableHead className="w-20">Quantité</TableHead>
+                      <TableHead className="w-24">Prix unit.</TableHead>
+                      <TableHead className="w-24">Total</TableHead>
+                      {/* Only show delete button when no order is selected */}
+                      {(!formData.orderId || formData.orderId === 0) && (
                         <TableHead className="w-16"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {invoiceItems.map((item, index) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.productName}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
-                          <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoiceItems.map((item, index) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.productName}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
+                        <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
+                        {/* Only show delete button when no order is selected */}
+                        {(!formData.orderId || formData.orderId === 0) && (
                           <TableCell>
                             <Button
                               variant="outline"
@@ -840,12 +927,12 @@ export default function SupplierInvoices() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
 
               <div className="space-y-2">
@@ -1114,6 +1201,7 @@ export default function SupplierInvoices() {
             // Handle print functionality if needed
             setIsPreviewOpen(false);
           }}
+          companySettings={companySettings}
         />
       )}
     </div>

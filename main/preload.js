@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-invoice-status", id, status),
   generateInvoiceFromSale: (saleId) =>
     ipcRenderer.invoke("generate-invoice-from-sale", saleId),
+  getInvoiceItems: (invoiceId) => ipcRenderer.invoke("get-invoice-items", invoiceId),
 
   // --- Quotes API ---
   getQuotes: () => ipcRenderer.invoke("get-quotes"),
@@ -75,17 +76,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createStockMovement: (movement) => ipcRenderer.invoke("create-stock-movement", movement),
   getStockMovementsByProduct: (productId) => ipcRenderer.invoke("get-stock-movements-by-product", productId),
 
-  // --- Client Payments API ---
-  getClientPayments: () => ipcRenderer.invoke("get-client-payments"),
-  createClientPayment: (payment) => ipcRenderer.invoke("create-client-payment", payment),
-  updateClientPayment: (id, payment) => ipcRenderer.invoke("update-client-payment", id, payment),
-  deleteClientPayment: (id) => ipcRenderer.invoke("delete-client-payment", id),
-
-  // --- Supplier Payments API ---
-  getSupplierPayments: () => ipcRenderer.invoke("get-supplier-payments"),
-  createSupplierPayment: (payment) => ipcRenderer.invoke("create-supplier-payment", payment),
-  updateSupplierPayment: (id, payment) => ipcRenderer.invoke("update-supplier-payment", id, payment),
-  deleteSupplierPayment: (id) => ipcRenderer.invoke("delete-supplier-payment", id),
 
   // --- Enterprise Settings API ---
   getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),

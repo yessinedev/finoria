@@ -28,6 +28,7 @@ interface InvoicePreviewProps {
   onClose: () => void;
   onPrint: (invoice: Invoice) => void;
   onStatusChange?: (invoiceId: number, status: string) => void;
+  companySettings?: any;
 }
 
 export default function InvoicePreview({
@@ -36,6 +37,7 @@ export default function InvoicePreview({
   onClose,
   onPrint,
   onStatusChange,
+  companySettings,
 }: InvoicePreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -43,7 +45,7 @@ export default function InvoicePreview({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const blob = await pdf(<InvoicePDFDocument invoice={invoice} />).toBlob();
+      const blob = await pdf(<InvoicePDFDocument invoice={invoice} companySettings={companySettings} />).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -92,7 +94,7 @@ export default function InvoicePreview({
             showToolbar={false}
             style={{ border: "none", backgroundColor: "transparent" }}
           >
-            <InvoicePDFDocument invoice={invoice} />
+            <InvoicePDFDocument invoice={invoice} companySettings={companySettings} />
           </PDFViewer>
         </div>
 

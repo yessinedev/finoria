@@ -105,7 +105,6 @@ app.whenReady().then(() => {
     "invoices",
     "quotes",
     "suppliers",
-    "payments",
     "enterprise-settings",
     "device",
     "database",

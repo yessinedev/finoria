@@ -12,7 +12,18 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       `
         )
         .all();
-      return invoices;
+      
+      // Add items to each invoice
+      const getItems = db.prepare(`
+        SELECT * FROM invoice_items WHERE invoiceId = ?
+      `);
+      
+      const invoicesWithItems = invoices.map(invoice => ({
+        ...invoice,
+        items: getItems.all(invoice.id)
+      }));
+      
+      return invoicesWithItems;
     } catch (error) {
       console.error("Error getting invoices:", error);
       throw new Error("Erreur lors de la récupération des factures");
@@ -21,11 +32,17 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("create-invoice", async (event, invoice) => {
     try {
-      const stmt = db.prepare(`
+      const insertInvoice = db.prepare(`
         INSERT INTO invoices (number, saleId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const result = stmt.run(
+      
+      const insertItem = db.prepare(`
+        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, totalPrice)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      const result = insertInvoice.run(
         invoice.number,
         invoice.saleId,
         invoice.clientId,
@@ -35,8 +52,25 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.status,
         invoice.dueDate
       );
+      
+      const invoiceId = result.lastInsertRowid;
+      
+      // Insert invoice items
+      if (invoice.items && Array.isArray(invoice.items)) {
+        for (const item of invoice.items) {
+          insertItem.run(
+            invoiceId,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.totalPrice
+          );
+        }
+      }
+      
       const newInvoice = {
-        id: result.lastInsertRowid,
+        id: invoiceId,
         ...invoice,
         issueDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
@@ -61,6 +95,16 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     } catch (error) {
       console.error("Error updating invoice status:", error);
       throw new Error("Erreur lors de la mise à jour du statut de facture");
+    }
+  });
+  
+  ipcMain.handle("get-invoice-items", async (event, invoiceId) => {
+    try {
+      const items = db.prepare("SELECT * FROM invoice_items WHERE invoiceId = ?").all(invoiceId);
+      return items;
+    } catch (error) {
+      console.error("Error getting invoice items:", error);
+      throw new Error("Erreur lors de la récupération des articles de facture");
     }
   });
 };

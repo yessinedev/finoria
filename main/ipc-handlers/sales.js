@@ -23,6 +23,14 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, totalPrice) 
           VALUES (?, ?, ?, ?, ?, ?)
         `);
+        
+        // Update product stock for non-service products
+        const updateStockStmt = db.prepare(`
+          UPDATE products 
+          SET stock = stock - ? 
+          WHERE id = ? AND category != 'Service'
+        `);
+        
         saleData.items.forEach((item) => {
           itemStmt.run(
             saleId,
@@ -32,6 +40,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.unitPrice,
             item.totalPrice
           );
+          
+          // Only reduce stock for non-service products
+          updateStockStmt.run(item.quantity, item.productId);
         });
         return saleId;
       } catch (error) {

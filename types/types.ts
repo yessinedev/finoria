@@ -45,6 +45,7 @@ export interface LineItem {
   id: number;
   productId: number;
   name: string;
+  productName?: string; // For compatibility with database field
   description: string;
   quantity: number;
   unitPrice: number;

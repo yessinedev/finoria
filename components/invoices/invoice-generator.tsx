@@ -168,6 +168,8 @@ export default function InvoiceGenerator({
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "TND",
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
     }).format(amount)
   }
 

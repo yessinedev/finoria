@@ -140,6 +140,21 @@ function createTables(db) {
     )
   `);
 
+  // Supplier invoice items table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS supplier_invoice_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoiceId INTEGER NOT NULL,
+      productId INTEGER NOT NULL,
+      productName TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      unitPrice REAL NOT NULL,
+      totalPrice REAL NOT NULL,
+      FOREIGN KEY (invoiceId) REFERENCES supplier_invoices(id) ON DELETE CASCADE,
+      FOREIGN KEY (productId) REFERENCES products(id)
+    )
+  `);
+
   // Invoices table
   db.exec(`
     CREATE TABLE IF NOT EXISTS invoices (
@@ -156,6 +171,21 @@ function createTables(db) {
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (saleId) REFERENCES sales(id),
       FOREIGN KEY (clientId) REFERENCES clients(id)
+    )
+  `);
+
+  // Invoice items table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS invoice_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoiceId INTEGER NOT NULL,
+      productId INTEGER NOT NULL,
+      productName TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      unitPrice REAL NOT NULL,
+      totalPrice REAL NOT NULL,
+      FOREIGN KEY (invoiceId) REFERENCES invoices(id) ON DELETE CASCADE,
+      FOREIGN KEY (productId) REFERENCES products(id)
     )
   `);
 
@@ -306,6 +336,8 @@ function createIndexes(db) {
       CREATE INDEX IF NOT EXISTS idx_supplier_invoices_supplier ON supplier_invoices(supplierId);
       CREATE INDEX IF NOT EXISTS idx_supplier_invoices_date ON supplier_invoices(issueDate);
       CREATE INDEX IF NOT EXISTS idx_supplier_invoices_status ON supplier_invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_supplier_invoice_items_invoice ON supplier_invoice_items(invoiceId);
+      CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoiceId);
       CREATE INDEX IF NOT EXISTS idx_client_payments_client ON client_payments(clientId);
       CREATE INDEX IF NOT EXISTS idx_client_payments_invoice ON client_payments(invoiceId);
       CREATE INDEX IF NOT EXISTS idx_client_payments_date ON client_payments(paymentDate);
