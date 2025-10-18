@@ -1,18 +1,10 @@
-import { db } from "./database";
 
-export async function verifyLicense() {
-  const licenseKey = localStorage.getItem("licenseKey");
-  if (!licenseKey) return false;
-
-  // Ask preload script for machine fingerprint
-  if (!db.device?.getFingerprint) return false;
-  const fingerprint = await db.device.getFingerprint();
-  console.log(fingerprint)
+export async function verifyLicense(licenseKey: string, fingerprint: string) {
   try {
-    const res = await fetch("https://license.etudionet.life/api/verify", {
+    const res = await fetch("http://localhost:4000/api/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ licenseKey, fingerprint: fingerprint.data }),
+      body: JSON.stringify({ licenseKey, fingerprint }),
     });
 
     const data = await res.json();

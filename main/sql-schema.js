@@ -261,14 +261,6 @@ function createTables(db) {
     )
   `);
 
-  // Insert default company if table is empty
-  const companiesCount = db.prepare("SELECT COUNT(*) as count FROM companies").get();
-  if (companiesCount.count === 0) {
-    db.exec(`
-      INSERT INTO companies (name, address, city, country, phone, email, taxId) 
-      VALUES ('Nom de votre entreprise', 'Adresse de votre entreprise', 'Ville', 'Pays', 'Téléphone', 'email@entreprise.com', 'Numéro fiscal')
-    `);
-  }
   
   // Add discountAmount column to sales table if it doesn't exist (for existing databases)
   try {
