@@ -51,39 +51,44 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-  const fetchCompany = async () => {
-    const res = await db.settings.get();
-    console.log("Raw response from db.settings.get():", res);
+    const fetchCompany = async () => {
+      const res = await db.settings.get();
+      console.log("Raw response from db.settings.get():", res);
 
-    // If your IPC returns { data: company }
-    const c = res?.data;
-    console.log("company: ", res)
-    if (c) {
-      console.log("Company data received:", c);
-      setCompany(c);
-      setCompanyFields({
-        name: c.name || "",
-        address: c.address || "",
-        phone: c.phone || "",
-        email: c.email || "",
-        website: c.website || "",
-        city: c.city || "",
-        country: c.country || "",
-      });
-      setTaxFields({
-        taxId: c.taxId || "",
-        taxStatus: c.taxStatus || "",
-        tvaNumber: c.tvaNumber !== null && c.tvaNumber !== undefined ? String(c.tvaNumber) : "",
-        tvaRate: c.tvaRate !== null && c.tvaRate !== undefined ? String(c.tvaRate) : "",
-      });
-    } else {
-      console.log("No company data received");
-    }
-  };
+      // If your IPC returns { data: company }
+      const c = res?.data;
+      console.log("company: ", res);
+      if (c) {
+        console.log("Company data received:", c);
+        setCompany(c);
+        setCompanyFields({
+          name: c.name || "",
+          address: c.address || "",
+          phone: c.phone || "",
+          email: c.email || "",
+          website: c.website || "",
+          city: c.city || "",
+          country: c.country || "",
+        });
+        setTaxFields({
+          taxId: c.taxId || "",
+          taxStatus: c.taxStatus || "",
+          tvaNumber:
+            c.tvaNumber !== null && c.tvaNumber !== undefined
+              ? String(c.tvaNumber)
+              : "",
+          tvaRate:
+            c.tvaRate !== null && c.tvaRate !== undefined
+              ? String(c.tvaRate)
+              : "",
+        });
+      } else {
+        console.log("No company data received");
+      }
+    };
 
-  fetchCompany();
-}, []);
-
+    fetchCompany();
+  }, []);
 
   const handleSaveSettings = async () => {
     if (!company) return;
@@ -101,21 +106,25 @@ export default function SettingsPage() {
     if (!companyChanged && !taxChanged) return;
 
     setIsSubmitting(true);
-    
+
     // Prepare the data for update
     const updateData = {
       ...companyFields,
       taxId: taxFields.taxId,
       taxStatus: taxFields.taxStatus,
-      tvaNumber: taxFields.tvaNumber !== "" ? parseInt(taxFields.tvaNumber) || null : null,
-      tvaRate: taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) || null : null,
+      tvaNumber:
+        taxFields.tvaNumber !== ""
+          ? parseInt(taxFields.tvaNumber) || null
+          : null,
+      tvaRate:
+        taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) || null : null,
     };
-    
+
     console.log("Updating company with data:", updateData);
-    
+
     const result = await db.settings.update(company.id, updateData);
     console.log("Update result:", result);
-    
+
     console.log("Company Settings:", companyFields);
     console.log("Tax Settings:", taxFields);
     console.log("Notification Settings:", notifications);
@@ -296,115 +305,23 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Notification Preferences */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                <CardTitle>Préférences de notification</CardTitle>
-              </div>
-              <CardDescription>
-                Choisissez les notifications que vous souhaitez recevoir
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-medium text-foreground">
-                      Notifications par e-mail
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recevez des notifications générales par e-mail
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.emailNotifications}
-                    onCheckedChange={(checked) =>
-                      updateNotification("emailNotifications", checked)
-                    }
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-medium text-foreground">
-                      Rappels de factures
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recevez des notifications concernant les factures en
-                      retard
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.invoiceReminders}
-                    onCheckedChange={(checked) =>
-                      updateNotification("invoiceReminders", checked)
-                    }
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-medium text-foreground">
-                      Alertes de stock faible
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recevez des alertes lorsque le stock est faible
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.lowStockAlerts}
-                    onCheckedChange={(checked) =>
-                      updateNotification("lowStockAlerts", checked)
-                    }
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-medium text-foreground">
-                      Notifications de paiement
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recevez une notification lors de la réception des
-                      paiements
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.paymentNotifications}
-                    onCheckedChange={(checked) =>
-                      updateNotification("paymentNotifications", checked)
-                    }
-                  />
-                </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSaveSettings}
+                  disabled={isSubmitting}
+                  size="lg"
+                  className="gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {isSubmitting
+                    ? "Enregistrement des modifications..."
+                    : "Enregistrer toutes les modifications"}
+                </Button>
               </div>
             </CardContent>
           </Card>
 
           {/* Save Button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSaveSettings}
-              disabled={isSubmitting}
-              size="lg"
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {isSubmitting
-                ? "Enregistrement des modifications..."
-                : "Enregistrer toutes les modifications"}
-            </Button>
-          </div>
         </div>
       </main>
     </div>
