@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle } from "lucide-react"
+import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import ProductFormModal from "@/components/products/ProductFormModal"
@@ -22,6 +22,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -278,6 +279,12 @@ export default function Products() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href="/categories">
+            <Button variant="outline">
+              <Tag className="h-4 w-4 mr-2" />
+              Catégories
+            </Button>
+          </Link>
           <CategoryManagerModal
             open={isCategoryManagerOpen}
             onOpenChange={setIsCategoryManagerOpen}

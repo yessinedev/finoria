@@ -67,6 +67,7 @@ const navigationItems = [
     children: [
       { id: "inventory", label: "Inventaire" },
       { id: "stock-movements", label: "Mouvements de stock" },
+      { id: "categories", label: "Catégories" },
     ],
   },
   { id: "clients", label: "Clients", icon: Users },
@@ -120,6 +121,8 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/payments/suppliers";
       case "settings":
         return "/settings";
+      case "categories":
+        return "/categories";
       default:
         return "#";
     }
