@@ -3,50 +3,25 @@ name: Build & Publish Finoria App
 on:
   push:
     tags:
-      - 'v*' # Trigger only when pushing a tag like v0.2.0
+      - "v*"
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: windows-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Build app for Windows only
-        run: npm run build:next && npx electron-builder --win
-
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build:next
+      - run: npx electron-builder --win --publish never
       - name: Deploy to VPS
         run: |
-          # Setup SSH
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-          
-          # Create target directory if it doesn't exist
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "mkdir -p /var/www/finoria-updates/"
-          
-          # Copy files
           scp dist/*.exe dist/*.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/
-          
-          # Set proper permissions
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "chmod -R 755 /var/www/finoria-updates/"
-
-      - name: Upload release artifacts
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/**/*.exe
-          draft: false
-          prerelease: false
+          files: dist/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
