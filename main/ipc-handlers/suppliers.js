@@ -146,7 +146,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const insertOrder = db.prepare(`
         INSERT INTO supplier_orders (
           supplierId, totalAmount, taxAmount, status, orderDate, deliveryDate
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
       `);
       
       const insertItem = db.prepare(`
