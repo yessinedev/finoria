@@ -112,6 +112,7 @@ app.whenReady().then(() => {
     "enterprise-settings",
     "device",
     "database",
+    "updates"
   ].forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
   });
