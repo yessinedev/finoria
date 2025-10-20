@@ -18,24 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Building2,
-  Save,
-  User,
-  Shield,
-  Bell,
-  Download,
-  Upload,
-  RefreshCw,
-  CheckCircle,
-} from "lucide-react";
+import { Building2, Save, User, Shield, Bell, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
-import { useToast } from "@/hooks/use-toast";
+
 
 export default function SettingsPage() {
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -106,6 +95,50 @@ export default function SettingsPage() {
     fetchCompany();
   }, []);
 
+  const checkForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const result = await db.device.checkForUpdates();
+      if (result.success && result.data) {
+        setUpdateInfo({
+          available: result.data.data?.available || false,
+          version: result.data.data?.version,
+          url: result.data.data?.url
+        });
+      }
+    } catch (error) {
+      console.error("Error checking for updates:", error);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const downloadUpdate = async () => {
+    if (!updateInfo?.available) return;
+    
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    
+    try {
+      const result = await db.device.downloadUpdate();
+      if (!result.success) {
+        console.error("Error downloading update:", result.error);
+        setIsDownloading(false);
+      }
+    } catch (error) {
+      console.error("Error downloading update:", error);
+      setIsDownloading(false);
+    }
+  };
+
+  const installUpdate = async () => {
+    try {
+      await db.device.quitAndInstall();
+    } catch (error) {
+      console.error("Error installing update:", error);
+    }
+  };
+
   const handleSaveSettings = async () => {
     if (!company) return;
     // Only save if something changed
@@ -136,9 +169,14 @@ export default function SettingsPage() {
         taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) || null : null,
     };
 
-    await db.settings.update(company.id, updateData).finally(() => {
-      setIsSubmitting(false);
-    });
+    console.log("Updating company with data:", updateData);
+
+    const result = await db.settings.update(company.id, updateData);
+    console.log("Update result:", result);
+
+    console.log("Company Settings:", companyFields);
+    console.log("Tax Settings:", taxFields);
+    setIsSubmitting(false);
   };
 
   const handleExportDatabase = async () => {
@@ -147,33 +185,15 @@ export default function SettingsPage() {
       const result = await db.database.export();
       if (result.success && result.data) {
         if (result.data.success) {
-          toast({
-            title: "Succès",
-            description: `Base de données exportée avec succès: ${result.data.filename}`,
-          });
+          console.log(`Database exported successfully: ${result.data.filename}`);
         } else {
-          toast({
-            title: "Erreur",
-            description:
-              result.data.error ||
-              "Erreur lors de l'export de la base de données",
-            variant: "destructive",
-          });
+          console.error("Error exporting database:", result.data.error || "Unknown error");
         }
       } else {
-        toast({
-          title: "Erreur",
-          description:
-            result.error || "Erreur lors de l'export de la base de données",
-          variant: "destructive",
-        });
+        console.error("Error exporting database:", result.error || "Unknown error");
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur inattendue lors de l'export de la base de données",
-        variant: "destructive",
-      });
+      console.error("Unexpected error exporting database:", error);
     } finally {
       setIsExporting(false);
     }
@@ -186,36 +206,17 @@ export default function SettingsPage() {
       const result = await db.database.import();
       if (result.success && result.data) {
         if (result.data.success) {
-          toast({
-            title: "Succès",
-            description:
-              result.data.message || "Base de données importée avec succès",
-          });
+          console.log(result.data.message || "Database imported successfully");
           // Reload the page to reflect the new data
           window.location.reload();
         } else {
-          toast({
-            title: "Erreur",
-            description:
-              result.data.error ||
-              "Erreur lors de l'import de la base de données",
-            variant: "destructive",
-          });
+          console.error("Error importing database:", result.data.error || "Unknown error");
         }
       } else {
-        toast({
-          title: "Erreur",
-          description:
-            result.error || "Erreur lors de l'import de la base de données",
-          variant: "destructive",
-        });
+        console.error("Error importing database:", result.error || "Unknown error");
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur inattendue lors de l'import de la base de données",
-        variant: "destructive",
-      });
+      console.error("Unexpected error importing database:", error);
     } finally {
       setIsImporting(false);
     }
@@ -228,28 +229,20 @@ export default function SettingsPage() {
         setUpdateInfo({
           available: true,
           version: info.version,
-          url: info.url,
+          url: info.url
         });
       });
     }
 
     if (window.electronAPI?.onUpdateNotAvailable) {
       window.electronAPI.onUpdateNotAvailable(() => {
-        toast({
-          title: "Aucune mise à jour disponible",
-          description:
-            "Vous utilisez déjà la dernière version de l'application.",
-        });
+        console.log("No updates available");
       });
     }
 
     if (window.electronAPI?.onUpdateError) {
       window.electronAPI.onUpdateError((error) => {
-        toast({
-          title: "Erreur de mise à jour",
-          description: error,
-          variant: "destructive",
-        });
+        console.error("Update error:", error);
         setIsCheckingUpdate(false);
         setIsDownloading(false);
       });
@@ -266,93 +259,12 @@ export default function SettingsPage() {
         setUpdateDownloaded(true);
         setIsDownloading(false);
         setDownloadProgress(0);
-        toast({
-          title: "Mise à jour téléchargée",
-          description: `La version ${info.version} est prête à être installée.`,
-        });
+        console.log(`Update downloaded: ${info.version}`);
       });
     }
 
     // No cleanup needed as the listeners are managed by the preload script
   }, []);
-
-  const checkForUpdates = async () => {
-    setIsCheckingUpdate(true);
-    try {
-      const result = await db.device.checkForUpdates();
-      if (result.success && result.data) {
-        setUpdateInfo({
-          available: result.data.data?.available || false,
-          version: result.data.data?.version,
-          url: result.data.data?.url,
-        });
-
-        if (!result.data.data?.available) {
-          toast({
-            title: "Aucune mise à jour disponible",
-            description:
-              "Vous utilisez déjà la dernière version de l'application.",
-          });
-        }
-      } else {
-        toast({
-          title: "Erreur",
-          description:
-            result.error || "Erreur lors de la vérification des mises à jour",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description:
-          "Erreur inattendue lors de la vérification des mises à jour",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCheckingUpdate(false);
-    }
-  };
-
-  const downloadUpdate = async () => {
-    if (!updateInfo?.available) return;
-
-    setIsDownloading(true);
-    setDownloadProgress(0);
-
-    try {
-      const result = await db.device.downloadUpdate();
-      if (!result.success) {
-        toast({
-          title: "Erreur",
-          description:
-            result.error || "Erreur lors du téléchargement de la mise à jour",
-          variant: "destructive",
-        });
-        setIsDownloading(false);
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description:
-          "Erreur inattendue lors du téléchargement de la mise à jour",
-        variant: "destructive",
-      });
-      setIsDownloading(false);
-    }
-  };
-
-  const installUpdate = async () => {
-    try {
-      await db.device.quitAndInstall();
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de l'installation de la mise à jour",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <div className="flex h-screen bg-background">
