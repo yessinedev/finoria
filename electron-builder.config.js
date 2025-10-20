@@ -10,6 +10,7 @@ module.exports = {
   asar: true,
   asarUnpack: ["**/*.node"],
   files: ["main/**/*"],
+  // Only build for Windows since that's your target platform
   win: {
     target: "nsis",
     icon: "public/icon.ico",
@@ -17,6 +18,13 @@ module.exports = {
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
+  },
+  // Disable Linux and macOS builds
+  linux: {
+    target: []
+  },
+  mac: {
+    target: []
   },
   // GitHub publish configuration
   publish: [

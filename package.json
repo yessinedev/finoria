@@ -19,7 +19,7 @@
     "rebuild": "electron-rebuild",
     "pack": "npm run build && electron-builder --dir",
     "build:next": "next build",
-    "build:electron": "electron-builder",
+    "build:electron": "electron-builder --win",
     "prepare:resources": "node scripts/prepare-build.js",
     "dist": "npm run build:next && npm run build:electron",
     "deploy": "echo 'Use GitHub Actions for deployment'",
