@@ -13,7 +13,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           saleData.totalAmount,
           saleData.taxAmount,
           saleData.discountAmount || 0,
-          saleData.status || "En attente",
+          saleData.status || "Confirmé",
           saleData.saleDate || new Date().toISOString()
         );
         const saleId = saleResult.lastInsertRowid;

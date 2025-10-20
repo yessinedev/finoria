@@ -10,7 +10,10 @@ autoUpdater.autoInstallOnAppQuit = true; // Install on quit
 autoUpdater.setFeedURL({
   provider: 'github',
   owner: 'yessinedev',
-  repo: 'finoria'
+  repo: 'finoria',
+  private: true,
+  token: process.env.GH_TOKEN,
+  releaseType: 'release',
 });
 
 // Function to check for updates from GitHub
