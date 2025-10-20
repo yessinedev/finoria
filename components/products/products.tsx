@@ -83,12 +83,8 @@ export default function Products() {
       filterType: "select" as const,
       filterOptions: categories.map((cat) => ({ label: cat.name, value: cat.name })),
       render: (value: string) => {
-        const category = categories.find((cat) => cat.name === value)
         return (
-          <Badge
-            variant="outline"
-            className={`bg-${category?.color || "gray"}-100 text-${category?.color || "gray"}-800 border-${category?.color || "gray"}-200`}
-          >
+          <Badge variant="outline">
             {value}
           </Badge>
         )
@@ -161,25 +157,41 @@ export default function Products() {
   }
 
   const handleProductFormSubmit = async (formData: any, editingProduct: Product | null) => {
-    setSaving(true)
-    setError(null)
+    setSaving(true);
+    setError(null);
     try {
-      let result
+      let result;
       if (editingProduct) {
-        result = await db.products.update(editingProduct.id, formData)
+        result = await db.products.update(editingProduct.id, formData);
       } else {
-        result = await db.products.create(formData)
+        result = await db.products.create(formData);
       }
       if (result.success) {
-        await loadData()
-        resetForm()
+        await loadData();
+        resetForm();
+        toast({
+          title: "Succès",
+          description: editingProduct 
+            ? "Produit mis à jour avec succès" 
+            : "Produit créé avec succès",
+        });
       } else {
-        setError(result.error || "Erreur lors de la sauvegarde")
+        setError(result.error || "Erreur lors de la sauvegarde");
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la sauvegarde",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      setError("Erreur inattendue lors de la sauvegarde")
+      setError("Erreur inattendue lors de la sauvegarde");
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de la sauvegarde",
+        variant: "destructive",
+      });
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 

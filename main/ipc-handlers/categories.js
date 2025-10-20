@@ -15,13 +15,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-category", async (event, category) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO categories (name, description, color, isActive) 
-        VALUES (?, ?, ?, ?)
+        INSERT INTO categories (name, description, isActive) 
+        VALUES (?, ?, ?)
       `);
       const result = stmt.run(
         category.name,
         category.description,
-        category.color,
         category.isActive ? 1 : 0
       );
       const newCategory = { id: result.lastInsertRowid, ...category };
@@ -40,13 +39,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE categories 
-        SET name = ?, description = ?, color = ?, isActive = ?, updatedAt = CURRENT_TIMESTAMP 
+        SET name = ?, description = ?, isActive = ?, updatedAt = CURRENT_TIMESTAMP 
         WHERE id = ?
       `);
       stmt.run(
         category.name,
         category.description,
-        category.color,
         category.isActive ? 1 : 0,
         id
       );

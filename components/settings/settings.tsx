@@ -22,9 +22,10 @@ import { Building2, Save, User, Shield, Bell, Download, Upload, RefreshCw, Check
 import { Switch } from "@/components/ui/switch";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
-
+import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -174,6 +175,19 @@ export default function SettingsPage() {
     const result = await db.settings.update(company.id, updateData);
     console.log("Update result:", result);
 
+    if (result.success) {
+      toast({
+        title: "Succès",
+        description: "Paramètres enregistrés avec succès",
+      });
+    } else {
+      toast({
+        title: "Erreur",
+        description: result.error || "Erreur lors de l'enregistrement des paramètres",
+        variant: "destructive",
+      });
+    }
+
     console.log("Company Settings:", companyFields);
     console.log("Tax Settings:", taxFields);
     setIsSubmitting(false);
@@ -186,14 +200,33 @@ export default function SettingsPage() {
       if (result.success && result.data) {
         if (result.data.success) {
           console.log(`Database exported successfully: ${result.data.filename}`);
+          toast({
+            title: "Succès",
+            description: `Base de données exportée avec succès: ${result.data.filename}`,
+          });
         } else {
           console.error("Error exporting database:", result.data.error || "Unknown error");
+          toast({
+            title: "Erreur",
+            description: result.data.error || "Erreur lors de l'export de la base de données",
+            variant: "destructive",
+          });
         }
       } else {
         console.error("Error exporting database:", result.error || "Unknown error");
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de l'export de la base de données",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Unexpected error exporting database:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de l'export de la base de données",
+        variant: "destructive",
+      });
     } finally {
       setIsExporting(false);
     }
@@ -207,16 +240,35 @@ export default function SettingsPage() {
       if (result.success && result.data) {
         if (result.data.success) {
           console.log(result.data.message || "Database imported successfully");
+          toast({
+            title: "Succès",
+            description: result.data.message || "Base de données importée avec succès",
+          });
           // Reload the page to reflect the new data
           window.location.reload();
         } else {
           console.error("Error importing database:", result.data.error || "Unknown error");
+          toast({
+            title: "Erreur",
+            description: result.data.error || "Erreur lors de l'import de la base de données",
+            variant: "destructive",
+          });
         }
       } else {
         console.error("Error importing database:", result.error || "Unknown error");
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de l'import de la base de données",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Unexpected error importing database:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de l'import de la base de données",
+        variant: "destructive",
+      });
     } finally {
       setIsImporting(false);
     }

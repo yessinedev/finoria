@@ -92,6 +92,7 @@ export default function SupplierOrders() {
   // Form state
   const [formData, setFormData] = useState({
     supplierId: 0,
+    orderNumber: "",
     totalAmount: 0,
     taxAmount: 0,
     status: "En attente",
@@ -259,30 +260,33 @@ export default function SupplierOrders() {
 
       const response = await db.supplierOrders.create(orderData);
       if (response.success && response.data) {
-        // Update product stock for each item in the order
-        for (const item of orderItems) {
-          try {
-            // Get current stock
-            const stockResponse = await db.products.getStock(item.productId);
-            const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
-            
-            // Update stock (add quantity from purchase order)
-            const newStock = currentStock + item.quantity;
-            await db.products.updateStock(item.productId, newStock);
-            
-            // Create stock movement record
-            await db.stockMovements.create({
-              productId: item.productId,
-              productName: item.productName,
-              quantity: item.quantity,
-              movementType: 'IN',
-              sourceType: 'supplier_order',
-              sourceId: response.data.id,
-              reference: `Order #${response.data.id}`,
-              reason: 'Purchase order delivered'
-            });
-          } catch (stockError) {
-            console.error(`Failed to update stock for product ${item.productId}:`, stockError);
+        // Only update product stock if the order status is "Livrée"
+        // According to requirements, stock should only be updated when status is "Livrée"
+        if (formData.status === "Livrée") {
+          for (const item of orderItems) {
+            try {
+              // Get current stock
+              const stockResponse = await db.products.getStock(item.productId);
+              const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
+              
+              // Update stock (add quantity from purchase order)
+              const newStock = currentStock + item.quantity;
+              await db.products.updateStock(item.productId, newStock);
+              
+              // Create stock movement record
+              await db.stockMovements.create({
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                movementType: 'IN',
+                sourceType: 'supplier_order',
+                sourceId: response.data.id,
+                reference: `Order #${response.data.id}`,
+                reason: 'Commande d\'achat livrée'
+              });
+            } catch (stockError) {
+              console.error(`Failed to update stock for product ${item.productId}:`, stockError);
+            }
           }
         }
         
@@ -360,7 +364,7 @@ export default function SupplierOrders() {
                 sourceType: 'supplier_order',
                 sourceId: response.data.id,
                 reference: `Order #${response.data.id}`,
-                reason: 'Purchase order delivered'
+                reason: 'Commande d\'achat livrée'
               });
             } catch (stockError) {
               console.error(`Failed to update stock for product ${item.productId}:`, stockError);
@@ -409,8 +413,8 @@ export default function SupplierOrders() {
                     sourceId: response.data.id,
                     reference: `Order #${response.data.id}`,
                     reason: quantityDifference > 0 
-                      ? 'Purchase order quantity increased' 
-                      : 'Purchase order quantity decreased'
+                      ? 'Quantité de commande d\'achat augmentée' 
+                      : 'Quantité de commande d\'achat réduite'
                   });
                 } catch (stockError) {
                   console.error(`Failed to update stock for product ${item.productId}:`, stockError);
@@ -438,7 +442,7 @@ export default function SupplierOrders() {
                   sourceType: 'supplier_order',
                   sourceId: response.data.id,
                   reference: `Order #${response.data.id}`,
-                  reason: 'Purchase order updated'
+                  reason: 'Commande d\'achat mise à jour'
                 });
               } catch (stockError) {
                 console.error(`Failed to update stock for product ${item.productId}:`, stockError);
@@ -493,6 +497,7 @@ export default function SupplierOrders() {
   const resetForm = () => {
     setFormData({
       supplierId: 0,
+      orderNumber: `PO-${Date.now()}`,
       totalAmount: 0,
       taxAmount: 0,
       status: "En attente",
@@ -516,6 +521,7 @@ export default function SupplierOrders() {
   const openEditDialog = (order: SupplierOrder) => {
     setFormData({
       supplierId: order.supplierId,
+      orderNumber: order.orderNumber,
       totalAmount: order.totalAmount,
       taxAmount: order.taxAmount,
       status: order.status,
@@ -755,6 +761,19 @@ export default function SupplierOrders() {
                   </Select>
                   {errors.supplierId && (
                     <p className="text-sm text-red-500">{errors.supplierId}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="orderNumber">Numéro de commande *</Label>
+                  <Input
+                    id="orderNumber"
+                    value={formData.orderNumber}
+                    onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
+                    className={errors.orderNumber ? "border-red-500" : ""}
+                    required
+                  />
+                  {errors.orderNumber && (
+                    <p className="text-sm text-red-500">{errors.orderNumber}</p>
                   )}
                 </div>
               </div>

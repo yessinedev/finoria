@@ -142,11 +142,14 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("create-supplier-order", async (event, order) => {
     try {
+      // Generate order number if not provided
+      const orderNumber = order.orderNumber || `PO-${Date.now()}`;
+      
       // Start transaction
       const insertOrder = db.prepare(`
         INSERT INTO supplier_orders (
-          supplierId, totalAmount, taxAmount, status, orderDate, deliveryDate
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          supplierId, orderNumber, totalAmount, taxAmount, status, orderDate, deliveryDate
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       const insertItem = db.prepare(`
@@ -161,6 +164,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const orderResult = insertOrder.run(
         order.supplierId,
+        orderNumber,
         order.totalAmount,
         order.taxAmount,
         order.status,
@@ -188,6 +192,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const newOrder = {
         id: orderId,
+        orderNumber,
         ...order,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -206,7 +211,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       // Start transaction
       const updateOrder = db.prepare(`
         UPDATE supplier_orders 
-        SET supplierId = ?, totalAmount = ?, taxAmount = ?, 
+        SET supplierId = ?, orderNumber = ?, totalAmount = ?, taxAmount = ?, 
             status = ?, orderDate = ?, deliveryDate = ?, updatedAt = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
@@ -214,6 +219,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       // Update order
       const updateResult = updateOrder.run(
         order.supplierId,
+        order.orderNumber,
         order.totalAmount,
         order.taxAmount,
         order.status,

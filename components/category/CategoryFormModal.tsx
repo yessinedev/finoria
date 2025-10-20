@@ -8,22 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Category } from "@/types/types";
 import { z } from "zod";
 
-const colorOptions = [
-  { name: "Bleu", value: "blue", class: "bg-blue-100 text-blue-800 border-blue-200" },
-  { name: "Vert", value: "green", class: "bg-green-100 text-green-800 border-green-200" },
-  { name: "Orange", value: "orange", class: "bg-orange-100 text-orange-800 border-orange-200" },
-  { name: "Violet", value: "purple", class: "bg-purple-100 text-purple-800 border-purple-200" },
-  { name: "Rouge", value: "red", class: "bg-red-100 text-red-800 border-red-200" },
-  { name: "Jaune", value: "yellow", class: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-  { name: "Rose", value: "pink", class: "bg-pink-100 text-pink-800 border-pink-200" },
-  { name: "Gris", value: "gray", class: "bg-gray-100 text-gray-800 border-gray-200" },
-];
-
 // Category validation schema
 const categorySchema = z.object({
   name: z.string().min(1, "Le nom de la catégorie est requis"),
   description: z.string().optional(),
-  color: z.string().min(1, "La couleur est requise"),
   isActive: z.boolean(),
 });
 
@@ -62,7 +50,6 @@ export default function CategoryFormModal({
       const categoryData = {
         name: formData.name,
         description: formData.description,
-        color: formData.color,
         isActive: formData.isActive,
       };
       
@@ -129,28 +116,6 @@ export default function CategoryFormModal({
             />
             {errors.description && (
               <p className="text-sm text-red-500 mt-1">{errors.description}</p>
-            )}
-          </div>
-          <div>
-            <Label>Couleur *</Label>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {colorOptions.map((color) => (
-                <button
-                  key={color.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, color: color.value })}
-                  className={`p-2 rounded-md border-2 text-xs font-medium transition-all ${
-                    formData.color === color.value
-                      ? `${color.class} border-current ring-2 ring-offset-2 ring-current`
-                      : `${color.class} border-transparent hover:border-current`
-                  } ${errors.color ? "ring-red-500 ring-2" : ""}`}
-                >
-                  {color.name}
-                </button>
-              ))}
-            </div>
-            {errors.color && (
-              <p className="text-sm text-red-500 mt-1">{errors.color}</p>
             )}
           </div>
           <div className="flex items-center space-x-2">

@@ -127,11 +127,27 @@ export default function Clients() {
       if (result.success) {
         await loadClients();
         resetForm();
+        toast({
+          title: "Succès",
+          description: editingClient 
+            ? "Client mis à jour avec succès" 
+            : "Client créé avec succès",
+        });
       } else {
         setError(result.error || "Erreur lors de la sauvegarde");
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la sauvegarde",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       setError(String(error));
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de la sauvegarde",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

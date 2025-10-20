@@ -6,68 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Edit, Tag, Palette, AlertCircle } from "lucide-react";
+import { Plus, Edit, Tag, AlertCircle } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
+import { toast } from "@/components/ui/use-toast";
 import type { Category } from "@/types/types";
 import CategoryFormModal from "@/components/category/CategoryFormModal";
 import CategoryDeleteDialog from "@/components/category/CategoryDeleteDialog";
-
-interface CategoryManagerProps {
-  categories: Category[];
-  onCategoriesChange: (categories: Category[]) => void;
-  onClose: () => void;
-}
-
-const colorOptions = [
-  {
-    name: "Bleu",
-    value: "blue",
-    class: "bg-blue-100 text-blue-800 border-blue-200",
-  },
-  {
-    name: "Vert",
-    value: "green",
-    class: "bg-green-100 text-green-800 border-green-200",
-  },
-  {
-    name: "Orange",
-    value: "orange",
-    class: "bg-orange-100 text-orange-800 border-orange-200",
-  },
-  {
-    name: "Violet",
-    value: "purple",
-    class: "bg-purple-100 text-purple-800 border-purple-200",
-  },
-  {
-    name: "Rouge",
-    value: "red",
-    class: "bg-red-100 text-red-800 border-red-200",
-  },
-  {
-    name: "Jaune",
-    value: "yellow",
-    class: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  },
-  {
-    name: "Rose",
-    value: "pink",
-    class: "bg-pink-100 text-pink-800 border-pink-200",
-  },
-  {
-    name: "Gris",
-    value: "gray",
-    class: "bg-gray-100 text-gray-800 border-gray-200",
-  },
-];
 
 export default function CategoryManager({
   categories,
   onCategoriesChange,
   onClose,
-}: CategoryManagerProps) {
+}: {
+  categories: Category[];
+  onCategoriesChange: (categories: Category[]) => void;
+  onClose: () => void;
+}) {
   const [localCategories, setLocalCategories] =
     useState<Category[]>(categories);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,7 +34,6 @@ export default function CategoryManager({
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    color: "blue",
     isActive: true,
   });
 
@@ -114,17 +69,6 @@ export default function CategoryManager({
       ),
     },
     {
-      key: "color" as keyof Category,
-      label: "Couleur",
-      sortable: true,
-      render: (value: string) => (
-        <Badge className={getColorClass(value)}>
-          <Palette className="h-3 w-3 mr-1" />
-          {colorOptions.find((c) => c.value === value)?.name}
-        </Badge>
-      ),
-    },
-    {
       key: "isActive" as keyof Category,
       label: "Statut",
       sortable: true,
@@ -146,21 +90,23 @@ export default function CategoryManager({
     setLocalCategories(categories);
   }, [categories]);
 
-  
-
   const loadCategories = async () => {
     setLoading(true);
     setError(null);
 
-    const result = await db.categories.getAll();
-    if (result.success) {
-      setLocalCategories(result.data || []);
-      onCategoriesChange(result.data || []);
-    } else {
-      setError(result.error || "Erreur lors du chargement des catégories");
+    try {
+      const result = await db.categories.getAll();
+      if (result.success) {
+        setLocalCategories(result.data || []);
+        onCategoriesChange(result.data || []);
+      } else {
+        setError(result.error || "Erreur lors du chargement des catégories");
+      }
+    } catch (error) {
+      setError("Erreur inattendue lors du chargement des catégories");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect((): (() => void) => {
@@ -174,7 +120,7 @@ export default function CategoryManager({
     });
 
     return unsubscribe;
-  }, [loadCategories]);
+  }, []);
 
   // Modularize form modal logic
   const handleCategoryFormSubmit = async (
@@ -193,18 +139,34 @@ export default function CategoryManager({
       if (result.success) {
         await loadCategories();
         resetForm();
+        toast({
+          title: "Succès",
+          description: editingCategory 
+            ? "Catégorie mise à jour avec succès" 
+            : "Catégorie créée avec succès",
+        });
       } else {
         setError(result.error || "Erreur lors de la sauvegarde");
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la sauvegarde",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       setError("Erreur inattendue lors de la sauvegarde");
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de la sauvegarde",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({ name: "", description: "", color: "blue", isActive: true });
+    setFormData({ name: "", description: "", isActive: true });
     setEditingCategory(null);
     setIsDialogOpen(false);
     setError(null);
@@ -215,7 +177,6 @@ export default function CategoryManager({
     setFormData({
       name: category.name,
       description: category.description,
-      color: category.color,
       isActive: category.isActive,
     });
     setIsDialogOpen(true);
@@ -225,8 +186,17 @@ export default function CategoryManager({
     const result = await db.categories.delete(id);
     if (result.success) {
       await loadCategories();
+      toast({
+        title: "Succès",
+        description: "Catégorie supprimée avec succès",
+      });
     } else {
       setError(result.error || "Erreur lors de la suppression");
+      toast({
+        title: "Erreur",
+        description: result.error || "Erreur lors de la suppression",
+        variant: "destructive",
+      });
     }
   };
 
@@ -240,14 +210,18 @@ export default function CategoryManager({
     });
     if (result.success) {
       await loadCategories();
+      toast({
+        title: "Succès",
+        description: "Statut de la catégorie mis à jour avec succès",
+      });
     } else {
       setError(result.error || "Erreur lors de la mise à jour");
+      toast({
+        title: "Erreur",
+        description: result.error || "Erreur lors de la mise à jour",
+        variant: "destructive",
+      });
     }
-  };
-
-  const getColorClass = (color: string) => {
-    const colorOption = colorOptions.find((option) => option.value === color);
-    return colorOption?.class || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   const renderActions = (category: Category) => (
@@ -273,8 +247,7 @@ export default function CategoryManager({
         <div>
           <p className="text-sm text-muted-foreground">
             Gérez les catégories utilisées pour organiser vos produits (
-            {localCategories.length} catégorie
-            {localCategories.length > 1 ? "s" : ""})
+            {localCategories.length} catégorie{localCategories.length > 1 ? "s" : ""})
           </p>
         </div>
         <Button

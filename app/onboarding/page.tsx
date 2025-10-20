@@ -14,9 +14,11 @@ import { FormStep } from "@/components/onboarding/form-step";
 import { Stepper } from "@/components/onboarding/stepper";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { db } from "@/lib/database";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const {
     currentStep,
     steps,
@@ -34,9 +36,17 @@ export default function OnboardingPage() {
       console.log(data)
       const settings = await db.settings.create({...data.companyInfo, ...data.taxInfo});
       if(settings.success) {
+        toast({
+          title: "Succès",
+          description: "Configuration de l'entreprise terminée avec succès",
+        });
         router.push("/dashboard");
       }else{
-        alert("Failed to create company. Please try again.");
+        toast({
+          title: "Erreur",
+          description: "Échec de la création de l'entreprise. Veuillez réessayer.",
+          variant: "destructive",
+        });
       }
 
     } else {

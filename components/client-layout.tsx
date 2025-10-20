@@ -2,6 +2,7 @@
 
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar, NavigationItem } from "@/components/app-sidebar";
+import { Toaster } from "@/components/ui/toaster"; // Import the Toaster component
 import { useState } from "react";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <main className="h-full min-w-0 bg-background">
             <SidebarTrigger />
             {children}
+            <Toaster /> {/* Add the Toaster component */}
           </main>
         </SidebarInset>
       </div>
