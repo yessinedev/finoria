@@ -225,7 +225,7 @@ export default function Invoices() {
           ...invoice,
           clientEmail: invoice.clientEmail || "client@example.com",
           clientPhone: invoice.clientPhone || "01 23 45 67 89",
-          notes: invoice.notes || "Merci pour votre confiance.",
+          notes: invoice.notes || "",
           paymentTerms: invoice.paymentTerms || "30 jours net",
         }));
         

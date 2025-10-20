@@ -116,6 +116,7 @@ export interface SupplierInvoice {
   supplierEmail?: string;
   supplierPhone?: string;
   supplierAddress?: string;
+  supplierTaxId?: string;
   orderId?: number;
   invoiceNumber: string;
   amount: number;

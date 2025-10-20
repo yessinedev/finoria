@@ -313,7 +313,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           s.company as supplierCompany,
           s.email as supplierEmail,
           s.phone as supplierPhone,
-          s.address as supplierAddress
+          s.address as supplierAddress,
+          s.taxId as supplierTaxId
         FROM supplier_invoices si
         JOIN suppliers s ON si.supplierId = s.id
         ORDER BY si.issueDate DESC
