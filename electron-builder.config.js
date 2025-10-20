@@ -23,7 +23,9 @@ module.exports = {
     provider: "github",
     owner: "yessinedev",
     repo: "finoria",
-    releaseType: "draft"
+    private: true,
+    releaseType: "release",
+    token: process.env.GH_TOKEN
   },
   // Hook executed after packaging but before installer is built
   afterPack: async (context) => {
