@@ -1,6 +1,6 @@
 {
   "name": "Finoria",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A business management application for sales, inventory, and invoicing",
   "author": "Finoria Team",
   "private": true,
@@ -22,6 +22,7 @@
     "build:electron": "electron-builder",
     "prepare:resources": "node scripts/prepare-build.js",
     "dist": "npm run build:next && npm run build:electron",
+    "deploy": "scp -r dist/*.exe dist/*.yml root@148.230.108.151:/var/www/finoria-updates/",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {

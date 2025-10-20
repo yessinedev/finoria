@@ -1,56 +1,55 @@
 const { app } = require("electron");
 const { autoUpdater } = require("electron-updater");
-const https = require("https");
 
-// Configure autoUpdater
+// Configure autoUpdater to use your VPS
 autoUpdater.autoDownload = false; // We'll download manually
 autoUpdater.autoInstallOnAppQuit = true; // Install on quit
 
-// Set the update feed URL - this should point to your GitHub repository
+// Set the update feed URL to your VPS
 autoUpdater.setFeedURL({
-  provider: 'github',
-  owner: 'yessinedev',
-  repo: 'finoria',
-  private: true,
-  token: process.env.GH_TOKEN,
-  releaseType: 'release',
+  provider: "generic",
+  url: "https://updates-finoria.etudionet.life",
 });
 
-// Function to check for updates from GitHub
+// Function to check for updates from your VPS
 async function checkForUpdates() {
   return new Promise((resolve) => {
     // For electron-updater, we use its built-in checkForUpdates method
-    autoUpdater.checkForUpdates().then((result) => {
-      if (result && result.updateInfo) {
-        const currentVersion = app.getVersion();
-        const latestVersion = result.updateInfo.version;
-        
-        // Simple version comparison
-        const isNewer = latestVersion > currentVersion;
-        
+    autoUpdater
+      .checkForUpdates()
+      .then((result) => {
+        if (result && result.updateInfo) {
+          const currentVersion = app.getVersion();
+          const latestVersion = result.updateInfo.version;
+
+          // Simple version comparison
+          const isNewer = latestVersion > currentVersion;
+
+          resolve({
+            success: true,
+            data: {
+              available: isNewer,
+              version: latestVersion,
+              // Point to your VPS for update information
+              url: "https://updates-finoria.etudionet.life",
+            },
+          });
+        } else {
+          resolve({
+            success: true,
+            data: {
+              available: false,
+            },
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error checking for updates:", error);
         resolve({
-          success: true,
-          data: {
-            available: isNewer,
-            version: latestVersion,
-            url: `https://github.com/yessinedev/finoria/releases/tag/v${latestVersion}`,
-          },
+          success: false,
+          error: "Failed to check for updates: " + error.message,
         });
-      } else {
-        resolve({
-          success: true,
-          data: {
-            available: false,
-          },
-        });
-      }
-    }).catch((error) => {
-      console.error("Error checking for updates:", error);
-      resolve({
-        success: false,
-        error: "Failed to check for updates",
       });
-    });
   });
 }
 
@@ -61,7 +60,7 @@ async function downloadUpdate() {
     const downloadedHandler = (info) => {
       autoUpdater.removeListener("update-downloaded", downloadedHandler);
       autoUpdater.removeListener("error", errorHandler);
-      
+
       resolve({
         success: true,
         data: {
@@ -73,7 +72,7 @@ async function downloadUpdate() {
     const errorHandler = (error) => {
       autoUpdater.removeListener("update-downloaded", downloadedHandler);
       autoUpdater.removeListener("error", errorHandler);
-      
+
       resolve({
         success: false,
         error: error.message || "Failed to download update",

@@ -18,8 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, User, Shield, Bell, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
 

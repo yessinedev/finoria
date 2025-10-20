@@ -19,14 +19,13 @@ module.exports = {
     allowToChangeInstallationDirectory: true,
   },
   // GitHub publish configuration
-  publish: {
-    provider: "github",
-    owner: "yessinedev",
-    repo: "finoria",
-    private: true,
-    releaseType: "release",
-    token: process.env.GH_TOKEN
-  },
+  publish: [
+  {
+    provider: "generic",
+    url: "https://updates-finoria.etudionet.life" 
+  }
+],
+
   // Hook executed after packaging but before installer is built
   afterPack: async (context) => {
     const { appOutDir, packager } = context;
