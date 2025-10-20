@@ -78,6 +78,9 @@ async function createWindow() {
     icon: path.join(__dirname, "icon.png"),
   });
 
+  // Make mainWindow available globally for update handlers
+  global.mainWindow = mainWindow;
+
   mainWindow.loadURL(`http://localhost:${port}`);
   mainWindow.once("ready-to-show", () => mainWindow.show());
 
@@ -88,6 +91,7 @@ async function createWindow() {
   mainWindow.on("closed", () => {
     if (nextProcess) nextProcess.kill();
     mainWindow = null;
+    global.mainWindow = null;
   });
 }
 
@@ -108,6 +112,7 @@ app.whenReady().then(() => {
     "enterprise-settings",
     "device",
     "database",
+    "updates"
   ].forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
   });

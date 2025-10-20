@@ -81,12 +81,22 @@ interface ElectronAPI {
 
   // Device
   getFingerprint: () => Promise<string>;
+  checkForUpdates: () => Promise<{ success: boolean; data?: { available: boolean; version?: string; url?: string }; error?: string }>;
+  downloadUpdate: () => Promise<{ success: boolean; data?: { version: string }; error?: string }>;
+  quitAndInstall: () => Promise<void>;
 
   // Data listeners for real-time updates
   onDataChange: (
     callback: (table: string, action: string, data: any) => void
   ) => void;
   removeDataListener: (callback: Function) => void;
+  
+  // Update events
+  onUpdateAvailable: (callback: (info: any) => void) => void;
+  onUpdateNotAvailable: (callback: () => void) => void;
+  onUpdateError: (callback: (error: string) => void) => void;
+  onUpdateDownloadProgress: (callback: (progress: any) => void) => void;
+  onUpdateDownloaded: (callback: (info: any) => void) => void;
 }
 
 declare global {
@@ -515,6 +525,21 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getFingerprint() || Promise.resolve(""),
         "getFingerprint"
+      ),
+    checkForUpdates: () =>
+      this.handle(
+        () => window.electronAPI?.checkForUpdates() || Promise.resolve({ success: false, error: "Electron API not available" }),
+        "checkForUpdates"
+      ),
+    downloadUpdate: () =>
+      this.handle(
+        () => window.electronAPI?.downloadUpdate() || Promise.resolve({ success: false, error: "Electron API not available" }),
+        "downloadUpdate"
+      ),
+    quitAndInstall: () =>
+      this.handle(
+        () => window.electronAPI?.quitAndInstall() || Promise.resolve(),
+        "quitAndInstall"
       ),
   };
 }

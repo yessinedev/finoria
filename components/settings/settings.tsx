@@ -18,23 +18,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, User, Shield, Bell, Download, Upload } from "lucide-react";
+import { Building2, Save, User, Shield, Bell, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
-import { useToast } from "@/hooks/use-toast";
+
 
 export default function SettingsPage() {
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    invoiceReminders: true,
-    lowStockAlerts: true,
-    paymentNotifications: true,
-  });
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [updateInfo, setUpdateInfo] = useState<{
+    available: boolean;
+    version?: string;
+    url?: string;
+  } | null>(null);
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
 
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [companyFields, setCompanyFields] = useState({
@@ -93,6 +95,50 @@ export default function SettingsPage() {
     fetchCompany();
   }, []);
 
+  const checkForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const result = await db.device.checkForUpdates();
+      if (result.success && result.data) {
+        setUpdateInfo({
+          available: result.data.data?.available || false,
+          version: result.data.data?.version,
+          url: result.data.data?.url
+        });
+      }
+    } catch (error) {
+      console.error("Error checking for updates:", error);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const downloadUpdate = async () => {
+    if (!updateInfo?.available) return;
+    
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    
+    try {
+      const result = await db.device.downloadUpdate();
+      if (!result.success) {
+        console.error("Error downloading update:", result.error);
+        setIsDownloading(false);
+      }
+    } catch (error) {
+      console.error("Error downloading update:", error);
+      setIsDownloading(false);
+    }
+  };
+
+  const installUpdate = async () => {
+    try {
+      await db.device.quitAndInstall();
+    } catch (error) {
+      console.error("Error installing update:", error);
+    }
+  };
+
   const handleSaveSettings = async () => {
     if (!company) return;
     // Only save if something changed
@@ -130,7 +176,6 @@ export default function SettingsPage() {
 
     console.log("Company Settings:", companyFields);
     console.log("Tax Settings:", taxFields);
-    console.log("Notification Settings:", notifications);
     setIsSubmitting(false);
   };
 
@@ -140,30 +185,15 @@ export default function SettingsPage() {
       const result = await db.database.export();
       if (result.success && result.data) {
         if (result.data.success) {
-          toast({
-            title: "Succès",
-            description: `Base de données exportée avec succès: ${result.data.filename}`,
-          });
+          console.log(`Database exported successfully: ${result.data.filename}`);
         } else {
-          toast({
-            title: "Erreur",
-            description: result.data.error || "Erreur lors de l'export de la base de données",
-            variant: "destructive",
-          });
+          console.error("Error exporting database:", result.data.error || "Unknown error");
         }
       } else {
-        toast({
-          title: "Erreur",
-          description: result.error || "Erreur lors de l'export de la base de données",
-          variant: "destructive",
-        });
+        console.error("Error exporting database:", result.error || "Unknown error");
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur inattendue lors de l'export de la base de données",
-        variant: "destructive",
-      });
+      console.error("Unexpected error exporting database:", error);
     } finally {
       setIsExporting(false);
     }
@@ -176,36 +206,65 @@ export default function SettingsPage() {
       const result = await db.database.import();
       if (result.success && result.data) {
         if (result.data.success) {
-          toast({
-            title: "Succès",
-            description: result.data.message || "Base de données importée avec succès",
-          });
+          console.log(result.data.message || "Database imported successfully");
           // Reload the page to reflect the new data
           window.location.reload();
         } else {
-          toast({
-            title: "Erreur",
-            description: result.data.error || "Erreur lors de l'import de la base de données",
-            variant: "destructive",
-          });
+          console.error("Error importing database:", result.data.error || "Unknown error");
         }
       } else {
-        toast({
-          title: "Erreur",
-          description: result.error || "Erreur lors de l'import de la base de données",
-          variant: "destructive",
-        });
+        console.error("Error importing database:", result.error || "Unknown error");
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur inattendue lors de l'import de la base de données",
-        variant: "destructive",
-      });
+      console.error("Unexpected error importing database:", error);
     } finally {
       setIsImporting(false);
     }
   };
+
+  useEffect(() => {
+    // Set up update event listeners
+    if (window.electronAPI?.onUpdateAvailable) {
+      window.electronAPI.onUpdateAvailable((info) => {
+        setUpdateInfo({
+          available: true,
+          version: info.version,
+          url: info.url
+        });
+      });
+    }
+
+    if (window.electronAPI?.onUpdateNotAvailable) {
+      window.electronAPI.onUpdateNotAvailable(() => {
+        console.log("No updates available");
+      });
+    }
+
+    if (window.electronAPI?.onUpdateError) {
+      window.electronAPI.onUpdateError((error) => {
+        console.error("Update error:", error);
+        setIsCheckingUpdate(false);
+        setIsDownloading(false);
+      });
+    }
+
+    if (window.electronAPI?.onUpdateDownloadProgress) {
+      window.electronAPI.onUpdateDownloadProgress((progress) => {
+        setDownloadProgress(progress.percent);
+      });
+    }
+
+    if (window.electronAPI?.onUpdateDownloaded) {
+      window.electronAPI.onUpdateDownloaded((info) => {
+        setUpdateDownloaded(true);
+        setIsDownloading(false);
+        setDownloadProgress(0);
+        console.log(`Update downloaded: ${info.version}`);
+      });
+    }
+
+    // No cleanup needed as the listeners are managed by the preload script
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">
@@ -219,38 +278,75 @@ export default function SettingsPage() {
                 Gérez les paramètres et préférences de votre entreprise
               </p>
             </div>
-            
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={handleImportDatabase}
+              disabled={isImporting}
+              variant="outline"
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              {isImporting ? "Import en cours..." : "Importer base de données"}
+            </Button>
+            <Button
+              onClick={handleExportDatabase}
+              disabled={isExporting}
+              variant="outline"
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? "Export en cours..." : "Exporter base de données"}
+            </Button>
+            <Button
+              onClick={checkForUpdates}
+              disabled={isCheckingUpdate || isDownloading}
+              variant="outline"
+              className="gap-2"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isCheckingUpdate ? "animate-spin" : ""}`}
+              />
+              {isCheckingUpdate
+                ? "Vérification..."
+                : "Vérifier les mises à jour"}
+            </Button>
+            {updateInfo?.available && !updateDownloaded && (
               <Button
-                onClick={handleImportDatabase}
-                disabled={isImporting}
-                variant="outline"
+                onClick={downloadUpdate}
+                disabled={isDownloading}
                 className="gap-2"
               >
-                <Upload className="h-4 w-4" />
-                {isImporting ? "Import en cours..." : "Importer base de données"}
+                {isDownloading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Téléchargement... {Math.round(downloadProgress)}%
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Télécharger la mise à jour ({updateInfo.version})
+                  </>
+                )}
               </Button>
-              <Button
-                onClick={handleExportDatabase}
-                disabled={isExporting}
-                variant="outline"
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {isExporting ? "Export en cours..." : "Exporter base de données"}
+            )}
+            {updateDownloaded && (
+              <Button onClick={installUpdate} className="gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Installer la mise à jour ({updateInfo?.version})
               </Button>
-              <Button
-                onClick={handleSaveSettings}
-                disabled={isSubmitting}
-                className="gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {isSubmitting
-                  ? "Enregistrement..."
-                  : "Enregistrer les modifications"}
-              </Button>
-            </div>
+            )}
+            <Button
+              onClick={handleSaveSettings}
+              disabled={isSubmitting}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting
+                ? "Enregistrement..."
+                : "Enregistrer les modifications"}
+            </Button>
+          </div>
 
           {/* Company Information */}
           <Card>

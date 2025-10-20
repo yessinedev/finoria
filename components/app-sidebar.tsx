@@ -3,6 +3,7 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -17,7 +18,7 @@ import {
   Package,
   ChevronDown,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export type NavigationItem =
@@ -64,7 +65,10 @@ const navigationItems = [
   },
   { id: "clients", label: "Clients", icon: Users },
   { id: "suppliers", label: "Fournisseurs", icon: Building2 },
-  // Add settings section
+];
+
+// Settings item moved to footer
+const footerItems = [
   { id: "settings", label: "Paramètres", icon: FileText },
 ];
 
@@ -74,7 +78,22 @@ export interface AppSidebarProps {
 }
 
 export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
-  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
+  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({
+    "sales-management": true,
+    "purchases": true,
+    "stock": true,
+  });
+
+  useEffect(() => {
+    // Initialize all groups as open by default
+    const initialOpenGroups: { [key: string]: boolean } = {};
+    navigationItems.forEach((item) => {
+      if (item.children) {
+        initialOpenGroups[item.id] = true;
+      }
+    });
+    setOpenGroups(initialOpenGroups);
+  }, []);
 
   const handleToggle = (id: string) => {
     setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -186,6 +205,25 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
           ))}
         </SidebarMenu>
       </SidebarContent>
+
+      <SidebarFooter className="border-t px-4 py-3">
+        <SidebarMenu>
+          {footerItems.map((item) => (
+            <SidebarMenuItem key={item.id}>
+              <Link href={getRoute(item.id)} passHref>
+                <SidebarMenuButton
+                  onClick={() => setActiveView(item.id as NavigationItem)}
+                  isActive={activeView === item.id}
+                  className="w-full justify-start gap-3 px-3 py-2.5"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

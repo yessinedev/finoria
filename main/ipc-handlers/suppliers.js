@@ -145,7 +145,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       // Start transaction
       const insertOrder = db.prepare(`
         INSERT INTO supplier_orders (
-          supplierId, orderNumber, totalAmount, taxAmount, status, orderDate, deliveryDate
+          supplierId, totalAmount, taxAmount, status, orderDate, deliveryDate
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
@@ -161,7 +161,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const orderResult = insertOrder.run(
         order.supplierId,
-        order.orderNumber,
         order.totalAmount,
         order.taxAmount,
         order.status,
@@ -207,7 +206,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       // Start transaction
       const updateOrder = db.prepare(`
         UPDATE supplier_orders 
-        SET supplierId = ?, orderNumber = ?, totalAmount = ?, taxAmount = ?, 
+        SET supplierId = ?, totalAmount = ?, taxAmount = ?, 
             status = ?, orderDate = ?, deliveryDate = ?, updatedAt = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
@@ -215,7 +214,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       // Update order
       const updateResult = updateOrder.run(
         order.supplierId,
-        order.orderNumber,
         order.totalAmount,
         order.taxAmount,
         order.status,

@@ -18,6 +18,13 @@ module.exports = {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
   },
+  // GitHub publish configuration
+  publish: {
+    provider: "github",
+    owner: "yessinedev",
+    repo: "finoria",
+    releaseType: "draft"
+  },
   // Hook executed after packaging but before installer is built
   afterPack: async (context) => {
     const { appOutDir, packager } = context;

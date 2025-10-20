@@ -13,7 +13,6 @@ export const supplierSchema = z.object({
 // Supplier order validation schema
 export const supplierOrderSchema = z.object({
   supplierId: z.number().min(1, "Le fournisseur est requis"),
-  orderNumber: z.string().min(1, "Le numéro de commande est requis"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   status: z.string().min(1, "Le statut est requis"),

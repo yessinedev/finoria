@@ -59,7 +59,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { supplierOrderSchema, SupplierOrderFormData } from "@/lib/validation/schemas";
 import { z } from "zod";
 
@@ -93,7 +92,6 @@ export default function SupplierOrders() {
   // Form state
   const [formData, setFormData] = useState({
     supplierId: 0,
-    orderNumber: "",
     totalAmount: 0,
     taxAmount: 0,
     status: "En attente",
@@ -121,7 +119,6 @@ export default function SupplierOrders() {
   useEffect(() => {
     let filtered = orders.filter(
       (order) =>
-        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
@@ -281,8 +278,8 @@ export default function SupplierOrders() {
               movementType: 'IN',
               sourceType: 'supplier_order',
               sourceId: response.data.id,
-              reference: response.data.orderNumber,
-              reason: 'Purchase order received'
+              reference: `Order #${response.data.id}`,
+              reason: 'Purchase order delivered'
             });
           } catch (stockError) {
             console.error(`Failed to update stock for product ${item.productId}:`, stockError);
@@ -362,7 +359,7 @@ export default function SupplierOrders() {
                 movementType: 'IN',
                 sourceType: 'supplier_order',
                 sourceId: response.data.id,
-                reference: response.data.orderNumber,
+                reference: `Order #${response.data.id}`,
                 reason: 'Purchase order delivered'
               });
             } catch (stockError) {
@@ -410,7 +407,7 @@ export default function SupplierOrders() {
                     movementType: quantityDifference > 0 ? 'IN' : 'OUT',
                     sourceType: 'supplier_order',
                     sourceId: response.data.id,
-                    reference: response.data.orderNumber,
+                    reference: `Order #${response.data.id}`,
                     reason: quantityDifference > 0 
                       ? 'Purchase order quantity increased' 
                       : 'Purchase order quantity decreased'
@@ -440,7 +437,7 @@ export default function SupplierOrders() {
                   movementType: 'IN',
                   sourceType: 'supplier_order',
                   sourceId: response.data.id,
-                  reference: response.data.orderNumber,
+                  reference: `Order #${response.data.id}`,
                   reason: 'Purchase order updated'
                 });
               } catch (stockError) {
@@ -496,7 +493,6 @@ export default function SupplierOrders() {
   const resetForm = () => {
     setFormData({
       supplierId: 0,
-      orderNumber: "",
       totalAmount: 0,
       taxAmount: 0,
       status: "En attente",
@@ -520,7 +516,6 @@ export default function SupplierOrders() {
   const openEditDialog = (order: SupplierOrder) => {
     setFormData({
       supplierId: order.supplierId,
-      orderNumber: order.orderNumber,
       totalAmount: order.totalAmount,
       taxAmount: order.taxAmount,
       status: order.status,
@@ -640,10 +635,10 @@ export default function SupplierOrders() {
                 productName: item.productName,
                 quantity: item.quantity,
                 movementType: 'IN',
-                sourceType: 'supplier_order',
+                sourceType: 'commande_fournisseur',
                 sourceId: orderId,
-                reference: order.orderNumber,
-                reason: 'Purchase order delivered'
+                reference: `Order #${orderId}`,
+                reason: "Commande d'achat livrée"
               });
             } catch (stockError) {
               console.error(`Failed to update stock for product ${item.productId}:`, stockError);
@@ -712,11 +707,7 @@ export default function SupplierOrders() {
     }
   };
 
-  const cancelEditing = () => {
-    setEditingOrderId(null);
-    setEditingField(null);
-    setEditingValue("");
-  };
+  
 
   return (
     <div className="container mx-auto py-6">
@@ -764,19 +755,6 @@ export default function SupplierOrders() {
                   </Select>
                   {errors.supplierId && (
                     <p className="text-sm text-red-500">{errors.supplierId}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="orderNumber">Numéro de commande *</Label>
-                  <Input
-                    id="orderNumber"
-                    value={formData.orderNumber}
-                    onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                    className={errors.orderNumber ? "border-red-500" : ""}
-                    required
-                  />
-                  {errors.orderNumber && (
-                    <p className="text-sm text-red-500">{errors.orderNumber}</p>
                   )}
                 </div>
               </div>
@@ -971,13 +949,6 @@ export default function SupplierOrders() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="cursor-pointer" onClick={() => requestSort('orderNumber')}>
-                <div className="flex items-center gap-1">
-                  <ShoppingCart className="h-4 w-4" />
-                  <span>Numéro</span>
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </div>
-              </TableHead>
               <TableHead className="cursor-pointer" onClick={() => requestSort('supplierName')}>
                 <div className="flex items-center gap-1">
                   <ShoppingCart className="h-4 w-4" />
@@ -1030,24 +1001,6 @@ export default function SupplierOrders() {
             ) : (
               currentOrders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium">
-                    {editingOrderId === order.id && editingField === 'orderNumber' ? (
-                      <Input
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={saveEditing}
-                        onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
-                        autoFocus
-                      />
-                    ) : (
-                      <div 
-                        onClick={() => startEditing(order.id, 'orderNumber', order.orderNumber)}
-                        className="cursor-pointer hover:underline"
-                      >
-                        {order.orderNumber}
-                      </div>
-                    )}
-                  </TableCell>
                   <TableCell>
                     {order.supplierName} {order.supplierCompany && `(${order.supplierCompany})`}
                   </TableCell>
@@ -1150,7 +1103,7 @@ export default function SupplierOrders() {
               Confirmer la suppression
             </DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer la commande "{orderToDelete?.orderNumber}" ? 
+              Êtes-vous sûr de vouloir supprimer cette commande fournisseur ? 
               Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>

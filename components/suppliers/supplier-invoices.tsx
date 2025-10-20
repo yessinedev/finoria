@@ -774,7 +774,7 @@ export default function SupplierInvoices() {
                     <SelectItem value="0">Aucune</SelectItem>
                     {orders.map((order) => (
                       <SelectItem key={order.id} value={order.id.toString()}>
-                        {order.orderNumber} - {order.supplierName}
+Commande #{order.id} - {order.supplierName}
                       </SelectItem>
                     ))}
                   </SelectContent>
