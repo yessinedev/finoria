@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, User, Shield, Bell, Download, Upload } from "lucide-react";
+import { Building2, Save, User, Shield, Bell, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
@@ -29,6 +29,11 @@ export default function SettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [updateInfo, setUpdateInfo] = useState<{ available: boolean; version?: string; url?: string } | null>(null);
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
     invoiceReminders: true,
@@ -207,6 +212,133 @@ export default function SettingsPage() {
     }
   };
 
+  useEffect(() => {
+    // Set up update event listeners
+    if (window.electronAPI?.onUpdateAvailable) {
+      window.electronAPI.onUpdateAvailable((info) => {
+        setUpdateInfo({
+          available: true,
+          version: info.version,
+          url: info.url
+        });
+      });
+    }
+
+    if (window.electronAPI?.onUpdateNotAvailable) {
+      window.electronAPI.onUpdateNotAvailable(() => {
+        toast({
+          title: "Aucune mise à jour disponible",
+          description: "Vous utilisez déjà la dernière version de l'application.",
+        });
+      });
+    }
+
+    if (window.electronAPI?.onUpdateError) {
+      window.electronAPI.onUpdateError((error) => {
+        toast({
+          title: "Erreur de mise à jour",
+          description: error,
+          variant: "destructive",
+        });
+        setIsCheckingUpdate(false);
+        setIsDownloading(false);
+      });
+    }
+
+    if (window.electronAPI?.onUpdateDownloadProgress) {
+      window.electronAPI.onUpdateDownloadProgress((progress) => {
+        setDownloadProgress(progress.percent);
+      });
+    }
+
+    if (window.electronAPI?.onUpdateDownloaded) {
+      window.electronAPI.onUpdateDownloaded((info) => {
+        setUpdateDownloaded(true);
+        setIsDownloading(false);
+        setDownloadProgress(0);
+        toast({
+          title: "Mise à jour téléchargée",
+          description: `La version ${info.version} est prête à être installée.`,
+        });
+      });
+    }
+
+    // No cleanup needed as the listeners are managed by the preload script
+  }, []);
+
+  const checkForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const result = await db.device.checkForUpdates();
+      if (result.success && result.data) {
+        setUpdateInfo({
+          available: result.data.data?.available || false,
+          version: result.data.data?.version,
+          url: result.data.data?.url
+        });
+        
+        if (!result.data.data?.available) {
+          toast({
+            title: "Aucune mise à jour disponible",
+            description: "Vous utilisez déjà la dernière version de l'application.",
+          });
+        }
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la vérification des mises à jour",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de la vérification des mises à jour",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const downloadUpdate = async () => {
+    if (!updateInfo?.available) return;
+    
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    
+    try {
+      const result = await db.device.downloadUpdate();
+      if (!result.success) {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors du téléchargement de la mise à jour",
+          variant: "destructive",
+        });
+        setIsDownloading(false);
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors du téléchargement de la mise à jour",
+        variant: "destructive",
+      });
+      setIsDownloading(false);
+    }
+  };
+
+  const installUpdate = async () => {
+    try {
+      await db.device.quitAndInstall();
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de l'installation de la mise à jour",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <main className="flex-1 p-6">
@@ -240,6 +372,43 @@ export default function SettingsPage() {
                 <Download className="h-4 w-4" />
                 {isExporting ? "Export en cours..." : "Exporter base de données"}
               </Button>
+              <Button
+                onClick={checkForUpdates}
+                disabled={isCheckingUpdate || isDownloading}
+                variant="outline"
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+                {isCheckingUpdate ? "Vérification..." : "Vérifier les mises à jour"}
+              </Button>
+              {updateInfo?.available && !updateDownloaded && (
+                <Button
+                  onClick={downloadUpdate}
+                  disabled={isDownloading}
+                  className="gap-2"
+                >
+                  {isDownloading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Téléchargement... {Math.round(downloadProgress)}%
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      Télécharger la mise à jour ({updateInfo.version})
+                    </>
+                  )}
+                </Button>
+              )}
+              {updateDownloaded && (
+                <Button
+                  onClick={installUpdate}
+                  className="gap-2"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Installer la mise à jour ({updateInfo?.version})
+                </Button>
+              )}
               <Button
                 onClick={handleSaveSettings}
                 disabled={isSubmitting}

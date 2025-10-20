@@ -5,6 +5,10 @@
   "author": "Finoria Team",
   "private": true,
   "main": "main/electron.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finoria/finoria.git"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "start": "next start",
@@ -58,6 +62,7 @@
     "concurrently": "^9.1.2",
     "date-fns": "^4.1.0",
     "electron-is-dev": "^3.0.1",
+    "electron-updater": "^6.3.9",
     "embla-carousel-react": "^8.6.0",
     "fs": "^0.0.1-security",
     "get-port": "^7.1.0",
