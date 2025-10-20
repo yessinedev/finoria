@@ -9,7 +9,7 @@ autoUpdater.autoInstallOnAppQuit = true; // Install on quit
 // Set the update feed URL - this should point to your GitHub repository
 autoUpdater.setFeedURL({
   provider: 'github',
-  owner: 'finoria',
+  owner: 'yessinedev',
   repo: 'finoria'
 });
 
@@ -30,7 +30,7 @@ async function checkForUpdates() {
           data: {
             available: isNewer,
             version: latestVersion,
-            url: `https://github.com/finoria/finoria/releases/tag/v${latestVersion}`,
+            url: `https://github.com/yessinedev/finoria/releases/tag/v${latestVersion}`,
           },
         });
       } else {

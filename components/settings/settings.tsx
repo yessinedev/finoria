@@ -18,7 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, User, Shield, Bell, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
+import {
+  Building2,
+  Save,
+  User,
+  Shield,
+  Bell,
+  Download,
+  Upload,
+  RefreshCw,
+  CheckCircle,
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
@@ -32,14 +42,12 @@ export default function SettingsPage() {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const [updateInfo, setUpdateInfo] = useState<{ available: boolean; version?: string; url?: string } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<{
+    available: boolean;
+    version?: string;
+    url?: string;
+  } | null>(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    invoiceReminders: true,
-    lowStockAlerts: true,
-    paymentNotifications: true,
-  });
 
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [companyFields, setCompanyFields] = useState({
@@ -128,15 +136,9 @@ export default function SettingsPage() {
         taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) || null : null,
     };
 
-    console.log("Updating company with data:", updateData);
-
-    const result = await db.settings.update(company.id, updateData);
-    console.log("Update result:", result);
-
-    console.log("Company Settings:", companyFields);
-    console.log("Tax Settings:", taxFields);
-    console.log("Notification Settings:", notifications);
-    setIsSubmitting(false);
+    await db.settings.update(company.id, updateData).finally(() => {
+      setIsSubmitting(false);
+    });
   };
 
   const handleExportDatabase = async () => {
@@ -152,14 +154,17 @@ export default function SettingsPage() {
         } else {
           toast({
             title: "Erreur",
-            description: result.data.error || "Erreur lors de l'export de la base de données",
+            description:
+              result.data.error ||
+              "Erreur lors de l'export de la base de données",
             variant: "destructive",
           });
         }
       } else {
         toast({
           title: "Erreur",
-          description: result.error || "Erreur lors de l'export de la base de données",
+          description:
+            result.error || "Erreur lors de l'export de la base de données",
           variant: "destructive",
         });
       }
@@ -183,21 +188,25 @@ export default function SettingsPage() {
         if (result.data.success) {
           toast({
             title: "Succès",
-            description: result.data.message || "Base de données importée avec succès",
+            description:
+              result.data.message || "Base de données importée avec succès",
           });
           // Reload the page to reflect the new data
           window.location.reload();
         } else {
           toast({
             title: "Erreur",
-            description: result.data.error || "Erreur lors de l'import de la base de données",
+            description:
+              result.data.error ||
+              "Erreur lors de l'import de la base de données",
             variant: "destructive",
           });
         }
       } else {
         toast({
           title: "Erreur",
-          description: result.error || "Erreur lors de l'import de la base de données",
+          description:
+            result.error || "Erreur lors de l'import de la base de données",
           variant: "destructive",
         });
       }
@@ -219,7 +228,7 @@ export default function SettingsPage() {
         setUpdateInfo({
           available: true,
           version: info.version,
-          url: info.url
+          url: info.url,
         });
       });
     }
@@ -228,7 +237,8 @@ export default function SettingsPage() {
       window.electronAPI.onUpdateNotAvailable(() => {
         toast({
           title: "Aucune mise à jour disponible",
-          description: "Vous utilisez déjà la dernière version de l'application.",
+          description:
+            "Vous utilisez déjà la dernière version de l'application.",
         });
       });
     }
@@ -274,26 +284,29 @@ export default function SettingsPage() {
         setUpdateInfo({
           available: result.data.data?.available || false,
           version: result.data.data?.version,
-          url: result.data.data?.url
+          url: result.data.data?.url,
         });
-        
+
         if (!result.data.data?.available) {
           toast({
             title: "Aucune mise à jour disponible",
-            description: "Vous utilisez déjà la dernière version de l'application.",
+            description:
+              "Vous utilisez déjà la dernière version de l'application.",
           });
         }
       } else {
         toast({
           title: "Erreur",
-          description: result.error || "Erreur lors de la vérification des mises à jour",
+          description:
+            result.error || "Erreur lors de la vérification des mises à jour",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Erreur inattendue lors de la vérification des mises à jour",
+        description:
+          "Erreur inattendue lors de la vérification des mises à jour",
         variant: "destructive",
       });
     } finally {
@@ -303,16 +316,17 @@ export default function SettingsPage() {
 
   const downloadUpdate = async () => {
     if (!updateInfo?.available) return;
-    
+
     setIsDownloading(true);
     setDownloadProgress(0);
-    
+
     try {
       const result = await db.device.downloadUpdate();
       if (!result.success) {
         toast({
           title: "Erreur",
-          description: result.error || "Erreur lors du téléchargement de la mise à jour",
+          description:
+            result.error || "Erreur lors du téléchargement de la mise à jour",
           variant: "destructive",
         });
         setIsDownloading(false);
@@ -320,7 +334,8 @@ export default function SettingsPage() {
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Erreur inattendue lors du téléchargement de la mise à jour",
+        description:
+          "Erreur inattendue lors du téléchargement de la mise à jour",
         variant: "destructive",
       });
       setIsDownloading(false);
@@ -351,75 +366,75 @@ export default function SettingsPage() {
                 Gérez les paramètres et préférences de votre entreprise
               </p>
             </div>
-            
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={handleImportDatabase}
+              disabled={isImporting}
+              variant="outline"
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              {isImporting ? "Import en cours..." : "Importer base de données"}
+            </Button>
+            <Button
+              onClick={handleExportDatabase}
+              disabled={isExporting}
+              variant="outline"
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? "Export en cours..." : "Exporter base de données"}
+            </Button>
+            <Button
+              onClick={checkForUpdates}
+              disabled={isCheckingUpdate || isDownloading}
+              variant="outline"
+              className="gap-2"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isCheckingUpdate ? "animate-spin" : ""}`}
+              />
+              {isCheckingUpdate
+                ? "Vérification..."
+                : "Vérifier les mises à jour"}
+            </Button>
+            {updateInfo?.available && !updateDownloaded && (
               <Button
-                onClick={handleImportDatabase}
-                disabled={isImporting}
-                variant="outline"
+                onClick={downloadUpdate}
+                disabled={isDownloading}
                 className="gap-2"
               >
-                <Upload className="h-4 w-4" />
-                {isImporting ? "Import en cours..." : "Importer base de données"}
+                {isDownloading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Téléchargement... {Math.round(downloadProgress)}%
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Télécharger la mise à jour ({updateInfo.version})
+                  </>
+                )}
               </Button>
-              <Button
-                onClick={handleExportDatabase}
-                disabled={isExporting}
-                variant="outline"
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {isExporting ? "Export en cours..." : "Exporter base de données"}
+            )}
+            {updateDownloaded && (
+              <Button onClick={installUpdate} className="gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Installer la mise à jour ({updateInfo?.version})
               </Button>
-              <Button
-                onClick={checkForUpdates}
-                disabled={isCheckingUpdate || isDownloading}
-                variant="outline"
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
-                {isCheckingUpdate ? "Vérification..." : "Vérifier les mises à jour"}
-              </Button>
-              {updateInfo?.available && !updateDownloaded && (
-                <Button
-                  onClick={downloadUpdate}
-                  disabled={isDownloading}
-                  className="gap-2"
-                >
-                  {isDownloading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Téléchargement... {Math.round(downloadProgress)}%
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      Télécharger la mise à jour ({updateInfo.version})
-                    </>
-                  )}
-                </Button>
-              )}
-              {updateDownloaded && (
-                <Button
-                  onClick={installUpdate}
-                  className="gap-2"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  Installer la mise à jour ({updateInfo?.version})
-                </Button>
-              )}
-              <Button
-                onClick={handleSaveSettings}
-                disabled={isSubmitting}
-                className="gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {isSubmitting
-                  ? "Enregistrement..."
-                  : "Enregistrer les modifications"}
-              </Button>
-            </div>
+            )}
+            <Button
+              onClick={handleSaveSettings}
+              disabled={isSubmitting}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting
+                ? "Enregistrement..."
+                : "Enregistrer les modifications"}
+            </Button>
+          </div>
 
           {/* Company Information */}
           <Card>

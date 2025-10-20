@@ -7,7 +7,7 @@
   "main": "main/electron.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/finoria/finoria.git"
+    "url": "https://github.com/yessinedev/finoria.git"
   },
   "scripts": {
     "dev": "next dev --turbopack",

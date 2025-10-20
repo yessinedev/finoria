@@ -21,7 +21,7 @@ module.exports = {
   // GitHub publish configuration
   publish: {
     provider: "github",
-    owner: "finoria",
+    owner: "yessinedev",
     repo: "finoria",
     releaseType: "draft"
   },
