@@ -89,7 +89,6 @@ export interface SupplierOrder {
   supplierEmail?: string;
   supplierPhone?: string;
   supplierAddress?: string;
-  orderNumber: string;
   totalAmount: number;
   taxAmount: number;
   status: string;
