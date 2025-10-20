@@ -20,11 +20,11 @@ module.exports = {
   },
   // GitHub publish configuration
   publish: [
-  {
-    provider: "generic",
-    url: "https://updates-finoria.etudionet.life" 
-  }
-],
+    {
+      provider: "generic",
+      url: "https://updates-finoria.etudionet.life" 
+    }
+  ],
 
   // Hook executed after packaging but before installer is built
   afterPack: async (context) => {
