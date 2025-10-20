@@ -22,7 +22,7 @@
     "build:electron": "electron-builder",
     "prepare:resources": "node scripts/prepare-build.js",
     "dist": "npm run build:next && npm run build:electron",
-    "deploy": "scp -r dist/*.exe dist/*.yml root@148.230.108.151:/var/www/finoria-updates/",
+    "deploy": "echo 'Use GitHub Actions for deployment'",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {

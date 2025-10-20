@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -25,13 +25,21 @@ jobs:
         run: npm run dist
 
       - name: Deploy to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "dist/*.exe,dist/*.yml"
-          target: "/var/www/finoria-updates/"
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          
+          # Create target directory if it doesn't exist
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "mkdir -p /var/www/finoria-updates/"
+          
+          # Copy files
+          scp dist/*.exe dist/*.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/
+          
+          # Set proper permissions
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "chmod -R 755 /var/www/finoria-updates/"
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
