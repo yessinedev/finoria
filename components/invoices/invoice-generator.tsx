@@ -30,6 +30,7 @@ import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
 import { Label } from "@/components/ui/label"
 import { invoiceSchema } from "@/lib/validation/schemas"
 import { z } from "zod"
+import { useToast } from "@/hooks/use-toast"
 
 interface InvoiceGeneratorProps {
   isOpen: boolean
@@ -44,6 +45,7 @@ export default function InvoiceGenerator({
   onInvoiceGenerated,
   availableSales,
 }: InvoiceGeneratorProps) {
+  const { toast } = useToast()
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [formData, setFormData] = useState({
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
@@ -163,11 +165,25 @@ export default function InvoiceGenerator({
           customNumber: "",
         })
         setFormErrors({});
+        toast({
+          title: "Succès",
+          description: "Facture générée avec succès",
+        });
       } else {
         setError(result.error || "Erreur lors de la génération de la facture")
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la génération de la facture",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       setError("Erreur inattendue lors de la génération")
+      toast({
+        title: "Erreur",
+        description: "Erreur inattendue lors de la génération",
+        variant: "destructive",
+      });
     } finally {
       setIsGenerating(false)
     }

@@ -142,7 +142,7 @@ export default function Sales() {
       const [clientsResult, productsResult, salesResult] = await Promise.all([
         db.clients.getAll(),
         db.products.getAll(),
-        db.sales.getAll(),
+        db.sales.getAllWithItems(),
       ]);
 
       if (clientsResult.success) setClients(clientsResult.data || []);
@@ -264,18 +264,10 @@ export default function Sales() {
 
       const result = await db.sales.create(saleData);
       if (result.success && result.data) {
-        // Update product stock for each item in the sale
+        // Stock update is now handled in the backend IPC handler
+        // Create stock movement record for each item
         for (const item of saleData.items) {
           try {
-            // Get current stock
-            const stockResponse = await db.products.getStock(item.productId);
-            const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
-            
-            // Update stock (reduce quantity for sale)
-            const newStock = currentStock - item.quantity;
-            await db.products.updateStock(item.productId, newStock);
-            
-            // Create stock movement record
             await db.stockMovements.create({
               productId: item.productId,
               productName: item.productName,
@@ -284,10 +276,10 @@ export default function Sales() {
               sourceType: 'sale',
               sourceId: result.data.id,
               reference: `SALE-${result.data.id}`,
-              reason: 'Product sold'
+              reason: 'Produit vendu'
             });
           } catch (stockError) {
-            console.error(`Failed to update stock for product ${item.productId}:`, stockError);
+            console.error(`Failed to create stock movement for product ${item.productId}:`, stockError);
           }
         }
         
@@ -310,9 +302,42 @@ export default function Sales() {
     }
   };
 
-  const handleViewSale = (sale: Sale) => {
-    setSelectedSale(sale);
+  const handleViewSale = async (sale: Sale) => {
+    // If the sale doesn't have items or items array is empty, fetch them
+    if (!sale.items || !Array.isArray(sale.items) || sale.items.length === 0) {
+      try {
+        const itemsResult = await db.sales.getItems(sale.id);
+        if (itemsResult.success) {
+          const saleWithItems = {
+            ...sale,
+            items: itemsResult.data || [],
+          };
+          setSelectedSale(saleWithItems);
+        } else {
+          // If fetching items fails, still show the sale without items
+          setSelectedSale(sale);
+        }
+      } catch (error) {
+        // If fetching items fails, still show the sale without items
+        setSelectedSale(sale);
+      }
+    } else {
+      setSelectedSale(sale);
+    }
     setIsSaleDetailsOpen(true);
+  };
+
+  const handleStatusChange = async (saleId: number, newStatus: string) => {
+    try {
+      const result = await db.sales.updateStatus(saleId, newStatus);
+      if (result.success) {
+        await loadData();
+      } else {
+        setError(result.error || "Erreur lors de la mise à jour du statut");
+      }
+    } catch (error) {
+      setError("Erreur lors de la mise à jour du statut");
+    }
   };
 
   if (loading) {
@@ -376,7 +401,19 @@ export default function Sales() {
               loading={loading}
               emptyMessage="Aucune vente trouvée"
               actions={(sale) => (
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 items-center">
+                  {/* Status dropdown for direct update */}
+                  <select
+                    value={sale.status}
+                    onChange={(e) => handleStatusChange(sale.id, e.target.value)}
+                    className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="En attente">En attente</option>
+                    <option value="Confirmée">Confirmée</option>
+                    <option value="Livrée">Livrée</option>
+                    <option value="Annulée">Annulée</option>
+                  </select>
+                  
                   <Button variant="outline" size="sm" onClick={() => handleViewSale(sale)}>
                     <Eye className="h-4 w-4" />
                   </Button>

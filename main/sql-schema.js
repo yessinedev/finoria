@@ -5,7 +5,6 @@ function createTables(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       description TEXT,
-      color TEXT DEFAULT 'blue',
       isActive BOOLEAN DEFAULT 1,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -93,6 +92,7 @@ function createTables(db) {
     CREATE TABLE IF NOT EXISTS supplier_orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       supplierId INTEGER NOT NULL,
+      orderNumber TEXT NOT NULL UNIQUE,
       totalAmount REAL NOT NULL,
       taxAmount REAL NOT NULL,
       status TEXT DEFAULT 'En attente',

@@ -1,8 +1,10 @@
+import type { Category } from "@/types/types";
+
 interface ElectronAPI {
   // Categories
   getCategories: () => Promise<any[]>;
-  createCategory: (category: any) => Promise<any>;
-  updateCategory: (id: number, category: any) => Promise<any>;
+  createCategory: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<any>;
+  updateCategory: (id: number, category: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<any>;
   deleteCategory: (id: number) => Promise<boolean>;
 
   // Clients
@@ -45,6 +47,7 @@ interface ElectronAPI {
   getSalesWithItems: () => Promise<any[]>;
   getSaleItems: (saleId: number) => Promise<any[]>;
   updateSaleStatus: (id: number, status: string) => Promise<any>;
+  deleteSale: (id: number) => Promise<boolean>;
 
   // Dashboard
   getDashboardStats: (dateRange?: string) => Promise<any>;
@@ -169,13 +172,13 @@ class DatabaseService {
         () => window.electronAPI?.getCategories() || Promise.resolve([]),
         "getCategories"
       ),
-    create: (category: any) =>
+    create: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) =>
       this.handle(
         () =>
           window.electronAPI?.createCategory(category) || Promise.resolve(null),
         "createCategory"
       ),
-    update: (id: number, category: any) =>
+    update: (id: number, category: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt'>>) =>
       this.handle(
         () =>
           window.electronAPI?.updateCategory(id, category) ||
@@ -379,6 +382,11 @@ class DatabaseService {
           window.electronAPI?.updateSaleStatus(id, status) ||
           Promise.resolve(null),
         "updateSaleStatus"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteSale(id) || Promise.resolve(false),
+        "deleteSale"
       ),
   };
 

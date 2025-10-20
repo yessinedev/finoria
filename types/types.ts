@@ -2,7 +2,6 @@ export interface Category {
   id: number;
   name: string;
   description: string;
-  color: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -84,6 +83,7 @@ export interface SaleItem {
 export interface SupplierOrder {
   id: number;
   supplierId: number;
+  orderNumber: string;
   supplierName: string;
   supplierCompany?: string;
   supplierEmail?: string;
