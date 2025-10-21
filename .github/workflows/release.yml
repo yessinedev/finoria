@@ -3,30 +3,53 @@ name: Build & Publish Finoria App
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-latest  # ✅ Windows runner is best for building .exe
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci --legacy-peer-deps
-      - run: npm run build:next
-      - run: npx electron-builder --win --publish never
-      - name: Test SSH connection
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Windows app
         run: |
-          ssh -o StrictHostKeyChecking=no -v ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo connected"
+          npm run build:next
+          npx electron-builder --win --publish never
+
+      # 🧩 Setup SSH key for deployment
+      - name: Setup SSH key
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      # 🚀 Deploy build artifacts to VPS
       - name: Deploy to VPS
+        shell: bash
         run: |
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 dist/*.exe dist/*.yml \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/\n"
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no dist/*.exe dist/*.yml \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "chmod -R 755 /var/www/finoria-updates/"
-      - uses: softprops/action-gh-release@v2
+
+      # 📦 Publish to GitHub Releases
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/**/*.exe
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
