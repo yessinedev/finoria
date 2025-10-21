@@ -134,7 +134,7 @@ export function QuotePDFDocument({ quote, companySettings }: { quote: Quote; com
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>DEVIS</Text>
+            <Text style={styles.title}>Finoria</Text>
             <Text style={styles.subtitle}>Gestion & Facturation</Text>
           </View>
           <View>
@@ -152,8 +152,8 @@ export function QuotePDFDocument({ quote, companySettings }: { quote: Quote; com
             <Text style={styles.cardContent}>{companySettings?.address || '123 Rue de l\'Entreprise, 75001 Paris'}</Text>
             <Text style={styles.cardContent}>Tél: {companySettings?.phone || '01 23 45 67 89'}</Text>
             <Text style={styles.cardContent}>{companySettings?.email || 'contact@gestvente.fr'}</Text>
-            {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
-            {companySettings?.tvaNumber && <Text style={styles.cardContent}>TVA: FR{companySettings.tvaNumber}</Text>}
+            {companySettings?.taxId && <Text style={styles.cardContent}>Numéro Fiscal: {companySettings.taxId}</Text>}
+            {companySettings?.tvaNumber && <Text style={styles.cardContent}>Numéro TVA: {companySettings.tvaNumber}</Text>}
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Client */}
             <Text style={styles.cardTitle}>Destinataire</Text>

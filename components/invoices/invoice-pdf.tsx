@@ -137,7 +137,7 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             
             <View>
-              <Text style={styles.title}>FACTURE</Text>
+              <Text style={styles.title}>Finoria</Text>
               <Text style={styles.subtitle}>Gestion & Facturation</Text>
             </View>
           </View>
