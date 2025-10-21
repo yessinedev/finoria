@@ -16,10 +16,15 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npm run build:next
       - run: npx electron-builder --win --publish never
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no -v ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo connected"
       - name: Deploy to VPS
         run: |
-          scp dist/*.exe dist/*.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "chmod -R 755 /var/www/finoria-updates/"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 dist/*.exe dist/*.yml \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/\n"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "chmod -R 755 /var/www/finoria-updates/"
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/**/*.exe
