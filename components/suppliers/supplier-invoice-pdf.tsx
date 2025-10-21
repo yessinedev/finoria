@@ -144,7 +144,7 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={styles.logoBox}>
-              <Text style={{ fontSize: 20, fontWeight: 700, color: '#6366f1' }}>GV</Text>
+
             </View>
             <View>
               <Text style={styles.title}>FACTURE FOURNISSEUR</Text>
@@ -167,13 +167,16 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
             <Text style={styles.cardContent}>Tél: {companySettings?.phone || '01 23 45 67 89'}</Text>
             <Text style={styles.cardContent}>{companySettings?.email || 'contact@gestvente.fr'}</Text>
             {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
-            {companySettings?.tvaNumber && <Text style={styles.cardContent}>TVA: FR{companySettings.tvaNumber}</Text>}
+            {companySettings?.tvaNumber && <Text style={styles.cardContent}>N° TVA: {companySettings.tvaNumber}</Text>}
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Supplier */}
             <Text style={styles.cardTitle}>Fournisseur</Text>
             <Text style={styles.cardContent}>{invoice.supplierName}</Text>
             {invoice.supplierCompany && <Text style={styles.cardContent}>{invoice.supplierCompany}</Text>}
-            {/* Add supplier contact info if available in your data model */}
+            {invoice.supplierAddress && <Text style={styles.cardContent}>{invoice.supplierAddress}</Text>}
+            {invoice.supplierPhone && <Text style={styles.cardContent}>Tél: {invoice.supplierPhone}</Text>}
+            {invoice.supplierEmail && <Text style={styles.cardContent}>{invoice.supplierEmail}</Text>}
+            {invoice.supplierTaxId && <Text style={styles.cardContent}>N° fiscal: {invoice.supplierTaxId}</Text>}
           </View>
         </View>
 
@@ -233,14 +236,8 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
         </View>
 
         {/* Notes */}
-        <Text style={styles.notes}>Facture générée par GestVente - Solution de gestion commerciale</Text>
 
-        {/* Footer */}
-        <Text style={styles.footer} fixed>
-          Conditions de paiement : Paiement à 30 jours par virement bancaire. En cas de retard de paiement, des pénalités de 3% par mois seront appliquées.\n
-          Coordonnées bancaires : IBAN: FR76 1234 5678 9012 3456 7890 123 | BIC: ABCDEFGH | Banque: Crédit Exemple\n
-          GestVente SARL - Capital social: 10 000TND - RCS Paris 123 456 789
-        </Text>
+        {/* Footer - Removed hardcoded text */}
       </Page>
     </Document>
   )

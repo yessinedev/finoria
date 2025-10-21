@@ -235,12 +235,7 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
           <Text style={styles.notes}>{invoice.notes}</Text>
         )}
 
-        {/* Footer */}
-        <Text style={styles.footer} fixed>
-          Conditions de paiement : Paiement à 30 jours par virement bancaire. En cas de retard de paiement, des pénalités de 3% par mois seront appliquées.\n
-          Coordonnées bancaires : IBAN: FR76 1234 5678 9012 3456 7890 123 | BIC: ABCDEFGH | Banque: Crédit Exemple\n
-          GestVente SARL - Capital social: 10 000TND - RCS Paris 123 456 789
-        </Text>
+        {/* Footer - Removed hardcoded text */}
       </Page>
     </Document>
   )
@@ -254,7 +249,3 @@ function formatDate(dateString: string) {
     day: 'numeric',
   })
 }
-
-// Removed local formatQuantity function since we're importing it from utils
-
-// Removed local formatCurrency function since we're importing it from utils

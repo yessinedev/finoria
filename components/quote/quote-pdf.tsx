@@ -224,9 +224,7 @@ export function QuotePDFDocument({ quote, companySettings }: { quote: Quote; com
         )}
 
         {/* Footer */}
-        <Text style={styles.footer}>
-          Gestion & Facturation - GestVente SARL - 123 Rue de l'Entreprise, 75001 Paris - Tél: 01 23 45 67 89 - contact@gestvente.fr
-        </Text>
+        {/* Removed: Gestion & Facturation - GestVente SARL - 123 Rue de l'Entreprise, 75001 Paris - Tél: 01 23 45 67 89 - contact@gestvente.fr */}
       </Page>
     </Document>
   );
