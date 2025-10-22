@@ -47,6 +47,7 @@ function createTables(db) {
       name TEXT NOT NULL UNIQUE,
       description TEXT,
       price REAL NOT NULL,
+      purchasePrice REAL,
       category TEXT NOT NULL,
       stock INTEGER DEFAULT 0,
       isActive BOOLEAN DEFAULT 1,
@@ -342,6 +343,16 @@ function createTables(db) {
     // Column might already exist, which is fine
     if (!error.message.includes("duplicate column name")) {
       console.error("Error adding discount column to supplier_order_items:", error);
+    }
+  }
+  
+  // Add purchasePrice column to products table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN purchasePrice REAL");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding purchasePrice column to products:", error);
     }
   }
 }
