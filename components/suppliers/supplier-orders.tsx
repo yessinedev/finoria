@@ -585,7 +585,7 @@ export default function SupplierOrders() {
     setOrderItems([...orderItems, newItem]);
     setSelectedProduct(null);
     setItemQuantity(1);
-    setItemUnitPrice(0);
+    setItemUnitPrice(product.purchasePrice || 0);
     setItemErrors({}); // Clear item errors when adding new item
   };
 
@@ -834,7 +834,7 @@ export default function SupplierOrders() {
                                   value={product.name}
                                   onSelect={() => {
                                     setSelectedProduct(product.id);
-                                    setItemUnitPrice(product.price);
+                                    setItemUnitPrice(product.purchasePrice || product.price || 0);
                                     setProductSearchOpen(false);
                                   }}
                                 >
@@ -845,7 +845,7 @@ export default function SupplierOrders() {
                                       </span>
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                      {product.price.toFixed(3)} TND • Stock: {product.stock}
+                                      Achat: {product.purchasePrice ? product.purchasePrice.toFixed(3) : 'N/A'} TND • Stock: {product.stock}
                                     </span>
                                   </div>
                                 </CommandItem>

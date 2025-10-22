@@ -211,8 +211,14 @@ export default function InventoryList() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('price')}>
                     <div className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
-                      <span>Prix</span>
+                      <span>Prix vente</span>
                       <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <Package className="h-4 w-4" />
+                      <span>Prix d'achat</span>
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer" onClick={() => requestSort('stock')}>
@@ -233,13 +239,13 @@ export default function InventoryList() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Chargement...
                     </TableCell>
                   </TableRow>
                 ) : currentProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Aucun produit trouvé
                     </TableCell>
                   </TableRow>
@@ -259,6 +265,9 @@ export default function InventoryList() {
                       </TableCell>
                       <TableCell>
                         {product.price.toFixed(3)} TND
+                      </TableCell>
+                      <TableCell>
+                        {product.purchasePrice ? `${product.purchasePrice.toFixed(3)} TND` : "N/A"}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

@@ -285,9 +285,12 @@ export default function SaleForm(props: SaleFormProps) {
                 <Label>Prix unitaire</Label>
                 <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
                   {selectedProduct
-                    ? products
-                        .find((p) => p.id === selectedProduct)
-                        ?.price.toFixed(3) + " TND"
+                    ? (() => {
+                        const product = products.find((p) => p.id === selectedProduct);
+                        return product 
+                          ? `${product.price.toFixed(3)} TND`
+                          : "0.000 TND";
+                      })()
                     : "0.000 TND"}
                 </div>
               </div>

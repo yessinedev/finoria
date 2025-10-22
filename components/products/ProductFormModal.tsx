@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/common/FormField";
 import { EntitySelect } from "@/components/common/EntitySelect";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import type { Category, Product } from "@/types/types";
 import { productSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
@@ -48,10 +49,16 @@ export default function ProductFormModal({
         name: formData.name,
         description: formData.description,
         price: formData.price,
+        purchasePrice: formData.purchasePrice,
         category: formData.category,
         stock: formData.stock,
         isActive: formData.isActive,
       };
+      
+      // Only include purchasePrice in validation if it's provided
+      if (productData.purchasePrice === undefined || productData.purchasePrice === null) {
+        delete productData.purchasePrice;
+      }
       
       productSchema.parse(productData);
       setErrors({});
@@ -120,15 +127,39 @@ export default function ProductFormModal({
             error={errors.description}
           />
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              label="Prix unitaire (TND) *"
-              id="price"
-              type="number"
-              value={formData.price.toString()}
-              onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
-              required
-              error={errors.price}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="price">Prix de vente (TND) *</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.001"
+                value={formData.price.toString()}
+                onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
+                required
+              />
+              {errors.price && <div className="text-xs text-red-600">{errors.price}</div>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="purchasePrice">Prix d'achat (TND)</Label>
+              <Input
+                id="purchasePrice"
+                type="number"
+                step="0.001"
+                value={formData.purchasePrice?.toString() || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || value === null) {
+                    setFormData({ ...formData, purchasePrice: undefined });
+                  } else {
+                    const numValue = Number.parseFloat(value);
+                    setFormData({ ...formData, purchasePrice: isNaN(numValue) ? undefined : numValue });
+                  }
+                }}
+              />
+              {errors.purchasePrice && <div className="text-xs text-red-600">{errors.purchasePrice}</div>}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <FormField
               label="Stock (0 pour les services)"
               id="stock"

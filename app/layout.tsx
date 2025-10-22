@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VentePro",
+  title: "Finoria",
   description: "Gestion de stock et facturation pour les PME",
 };
 

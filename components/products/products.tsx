@@ -41,6 +41,7 @@ export default function Products() {
     name: "",
     description: "",
     price: 0,
+    purchasePrice: undefined,
     category: "",
     stock: 0,
     isActive: true,
@@ -92,9 +93,15 @@ export default function Products() {
     },
     {
       key: "price" as keyof Product,
-      label: "Prix",
+      label: "Prix de vente",
       sortable: true,
       render: (value: number) => `${value.toFixed(3)} TND`,
+    },
+    {
+      key: "purchasePrice" as keyof Product,
+      label: "Prix d'achat",
+      sortable: true,
+      render: (value: number) => value ? `${value.toFixed(3)} TND` : "—",
     },
     {
       key: "stock" as keyof Product,
@@ -196,7 +203,7 @@ export default function Products() {
   }
 
   const resetForm = () => {
-    setFormData({ name: "", description: "", price: 0, category: "", stock: 0, isActive: true })
+    setFormData({ name: "", description: "", price: 0, purchasePrice: undefined, category: "", stock: 0, isActive: true })
     setEditingProduct(null)
     setIsDialogOpen(false)
     setError(null)
@@ -208,6 +215,7 @@ export default function Products() {
       name: product.name,
       description: product.description,
       price: product.price,
+      purchasePrice: product.purchasePrice,
       category: product.category,
       stock: product.stock,
       isActive: product.isActive,
