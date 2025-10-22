@@ -36,8 +36,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.ssh"
           $key | Out-File -FilePath "$env:USERPROFILE\.ssh\id_ed25519" -Encoding ascii
           icacls "$env:USERPROFILE\.ssh\id_ed25519" /inheritance:r /grant:r "$($env:USERNAME):R"
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} | Out-File "$env:USERPROFILE\.ssh\known_hosts" -Encoding ascii
-
+          try {
+            ssh-keyscan -H ${{ secrets.VPS_HOST }} | Out-File "$env:USERPROFILE\.ssh\known_hosts" -Encoding ascii
+            } catch {
+              Write-Host "⚠️ Warning: ssh-keyscan failed, continuing..."
+            }
+           }
+  
       # 🚀 Deploy build artifacts to VPS
       - name: Deploy to VPS
         shell: bash
