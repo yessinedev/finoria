@@ -44,13 +44,3 @@ jobs:
         run: |
           scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no dist/*.exe dist/*.yml \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/
-
-      # 📦 Publish to GitHub Releases
-      - name: Upload release artifacts
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/**/*.exe
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
