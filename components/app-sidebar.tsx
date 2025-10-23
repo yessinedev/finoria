@@ -103,7 +103,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
   const getRoute = (id: string) => {
     switch (id) {
       case "dashboard":
-        return "/";
+        return "/dashboard";
       case "clients":
         return "/clients";
       case "sales":
