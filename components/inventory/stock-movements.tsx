@@ -136,7 +136,7 @@ export default function StockMovements() {
   const paginateMovements = (pageNumber: number) => setMovementCurrentPage(pageNumber);
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="p-6 flex flex-col gap-2">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">

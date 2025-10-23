@@ -36,6 +36,7 @@ interface ElectronAPI {
   getProducts: () => Promise<any[]>;
   getProductById: (id: number) => Promise<any>;
   getProductStock: (id: number) => Promise<number>;
+  checkProductStock: (id: number, requestedQuantity: number) => Promise<{ available: boolean; stock: number }>;
   updateProductStock: (id: number, quantity: number) => Promise<any>;
   createProduct: (product: any) => Promise<any>;
   updateProduct: (id: number, product: any) => Promise<any>;
@@ -332,6 +333,11 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getProductStock(id) || Promise.resolve(0),
         "getProductStock"
+      ),
+    checkStock: (id: number, requestedQuantity: number) =>
+      this.handle(
+        () => window.electronAPI?.checkProductStock(id, requestedQuantity) || Promise.resolve({ available: true, stock: 0 }),
+        "checkProductStock"
       ),
     updateStock: (id: number, quantity: number) =>
       this.handle(

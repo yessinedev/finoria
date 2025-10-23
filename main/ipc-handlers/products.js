@@ -54,14 +54,36 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("get-product-stock", async (event, id) => {
     try {
-      const product = db.prepare("SELECT stock FROM products WHERE id = ?").get(id);
-      if (!product) {
-        throw new Error("Produit introuvable");
-      }
-      return product.stock;
+      const stmt = db.prepare("SELECT stock FROM products WHERE id = ?");
+      const result = stmt.get(id);
+      return result ? result.stock : 0;
     } catch (error) {
       console.error("Error getting product stock:", error);
       throw new Error("Erreur lors de la récupération du stock du produit");
+    }
+  });
+
+  ipcMain.handle("check-product-stock", async (event, id, requestedQuantity) => {
+    try {
+      const stmt = db.prepare("SELECT stock, category FROM products WHERE id = ?");
+      const result = stmt.get(id);
+      
+      if (!result) {
+        return { available: false, stock: 0 };
+      }
+      
+      // Services don't have stock limitations
+      if (result.category === 'Service') {
+        return { available: true, stock: result.stock };
+      }
+      
+      return { 
+        available: result.stock >= requestedQuantity, 
+        stock: result.stock 
+      };
+    } catch (error) {
+      console.error("Error checking product stock:", error);
+      throw new Error("Erreur lors de la vérification du stock du produit");
     }
   });
 

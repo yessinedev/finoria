@@ -21,6 +21,16 @@ import SaleDetailsModal from "@/components/sales/SaleDetailsModal";
 import SaleForm from "@/components/sales/SaleForm";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Sales() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -42,6 +52,13 @@ export default function Sales() {
   const [isSaleDetailsOpen, setIsSaleDetailsOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  // State for stock alert dialog
+  const [showStockAlert, setShowStockAlert] = useState(false);
+  const [stockAlertData, setStockAlertData] = useState<{
+    insufficientItems: Array<{ name: string; requested: number; available: number }>;
+    onContinue: () => void;
+  } | null>(null);
 
   // Data table for sales list
   const {
@@ -244,6 +261,54 @@ export default function Sales() {
     setError(null);
 
     try {
+      // Check stock availability before proceeding
+      const stockCheckResults = [];
+      let hasInsufficientStock = false;
+
+      for (const item of lineItems) {
+        // Skip stock check for service products
+        const product = products.find(p => p.id === item.productId);
+        if (product && product.category === 'Service') {
+          continue;
+        }
+
+        const stockResponse = await db.products.getStock(item.productId);
+        const availableStock = stockResponse.success ? stockResponse.data : 0;
+        
+        if (availableStock < item.quantity) {
+          hasInsufficientStock = true;
+          stockCheckResults.push({
+            name: item.name,
+            requested: item.quantity,
+            available: availableStock
+          });
+        }
+      }
+
+      // If there's insufficient stock, show alert dialog
+      if (hasInsufficientStock) {
+        setStockAlertData({
+          insufficientItems: stockCheckResults,
+          onContinue: () => {
+            setShowStockAlert(false);
+            processSale();
+          }
+        });
+        setShowStockAlert(true);
+        setSaving(false);
+        return;
+      }
+
+      // If stock is sufficient, proceed with sale
+      await processSale();
+    } catch (error) {
+      setError("Erreur inattendue lors de la vérification du stock");
+      setSaving(false);
+    }
+  };
+
+  const processSale = async () => {
+    try {
       const saleData = {
         clientId: Number.parseInt(selectedClient),
         items: lineItems.map((item) => ({
@@ -377,6 +442,42 @@ export default function Sales() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* Stock Alert Dialog */}
+      <AlertDialog open={showStockAlert} onOpenChange={setShowStockAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Stock Insuffisant
+            </AlertDialogTitle>
+            <div className="text-sm text-muted-foreground">
+              Les articles suivants n'ont pas suffisamment de stock disponible :
+              <div className="mt-2 space-y-2">
+                {stockAlertData?.insufficientItems.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center p-2 bg-yellow-50 rounded">
+                    <span className="font-medium">{item.name}</span>
+                    <span>
+                      Demandé: {item.requested}, Disponible: {item.available}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4">
+                Voulez-vous continuer avec cette vente malgré le stock insuffisant ?
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowStockAlert(false)}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={stockAlertData?.onContinue}>
+              Continuer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {showSalesList ? (
         // Sales List View

@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, Percent, Plus, Trash2, Save, Check, ChevronsUpDown } from "lucide-react";
+import { Calculator, Percent, Plus, Trash2, Save, Check, ChevronsUpDown, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Client, Product, LineItem } from "@/types/types";
 import { saleSchema } from "@/lib/validation/schemas";

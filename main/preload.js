@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateProductStock: (id, quantity) =>
     ipcRenderer.invoke("update-product-stock", id, quantity),
   getProductStock: (id) => ipcRenderer.invoke("get-product-stock", id),
+  checkProductStock: (id, requestedQuantity) => ipcRenderer.invoke("check-product-stock", id, requestedQuantity),
   deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
 
   // --- Sales API ---
