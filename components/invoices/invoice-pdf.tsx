@@ -152,10 +152,10 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
           <View style={[styles.card, { flex: 1 }]}> {/* Company */}
             <Text style={styles.cardTitle}>Émetteur</Text>
-            <Text style={styles.cardContent}>{companySettings?.name || 'GestVente SARL'}</Text>
-            <Text style={styles.cardContent}>{companySettings?.address || '123 Rue de l\'Entreprise, 75001 Paris'}</Text>
-            <Text style={styles.cardContent}>Tél: {companySettings?.phone || '01 23 45 67 89'}</Text>
-            <Text style={styles.cardContent}>{companySettings?.email || 'contact@gestvente.fr'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.name}</Text>
+            <Text style={styles.cardContent}>{companySettings?.address}</Text>
+            <Text style={styles.cardContent}>Tél: {companySettings?.phone}</Text>
+            <Text style={styles.cardContent}>{companySettings?.email}</Text>
             {companySettings?.taxId && <Text style={styles.cardContent}>Numéro Fiscal: {companySettings.taxId}</Text>}
             {companySettings?.tvaNumber && <Text style={styles.cardContent}>Numéro TVA: {companySettings.tvaNumber}</Text>}
           </View>
