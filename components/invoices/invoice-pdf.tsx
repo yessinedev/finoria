@@ -166,6 +166,8 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
             {invoice.clientAddress && <Text style={styles.cardContent}>{invoice.clientAddress}</Text>}
             {invoice.clientPhone && <Text style={styles.cardContent}>{invoice.clientPhone}</Text>}
             {invoice.clientEmail && <Text style={styles.cardContent}>{invoice.clientEmail}</Text>}
+            {/* Display client tax ID if available */}
+            {invoice.clientTaxId && <Text style={styles.cardContent}>Matricule fiscal: {invoice.clientTaxId}</Text>}
           </View>
         </View>
 

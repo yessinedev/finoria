@@ -5,14 +5,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       try {
         // Insert sale
         const saleStmt = db.prepare(`
-          INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, status, saleDate) 
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, fodecAmount, status, saleDate) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
         const saleResult = saleStmt.run(
           saleData.clientId,
           saleData.totalAmount,
           saleData.taxAmount,
           saleData.discountAmount || 0,
+          saleData.fodecAmount || 0, // New FODEC amount
           saleData.status || "Confirmé",
           saleData.saleDate || new Date().toISOString()
         );
@@ -92,7 +93,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const sales = db
         .prepare(
           `
-        SELECT s.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress
+        SELECT s.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress, c.taxId as clientTaxId
         FROM sales s
         JOIN clients c ON s.clientId = c.id
         ORDER BY s.saleDate DESC

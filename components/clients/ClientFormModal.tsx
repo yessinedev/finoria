@@ -123,6 +123,13 @@ export default function ClientFormModal({
             textarea
             error={errors.address}
           />
+          <FormField
+            label="Matricule fiscal"
+            id="clientTaxId"
+            value={formData.taxId || ""}
+            onChange={(e) => handleFieldChange("taxId", e.target.value)}
+            error={errors.taxId}
+          />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onReset} disabled={saving}>
               Annuler

@@ -5,7 +5,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const invoices = db
         .prepare(
           `
-        SELECT i.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress
+        SELECT i.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress, c.taxId as clientTaxId
         FROM invoices i
         JOIN clients c ON i.clientId = c.id
         ORDER BY i.issueDate DESC
@@ -168,7 +168,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       // Get the sale with client information
       const sale = db.prepare(`
-        SELECT s.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress
+        SELECT s.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress, c.taxId as clientTaxId
         FROM sales s
         JOIN clients c ON s.clientId = c.id
         WHERE s.id = ?
@@ -258,6 +258,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         clientName: sale.clientName,
         clientCompany: sale.clientCompany,
         clientAddress: sale.clientAddress,
+        clientTaxId: sale.clientTaxId, // Include client tax ID
         items: items
       };
       

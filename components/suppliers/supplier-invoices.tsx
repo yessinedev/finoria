@@ -329,14 +329,11 @@ export default function SupplierInvoices() {
     }
 
     try {
-      console.log('Invoice items before calculating totals:', invoiceItems); // Debug log
       // Calculate totals
       const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
       const taxAmount = subtotal * 0.19; // 19% VAT
       const totalAmount = subtotal + taxAmount;
       
-      console.log('Calculated totals:', { subtotal, taxAmount, totalAmount }); // Debug log
-
       const invoiceData = {
         ...formData,
         supplierId: Number(formData.supplierId),
@@ -346,8 +343,6 @@ export default function SupplierInvoices() {
         totalAmount: Number(totalAmount.toFixed(3)),
         items: invoiceItems,
       };
-
-      console.log('Invoice data to be sent:', invoiceData); // Debug log
 
       const response = await db.supplierInvoices.create(invoiceData);
       if (response.success && response.data) {

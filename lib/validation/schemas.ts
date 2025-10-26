@@ -69,6 +69,7 @@ export const clientSchema = z.object({
   email: z.string().email("Email invalide").optional().or(z.string().length(0)),
   phone: z.string().optional(),
   address: z.string().optional(),
+  taxId: z.string().optional(), // New tax identification number field
 });
 
 // Sale validation schema

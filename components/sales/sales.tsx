@@ -42,8 +42,9 @@ export default function Sales() {
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
-  const [globalDiscount, setGlobalDiscount] = useState(0);
+  // Removed globalDiscount state
   const [taxRate, setTaxRate] = useState(20);
+  const [fodecTax, setFodecTax] = useState(0); // New FODEC tax state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +77,8 @@ export default function Sales() {
     ...sale,
     finalAmount:
       sale.totalAmount +
-      sale.taxAmount -
+      sale.taxAmount +
+      (sale.fodecAmount ?? 0) - // Include FODEC amount if exists
       (sale.discountAmount ?? 0),
   }));
   
@@ -244,10 +246,11 @@ export default function Sales() {
 
   // Calculate totals
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-  const globalDiscountAmount = (subtotal * globalDiscount) / 100;
-  const discountedSubtotal = subtotal - globalDiscountAmount;
+  // Removed globalDiscountAmount calculation
+  const discountedSubtotal = subtotal; // No global discount anymore
   const taxAmount = (discountedSubtotal * taxRate) / 100;
-  const finalTotal = discountedSubtotal + taxAmount;
+  const fodecAmount = (discountedSubtotal * fodecTax) / 100; // New FODEC amount
+  const finalTotal = discountedSubtotal + taxAmount + fodecAmount;
 
   const handleSubmit = async (errors: Record<string, string>) => {
     if (!selectedClient || lineItems.length === 0) {
@@ -321,7 +324,8 @@ export default function Sales() {
         })),
         totalAmount: discountedSubtotal,
         taxAmount: taxAmount,
-        discountAmount: globalDiscountAmount,
+        fodecAmount: fodecAmount, // Include FODEC amount
+        discountAmount: 0, // No global discount
         finalAmount: finalTotal,
         status: "En attente",
         saleDate: new Date().toISOString(),
@@ -350,7 +354,7 @@ export default function Sales() {
         
         setSelectedClient("");
         setLineItems([]);
-        setGlobalDiscount(0);
+        setFodecTax(0); // Reset FODEC tax
         setFormErrors({});
         toast({
           title: "Succès",
@@ -543,14 +547,16 @@ export default function Sales() {
           addLineItem={addLineItem}
           removeLineItem={removeLineItem}
           updateLineItem={updateLineItem}
-          globalDiscount={globalDiscount}
-          setGlobalDiscount={setGlobalDiscount}
+          // Removed globalDiscount and setGlobalDiscount
           taxRate={taxRate}
           setTaxRate={setTaxRate}
+          fodecTax={fodecTax} // New FODEC tax prop
+          setFodecTax={setFodecTax} // New FODEC tax setter prop
           subtotal={subtotal}
-          globalDiscountAmount={globalDiscountAmount}
+          // Removed globalDiscountAmount
           discountedSubtotal={discountedSubtotal}
           taxAmount={taxAmount}
+          fodecAmount={fodecAmount} // New FODEC amount prop
           finalTotal={finalTotal}
           saving={saving}
           handleSubmit={handleSubmit}

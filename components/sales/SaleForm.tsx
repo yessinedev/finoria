@@ -32,14 +32,16 @@ interface SaleFormProps {
   addLineItem: () => void;
   removeLineItem: (id: number) => void;
   updateLineItem: (id: number, field: keyof LineItem, value: string | number) => void;
-  globalDiscount: number;
-  setGlobalDiscount: (discount: number) => void;
+  // Removed globalDiscount and setGlobalDiscount
   taxRate: number;
   setTaxRate: (rate: number) => void;
+  fodecTax: number; // New FODEC tax state
+  setFodecTax: (rate: number) => void; // New FODEC tax setter
   subtotal: number;
-  globalDiscountAmount: number;
+  // Removed globalDiscountAmount
   discountedSubtotal: number;
   taxAmount: number;
+  fodecAmount: number; // New FODEC amount
   finalTotal: number;
   saving: boolean;
   handleSubmit: (errors: Record<string, string>) => void;
@@ -66,14 +68,16 @@ export default function SaleForm(props: SaleFormProps) {
     addLineItem,
     removeLineItem,
     updateLineItem,
-    globalDiscount,
-    setGlobalDiscount,
+    // Removed globalDiscount and setGlobalDiscount
     taxRate,
     setTaxRate,
+    fodecTax, // New FODEC tax
+    setFodecTax, // New FODEC tax setter
     subtotal,
-    globalDiscountAmount,
+    // Removed globalDiscountAmount
     discountedSubtotal,
     taxAmount,
+    fodecAmount, // New FODEC amount
     finalTotal,
     saving,
     handleSubmit,
@@ -103,7 +107,7 @@ export default function SaleForm(props: SaleFormProps) {
         clientId: Number(selectedClient),
         totalAmount: discountedSubtotal,
         taxAmount: taxAmount,
-        discountAmount: globalDiscountAmount,
+        discountAmount: 0, // Removed global discount
         finalAmount: finalTotal,
         status: "Confirmé",
         saleDate: new Date().toISOString(),
@@ -346,7 +350,7 @@ export default function SaleForm(props: SaleFormProps) {
                         <Input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="0.001"
                           value={item.unitPrice}
                           onChange={(e) =>
                             updateLineItem(
@@ -405,21 +409,19 @@ export default function SaleForm(props: SaleFormProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Global Discount */}
+            {/* FODEC Tax */}
             <div className="space-y-2">
-              <Label htmlFor="globalDiscount">Remise globale (%)</Label>
+              <Label htmlFor="fodecTax">Taxe FODEC (%)</Label>
               <div className="flex items-center gap-2">
                 <Percent className="h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="globalDiscount"
+                  id="fodecTax"
                   type="number"
                   min="0"
                   max="100"
-                  value={globalDiscount}
+                  value={fodecTax}
                   onChange={(e) =>
-                    setGlobalDiscount(
-                      Number.parseFloat(e.target.value) || 0
-                    )
+                    setFodecTax(Number.parseFloat(e.target.value) || 0)
                   }
                 />
               </div>
@@ -444,12 +446,6 @@ export default function SaleForm(props: SaleFormProps) {
                 <span>Sous-total:</span>
                 <span>{subtotal.toFixed(3)} TND</span>
               </div>
-              {globalDiscount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>Remise globale ({globalDiscount}%):</span>
-                  <span>-{globalDiscountAmount.toFixed(3)} TND</span>
-                </div>
-              )}
               <div className="flex justify-between text-sm">
                 <span>Sous-total après remise:</span>
                 <span>{discountedSubtotal.toFixed(3)} TND</span>
@@ -458,6 +454,12 @@ export default function SaleForm(props: SaleFormProps) {
                 <span>TVA ({taxRate}%):</span>
                 <span>{taxAmount.toFixed(3)} TND</span>
               </div>
+              {fodecTax > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>FODEC ({fodecTax}%):</span>
+                  <span>{fodecAmount.toFixed(3)} TND</span>
+                </div>
+              )}
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total TTC:</span>

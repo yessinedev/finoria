@@ -220,6 +220,7 @@ export default function InvoiceGenerator({
       notes: formData.notes,
       clientName: selectedSale.clientName,
       clientCompany: selectedSale.clientCompany,
+      clientTaxId: selectedSale.clientTaxId, // Include client tax ID
       items: selectedSale.items,
       issueDate: new Date().toISOString(),
     })

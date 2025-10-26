@@ -13,15 +13,16 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-client", async (event, client) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO clients (name, email, phone, address, company) 
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO clients (name, email, phone, address, company, taxId) 
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         client.name,
         client.email,
         client.phone,
         client.address,
-        client.company
+        client.company,
+        client.taxId || null // New tax identification number field
       );
       const newClient = {
         id: result.lastInsertRowid,
@@ -41,7 +42,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE clients 
-        SET name = ?, email = ?, phone = ?, address = ?, company = ?, updatedAt = CURRENT_TIMESTAMP 
+        SET name = ?, email = ?, phone = ?, address = ?, company = ?, taxId = ?, updatedAt = CURRENT_TIMESTAMP 
         WHERE id = ?
       `);
       stmt.run(
@@ -50,6 +51,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         client.phone,
         client.address,
         client.company,
+        client.taxId || null, // New tax identification number field
         id
       );
       const updatedClient = {

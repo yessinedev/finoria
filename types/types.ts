@@ -27,6 +27,7 @@ export interface Client {
   email: string;
   phone?: string;
   address?: string;
+  taxId?: string; // New tax identification number field
 }
 
 export interface Supplier {
@@ -61,9 +62,11 @@ export interface Sale {
   clientEmail?: string;
   clientPhone?: string;
   clientAddress?: string;
+  clientTaxId?: string; // New client tax identification number field
   totalAmount: number;
   taxAmount: number;
   discountAmount?: number;
+  fodecAmount?: number; // New FODEC tax amount
   finalAmount?: number;
   status: string;
   saleDate: string;
@@ -151,6 +154,7 @@ export interface Invoice {
   clientEmail: string;
   clientPhone: string;
   clientAddress: string;
+  clientTaxId?: string; // New client tax identification number field
   amount: number;
   taxAmount: number;
   totalAmount: number;

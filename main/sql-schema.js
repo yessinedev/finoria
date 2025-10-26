@@ -20,6 +20,7 @@ function createTables(db) {
       phone TEXT,
       address TEXT,
       company TEXT,
+      taxId TEXT, -- New tax identification number field
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -65,6 +66,7 @@ function createTables(db) {
       totalAmount REAL NOT NULL,
       taxAmount REAL NOT NULL,
       discountAmount REAL DEFAULT 0,
+      fodecAmount REAL DEFAULT 0, -- New FODEC tax amount column
       status TEXT DEFAULT 'En attente',
       saleDate DATETIME DEFAULT CURRENT_TIMESTAMP,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -306,6 +308,16 @@ function createTables(db) {
     }
   }
   
+  // Add fodecAmount column to sales table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE sales ADD COLUMN fodecAmount REAL DEFAULT 0");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding fodecAmount column:", error);
+    }
+  }
+  
   // Add discount column to sale_items table if it doesn't exist (for existing databases)
   try {
     db.exec("ALTER TABLE sale_items ADD COLUMN discount REAL DEFAULT 0");
@@ -353,6 +365,16 @@ function createTables(db) {
     // Column might already exist, which is fine
     if (!error.message.includes("duplicate column name")) {
       console.error("Error adding purchasePrice column to products:", error);
+    }
+  }
+  
+  // Add taxId column to clients table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE clients ADD COLUMN taxId TEXT");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding taxId column to clients:", error);
     }
   }
 }
