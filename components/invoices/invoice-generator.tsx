@@ -69,7 +69,7 @@ export default function InvoiceGenerator({
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: "TND",
+      currency: "DNT",
       minimumFractionDigits: 3,
       maximumFractionDigits: 3
     }).format(amount)
@@ -417,7 +417,7 @@ export default function InvoiceGenerator({
                         total={selectedSale.totalAmount + selectedSale.taxAmount}
                         dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                         paymentTerms={formData.paymentTerms}
-                        currency="TND"
+                        currency="DNT"
                       />
                     )}
                   </div>

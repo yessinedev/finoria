@@ -17,7 +17,7 @@ export const FinancialSummaryCard: React.FC<FinancialSummaryCardProps> = ({
   total,
   dueDate,
   paymentTerms,
-  currency = "TND",
+  currency = "DNT",
   className = "",
 }) => (
   <Card className={className + " border-green-200 bg-green-50"}>

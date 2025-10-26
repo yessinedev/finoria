@@ -158,7 +158,7 @@ export default function EnhancedInvoiceGenerator({
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: "TND",
+      currency: "DNT",
       minimumFractionDigits: 3,
       maximumFractionDigits: 3
     }).format(amount);
@@ -653,7 +653,7 @@ export default function EnhancedInvoiceGenerator({
                               value={selectedProduct?.toString() || ""}
                               onChange={(value) => setSelectedProduct(Number(value) || null)}
                               options={products.filter(p => p.isActive)}
-                              getOptionLabel={(product) => `${product.name} (${product.price.toFixed(3)} TND)`}
+                              getOptionLabel={(product) => `${product.name} (${product.price.toFixed(3)} DNT)`}
                               getOptionValue={(product) => product.id.toString()}
                               placeholder="Sélectionner un produit"
                             />
@@ -694,10 +694,10 @@ export default function EnhancedInvoiceGenerator({
                                 ? (() => {
                                     const product = products.find((p) => p.id === selectedProduct);
                                     return product 
-                                      ? `${product.price.toFixed(3)} TND`
-                                      : "0.000 TND";
+                                      ? `${product.price.toFixed(3)} DNT`
+                                      : "0.000 DNT";
                                   })()
-                                : "0.000 TND"}
+                                : "0.000 DNT"}
                             </div>
                           </div>
                           <div className="col-span-1">
@@ -784,7 +784,7 @@ export default function EnhancedInvoiceGenerator({
                                       />
                                     </td>
                                     <td className="p-2 text-right font-medium">
-                                      {item.totalPrice.toFixed(3)} TND
+                                      {item.totalPrice.toFixed(3)} DNT
                                     </td>
                                     <td className="p-2 text-right">
                                       <Button
@@ -848,22 +848,22 @@ export default function EnhancedInvoiceGenerator({
                           <div className="space-y-2 pt-4">
                             <div className="flex justify-between text-sm">
                               <span>Sous-total:</span>
-                              <span>{subtotal.toFixed(3)} TND</span>
+                              <span>{subtotal.toFixed(3)} DNT</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span>TVA ({taxRate}%):</span>
-                              <span>{taxAmount.toFixed(3)} TND</span>
+                              <span>{taxAmount.toFixed(3)} DNT</span>
                             </div>
                             {fodecTax > 0 && (
                               <div className="flex justify-between text-sm">
                                 <span>FODEC ({fodecTax}%):</span>
-                                <span>{fodecAmount.toFixed(3)} TND</span>
+                                <span>{fodecAmount.toFixed(3)} DNT</span>
                               </div>
                             )}
                             <div className="border-t pt-2">
                               <div className="flex justify-between font-semibold">
                                 <span>Total TTC:</span>
-                                <span>{finalTotal.toFixed(3)} TND</span>
+                                <span>{finalTotal.toFixed(3)} DNT</span>
                               </div>
                             </div>
                           </div>
@@ -963,7 +963,7 @@ export default function EnhancedInvoiceGenerator({
                                 total={selectedPurchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0)}
                                 dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                                 paymentTerms={formData.paymentTerms}
-                                currency="TND"
+                                currency="DNT"
                               />
                             </div>
                           </div>

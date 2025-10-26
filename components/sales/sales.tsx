@@ -98,7 +98,7 @@ export default function Sales() {
       label: "Montant TTC",
       sortable: true,
       render: (value?: number) =>
-        typeof value === "number" ? `${value.toFixed(3)} TND` : "—",
+        typeof value === "number" ? `${value.toFixed(3)} DNT` : "—",
     },
     {
       key: "saleDate" as keyof Sale,

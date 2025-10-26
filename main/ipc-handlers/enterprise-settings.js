@@ -4,21 +4,24 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       // Try to get a company with actual data first
       let settings = db
-        .prepare("SELECT * FROM companies WHERE (name != '' OR address != '' OR email != '' OR phone != '') ORDER BY id LIMIT 1")
+        .prepare(
+          "SELECT * FROM companies WHERE (name != '' OR address != '' OR email != '' OR phone != '') ORDER BY id LIMIT 1"
+        )
         .get();
-      
+
       // If no company with data found, get the first company (might be default empty record)
       if (!settings) {
         settings = db
           .prepare("SELECT * FROM companies ORDER BY id LIMIT 1")
           .get();
       }
-      
-      console.log("Company settings retrieved:", settings);
+
       return settings || null;
     } catch (error) {
       console.error("Error getting enterprise settings:", error);
-      throw new Error("Erreur lors de la récupération des paramètres de l'entreprise");
+      throw new Error(
+        "Erreur lors de la récupération des paramètres de l'entreprise"
+      );
     }
   });
 
@@ -41,17 +44,16 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.tvaNumber,
         settings.tvaRate
       );
-      
-      console.log("Insert result:", result);
-      
+
       const newSettings = { id: result.lastInsertRowid, ...settings };
-      console.log("New settings:", newSettings);
-      
+
       notifyDataChange("companies", "create", newSettings);
       return newSettings;
     } catch (error) {
       console.error("Error creating enterprise settings:", error);
-      throw new Error("Erreur lors de la création des paramètres de l'entreprise");
+      throw new Error(
+        "Erreur lors de la création des paramètres de l'entreprise"
+      );
     }
   });
 
@@ -76,20 +78,19 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.tvaRate,
         id
       );
-      
+
       // Verify the update was successful by fetching the updated record
       const updatedSettings = db
         .prepare("SELECT * FROM companies WHERE id = ?")
         .get(id);
-        
-      console.log("Update result:", result);
-      console.log("Updated settings:", updatedSettings);
-      
+
       notifyDataChange("companies", "update", updatedSettings);
       return updatedSettings;
     } catch (error) {
       console.error("Error updating enterprise settings:", error);
-      throw new Error("Erreur lors de la mise à jour des paramètres de l'entreprise");
+      throw new Error(
+        "Erreur lors de la mise à jour des paramètres de l'entreprise"
+      );
     }
   });
 };

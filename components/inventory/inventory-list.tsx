@@ -264,10 +264,10 @@ export default function InventoryList() {
                         <Badge variant="secondary">{product.category}</Badge>
                       </TableCell>
                       <TableCell>
-                        {product.price.toFixed(3)} TND
+                        {product.price.toFixed(3)} DNT
                       </TableCell>
                       <TableCell>
-                        {product.purchasePrice ? `${product.purchasePrice.toFixed(3)} TND` : "N/A"}
+                        {product.purchasePrice ? `${product.purchasePrice.toFixed(3)} DNT` : "N/A"}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

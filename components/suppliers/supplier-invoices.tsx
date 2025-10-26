@@ -688,7 +688,7 @@ export default function SupplierInvoices() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: "TND",
+      currency: "DNT",
       minimumFractionDigits: 3,
       maximumFractionDigits: 3
     }).format(amount);
@@ -873,7 +873,7 @@ Commande #{order.id} - {order.supplierName}
                                       </span>
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                      Achat: {product.purchasePrice ? product.purchasePrice.toFixed(3) : 'N/A'} TND • Stock: {product.stock}
+                                      Achat: {product.purchasePrice ? product.purchasePrice.toFixed(3) : 'N/A'} DNT • Stock: {product.stock}
                                     </span>
                                   </div>
                                 </CommandItem>
@@ -908,7 +908,7 @@ Commande #{order.id} - {order.supplierName}
                   <div className="md:col-span-2">
                     <Label>Total</Label>
                     <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {(itemQuantity * itemUnitPrice).toFixed(3)} TND
+                      {(itemQuantity * itemUnitPrice).toFixed(3)} DNT
                     </div>
                   </div>
                   <div className="md:col-span-1">
@@ -951,8 +951,8 @@ Commande #{order.id} - {order.supplierName}
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.productName}</TableCell>
                       <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
-                      <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
+                      <TableCell>{item.unitPrice.toFixed(3)} DNT</TableCell>
+                      <TableCell>{item.totalPrice.toFixed(3)} DNT</TableCell>
                       {/* Only show delete button when no order is selected */}
                       {(!formData.orderId || formData.orderId === 0) && (
                         <TableCell>
@@ -1162,7 +1162,7 @@ Commande #{order.id} - {order.supplierName}
                     )}
                   </TableCell>
                   <TableCell>
-                    {invoice.totalAmount.toFixed(3)} TND
+                    {invoice.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
                     {/* Status dropdown for direct update */}

@@ -845,7 +845,7 @@ export default function SupplierOrders() {
                                       </span>
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                      Achat: {product.purchasePrice ? product.purchasePrice.toFixed(3) : 'N/A'} TND • Stock: {product.stock}
+                                      Achat: {product.purchasePrice ? product.purchasePrice.toFixed(3) : 'N/A'} DNT • Stock: {product.stock}
                                     </span>
                                   </div>
                                 </CommandItem>
@@ -880,7 +880,7 @@ export default function SupplierOrders() {
                   <div className="md:col-span-2">
                     <Label>Total</Label>
                     <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {(itemQuantity * itemUnitPrice).toFixed(3)} TND
+                      {(itemQuantity * itemUnitPrice).toFixed(3)} DNT
                     </div>
                   </div>
                   <div className="md:col-span-1">
@@ -914,8 +914,8 @@ export default function SupplierOrders() {
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.productName}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
-                          <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
+                          <TableCell>{item.unitPrice.toFixed(3)} DNT</TableCell>
+                          <TableCell>{item.totalPrice.toFixed(3)} DNT</TableCell>
                           <TableCell>
                             <Button
                               variant="outline"
@@ -1043,7 +1043,7 @@ export default function SupplierOrders() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {order.totalAmount.toFixed(3)} TND
+                    {order.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
                     {/* Status dropdown for direct update */}

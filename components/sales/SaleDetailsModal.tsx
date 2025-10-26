@@ -53,9 +53,9 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><strong>Client:</strong> {sale.clientName}</div>
             <div><strong>Date:</strong> {new Date(sale.saleDate).toLocaleDateString("fr-FR")}</div>
-            <div><strong>Montant HT:</strong> {sale.totalAmount.toFixed(3)} TND</div>
-            <div><strong>TVA:</strong> {sale.taxAmount.toFixed(3)} TND</div>
-            <div><strong>Montant TTC:</strong> {(sale.totalAmount + sale.taxAmount).toFixed(3)} TND</div>
+            <div><strong>Montant HT:</strong> {sale.totalAmount.toFixed(3)} DNT</div>
+            <div><strong>TVA:</strong> {sale.taxAmount.toFixed(3)} DNT</div>
+            <div><strong>Montant TTC:</strong> {(sale.totalAmount + sale.taxAmount).toFixed(3)} DNT</div>
             <div>
               <strong>Statut:</strong>
               <Select value={status} onValueChange={handleStatusChange}>
@@ -89,8 +89,8 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
                     <tr key={item.id} className="border-t">
                       <td className="p-2">{item.productName}</td>
                       <td className="p-2 text-right">{item.quantity}</td>
-                      <td className="p-2 text-right">{item.unitPrice.toFixed(3)} TND</td>
-                      <td className="p-2 text-right">{item.totalPrice.toFixed(3)} TND</td>
+                      <td className="p-2 text-right">{item.unitPrice.toFixed(3)} DNT</td>
+                      <td className="p-2 text-right">{item.totalPrice.toFixed(3)} DNT</td>
                     </tr>
                   ))}
                 </tbody>

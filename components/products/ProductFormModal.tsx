@@ -128,7 +128,7 @@ export default function ProductFormModal({
           />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Prix de vente (TND) *</Label>
+              <Label htmlFor="price">Prix de vente (DNT) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -140,7 +140,7 @@ export default function ProductFormModal({
               {errors.price && <div className="text-xs text-red-600">{errors.price}</div>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="purchasePrice">Prix d'achat (TND)</Label>
+              <Label htmlFor="purchasePrice">Prix d'achat (DNT)</Label>
               <Input
                 id="purchasePrice"
                 type="number"
