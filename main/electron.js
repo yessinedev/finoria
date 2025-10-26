@@ -152,7 +152,8 @@ app.whenReady().then(async () => {
     "enterprise-settings",
     "device",
     "database",
-    "updates"
+    "updates",
+    "credit-notes"
   ].forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
   });

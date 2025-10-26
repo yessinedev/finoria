@@ -60,19 +60,24 @@ interface ElectronAPI {
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
   getInvoiceItems: (invoiceId: number) => Promise<any[]>;
 
-  //Quotes
+  // Quotes
   getQuotes: () => Promise<any[]>;
   createQuote: (quote: any) => Promise<any>;
   updateQuote: (id: number, quote: any) => Promise<any>;
   deleteQuote: (id: number) => Promise<boolean>;
   getQuoteItems: (quoteId: number) => Promise<any[]>;
 
+  // Credit Notes
+  getCreditNotes: () => Promise<any[]>;
+  createCreditNote: (creditNote: any) => Promise<any>;
+  updateCreditNoteStatus: (id: number, status: string) => Promise<any>;
+  generateCreditNoteFromInvoice: (invoiceId: number, reason: string) => Promise<any>;
+  getCreditNoteItems: (creditNoteId: number) => Promise<any[]>;
+
   // Stock Movements
   getStockMovements: () => Promise<any[]>;
   createStockMovement: (movement: any) => Promise<any>;
   getStockMovementsByProduct: (productId: number) => Promise<any[]>;
-
-
 
   // Enterprise Settings
   getEnterpriseSettings: () => Promise<any>;
@@ -468,6 +473,41 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getQuoteItems(quoteId) || Promise.resolve([]),
         "getQuoteItems"
+      ),
+  };
+
+  // --- Credit Notes API ---
+  creditNotes = {
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getCreditNotes() || Promise.resolve([]),
+        "getCreditNotes"
+      ),
+    create: (creditNote: any) =>
+      this.handle(
+        () =>
+          window.electronAPI?.createCreditNote(creditNote) ||
+          Promise.resolve(null),
+        "createCreditNote"
+      ),
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.updateCreditNoteStatus(id, status) ||
+          Promise.resolve(null),
+        "updateCreditNoteStatus"
+      ),
+    generateFromInvoice: (invoiceId: number, reason: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.generateCreditNoteFromInvoice(invoiceId, reason) ||
+          Promise.resolve(null),
+        "generateCreditNoteFromInvoice"
+      ),
+    getItems: (creditNoteId: number) =>
+      this.handle(
+        () => window.electronAPI?.getCreditNoteItems(creditNoteId) || Promise.resolve([]),
+        "getCreditNoteItems"
       ),
   };
 

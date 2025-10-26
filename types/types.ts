@@ -272,6 +272,39 @@ export interface SupplierPayment {
   createdAt: string;
 }
 
+export interface CreditNote {
+  id: number;
+  number: string;
+  originalInvoiceId: number;
+  clientId: number;
+  clientName: string;
+  clientCompany?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  clientTaxId?: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  reason: string;
+  issueDate: string;
+  dueDate?: string;
+  status: "En attente" | "Confirmée" | "Annulée";
+  items: CreditNoteItem[];
+  notes?: string;
+}
+
+export interface CreditNoteItem {
+  id: number;
+  productId: number;
+  productName: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  totalPrice: number;
+}
+
 export interface CompanyInfo {
   name: string
   address: string

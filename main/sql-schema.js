@@ -377,6 +377,42 @@ function createTables(db) {
       console.error("Error adding taxId column to clients:", error);
     }
   }
+  
+  // Credit Notes table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS credit_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      number TEXT NOT NULL UNIQUE,
+      originalInvoiceId INTEGER NOT NULL,
+      clientId INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      taxAmount REAL NOT NULL,
+      totalAmount REAL NOT NULL,
+      reason TEXT NOT NULL,
+      status TEXT DEFAULT 'En attente',
+      issueDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+      dueDate DATETIME,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (originalInvoiceId) REFERENCES invoices(id),
+      FOREIGN KEY (clientId) REFERENCES clients(id)
+    )
+  `);
+
+  // Credit Note items table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS credit_note_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      creditNoteId INTEGER NOT NULL,
+      productId INTEGER NOT NULL,
+      productName TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      unitPrice REAL NOT NULL,
+      discount REAL DEFAULT 0,
+      totalPrice REAL NOT NULL,
+      FOREIGN KEY (creditNoteId) REFERENCES credit_notes(id) ON DELETE CASCADE,
+      FOREIGN KEY (productId) REFERENCES products(id)
+    )
+  `);
 }
 
 function createIndexes(db) {

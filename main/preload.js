@@ -74,6 +74,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteQuote: (id) => ipcRenderer.invoke("delete-quote", id),
   getQuoteItems: (quoteId) => ipcRenderer.invoke("get-quote-items", quoteId),
   
+  // --- Credit Notes API ---
+  getCreditNotes: () => ipcRenderer.invoke("get-credit-notes"),
+  createCreditNote: (creditNote) => ipcRenderer.invoke("create-credit-note", creditNote),
+  updateCreditNoteStatus: (id, status) =>
+    ipcRenderer.invoke("update-credit-note-status", id, status),
+  generateCreditNoteFromInvoice: (invoiceId, reason) =>
+    ipcRenderer.invoke("generate-credit-note-from-invoice", invoiceId, reason),
+  getCreditNoteItems: (creditNoteId) => ipcRenderer.invoke("get-credit-note-items", creditNoteId),
+  
   // --- Stock Movements API ---
   getStockMovements: () => ipcRenderer.invoke("get-stock-movements"),
   createStockMovement: (movement) => ipcRenderer.invoke("create-stock-movement", movement),

@@ -27,6 +27,7 @@ export type NavigationItem =
   | "sales"
   | "quotes"
   | "invoices"
+  | "credit-notes"
   | "inventory"
   | "stock-movements"
   | "settings";
@@ -41,6 +42,7 @@ const navigationItems = [
       { id: "quotes", label: "Devis" },
       { id: "sales", label: "Commande client" },
       { id: "invoices", label: "Facture" },
+      { id: "credit-notes", label: "Facture d'avoir" },
     ],
   },
   {
@@ -112,6 +114,8 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/quotes";
       case "invoices":
         return "/invoices";
+      case "credit-notes":
+        return "/credit-notes";
       case "delivery":
         return "/sales/delivery";
       case "output":
