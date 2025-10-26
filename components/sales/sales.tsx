@@ -9,9 +9,6 @@ import {
   AlertCircle,
   Eye,
   AlertTriangle,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -26,7 +23,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -43,7 +39,7 @@ export default function Sales() {
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
   // Removed globalDiscount state
-  const [taxRate, setTaxRate] = useState(20);
+  const [taxRate, setTaxRate] = useState(19);
   const [fodecTax, setFodecTax] = useState(0); // New FODEC tax state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

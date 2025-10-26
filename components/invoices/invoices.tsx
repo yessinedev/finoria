@@ -23,11 +23,13 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Wand2,
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import InvoiceGeneratorModal from "@/components/invoices/InvoiceGeneratorModal"
 import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
+import EnhancedInvoiceGenerator from "@/components/invoices/EnhancedInvoiceGenerator"
 import { db } from "@/lib/database"
 import type { Invoice, Sale } from "@/types/types"
 import { pdf } from "@react-pdf/renderer"
@@ -39,6 +41,7 @@ export default function Invoices() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false)
+  const [isEnhancedGeneratorOpen, setIsEnhancedGeneratorOpen] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [generatingPDF, setGeneratingPDF] = useState<number | null>(null)
@@ -455,10 +458,16 @@ export default function Invoices() {
           </p>
         </div>
 
-        <Button onClick={() => setIsGeneratorOpen(true)} className="w-fit">
-          <Plus className="h-4 w-4 mr-2" />
-          Générer une facture
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsGeneratorOpen(true)} className="w-fit">
+            <Plus className="h-4 w-4 mr-2" />
+            Générer une facture (Classique)
+          </Button>
+          <Button onClick={() => setIsEnhancedGeneratorOpen(true)} className="w-fit">
+            <Wand2 className="h-4 w-4 mr-2" />
+            Générer une facture (Amélioré)
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -623,12 +632,19 @@ export default function Invoices() {
         </CardContent>
       </Card>
 
-      {/* Invoice Generator Modal */}
+      {/* Classic Invoice Generator Modal */}
       <InvoiceGeneratorModal
         open={isGeneratorOpen}
         onClose={() => setIsGeneratorOpen(false)}
         onInvoiceGenerated={loadData}
         availableSales={availableSales}
+      />
+
+      {/* Enhanced Invoice Generator Modal */}
+      <EnhancedInvoiceGenerator
+        isOpen={isEnhancedGeneratorOpen}
+        onClose={() => setIsEnhancedGeneratorOpen(false)}
+        onInvoiceGenerated={loadData}
       />
 
       {/* Invoice Preview Modal */}

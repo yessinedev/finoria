@@ -44,7 +44,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const result = insertInvoice.run(
         invoice.number,
-        invoice.saleId,
+        invoice.saleId || null, // Allow null saleId
         invoice.clientId,
         invoice.amount,
         invoice.taxAmount,
@@ -55,8 +55,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const invoiceId = result.lastInsertRowid;
       
-      // Get sale items and convert them to invoice items
+      // Insert items - either from sale or directly passed items
       if (invoice.saleId) {
+        // Get sale items and convert them to invoice items
         const getSaleItems = db.prepare(`
           SELECT * FROM sale_items WHERE saleId = ?
         `);
@@ -64,6 +65,19 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         // Insert sale items as invoice items
         for (const item of saleItems) {
+          insertItem.run(
+            invoiceId,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.discount || 0,
+            item.totalPrice
+          );
+        }
+      } else if (invoice.items && Array.isArray(invoice.items)) {
+        // Insert directly passed items
+        for (const item of invoice.items) {
           insertItem.run(
             invoiceId,
             item.productId,

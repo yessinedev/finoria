@@ -165,7 +165,7 @@ function createTables(db) {
     CREATE TABLE IF NOT EXISTS invoices (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       number TEXT NOT NULL UNIQUE,
-      saleId INTEGER NOT NULL,
+      saleId INTEGER,
       clientId INTEGER NOT NULL,
       amount REAL NOT NULL,
       taxAmount REAL NOT NULL,
@@ -377,6 +377,7 @@ function createTables(db) {
       console.error("Error adding taxId column to clients:", error);
     }
   }
+  
   
   // Credit Notes table
   db.exec(`
