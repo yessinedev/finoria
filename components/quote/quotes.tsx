@@ -29,6 +29,7 @@ import { PDFViewer, pdf } from "@react-pdf/renderer";
 import { QuotePDFDocument } from "./quote-pdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // TODO: Move to types.ts and backend
 export type QuoteStatus = "Brouillon" | "Envoyé" | "Accepté" | "Refusé";
@@ -65,6 +66,7 @@ export default function Quotes() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
 
   // DataTable logic (reuse from invoices)
@@ -374,6 +376,30 @@ export default function Quotes() {
     }
   };
 
+  const handleConvertToInvoice = async (quote: Quote) => {
+    setIsConverting(true);
+    try {
+      const result = await db.invoices.generateFromQuote(quote.id);
+      if (result.success) {
+        await loadData(); // Refresh the list
+        toast({
+          title: "Succès",
+          description: "Devis converti en facture avec succès",
+        });
+      } else {
+        throw new Error(result.error || "Erreur lors de la conversion du devis en facture");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la conversion du devis en facture",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   // TODO: Add quote creation and preview logic
 
   if (loading) {
@@ -430,13 +456,46 @@ export default function Quotes() {
             emptyMessage="Aucun devis trouvé"
             actions={(quote) => (
               <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleViewQuote(quote)}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleViewQuote(quote)}
+                >
                   <Eye className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleDownloadQuote(quote)}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDownloadQuote(quote)}
+                >
                   <Download className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleDeleteQuote(quote)}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleConvertToInvoice(quote)}
+                        disabled={isConverting || quote.status === "Accepté"}
+                      >
+                        {isConverting ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Convertir en facture</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDeleteQuote(quote)}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

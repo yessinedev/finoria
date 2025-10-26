@@ -58,6 +58,7 @@ interface ElectronAPI {
   createInvoice: (invoice: any) => Promise<any>;
   updateInvoiceStatus: (id: number, status: string) => Promise<any>;
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
+  generateInvoiceFromQuote: (quoteId: number) => Promise<any>;
   getInvoiceItems: (invoiceId: number) => Promise<any[]>;
 
   // Quotes
@@ -445,6 +446,13 @@ class DatabaseService {
           window.electronAPI?.generateInvoiceFromSale(saleId) ||
           Promise.resolve(null),
         "generateInvoiceFromSale"
+      ),
+    generateFromQuote: (quoteId: number) =>
+      this.handle(
+        () =>
+          window.electronAPI?.generateInvoiceFromQuote(quoteId) ||
+          Promise.resolve(null),
+        "generateInvoiceFromQuote"
       ),
     getItems: (invoiceId: number) =>
       this.handle(

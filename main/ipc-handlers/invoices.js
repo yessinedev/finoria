@@ -33,8 +33,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-invoice", async (event, invoice) => {
     try {
       const insertInvoice = db.prepare(`
-        INSERT INTO invoices (number, saleId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (number, saleId, quoteId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const insertItem = db.prepare(`
@@ -45,6 +45,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const result = insertInvoice.run(
         invoice.number,
         invoice.saleId || null, // Allow null saleId
+        invoice.quoteId || null, // Allow null quoteId
         invoice.clientId,
         invoice.amount,
         invoice.taxAmount,
@@ -55,7 +56,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const invoiceId = result.lastInsertRowid;
       
-      // Insert items - either from sale or directly passed items
+      // Insert items - either from sale, quote, or directly passed items
       if (invoice.saleId) {
         // Get sale items and convert them to invoice items
         const getSaleItems = db.prepare(`

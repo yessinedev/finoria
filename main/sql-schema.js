@@ -166,6 +166,7 @@ function createTables(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       number TEXT NOT NULL UNIQUE,
       saleId INTEGER,
+      quoteId INTEGER,
       clientId INTEGER NOT NULL,
       amount REAL NOT NULL,
       taxAmount REAL NOT NULL,
@@ -175,6 +176,7 @@ function createTables(db) {
       dueDate DATETIME,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (saleId) REFERENCES sales(id),
+      FOREIGN KEY (quoteId) REFERENCES quotes(id),
       FOREIGN KEY (clientId) REFERENCES clients(id)
     )
   `);
@@ -378,6 +380,15 @@ function createTables(db) {
     }
   }
   
+  // Add quoteId column to invoices table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE invoices ADD COLUMN quoteId INTEGER REFERENCES quotes(id)");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding quoteId column to invoices:", error);
+    }
+  }
   
   // Credit Notes table
   db.exec(`
