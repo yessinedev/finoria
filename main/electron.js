@@ -153,7 +153,8 @@ app.whenReady().then(async () => {
     "device",
     "database",
     "updates",
-    "credit-notes"
+    "credit-notes",
+    "purchase-orders"
   ].forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
   });

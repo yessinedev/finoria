@@ -307,6 +307,38 @@ export interface CreditNoteItem {
   totalPrice: number;
 }
 
+export interface PurchaseOrder {
+  id: number;
+  number: string;
+  saleId: number;
+  clientId: number;
+  clientName: string;
+  clientCompany?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  clientTaxId?: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: "En attente" | "Confirmée" | "Livrée" | "Annulée";
+  orderDate: string;
+  deliveryDate?: string;
+  items: PurchaseOrderItem[];
+  notes?: string;
+}
+
+export interface PurchaseOrderItem {
+  id: number;
+  productId: number;
+  productName: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  totalPrice: number;
+}
+
 export interface CompanyInfo {
   name: string
   address: string

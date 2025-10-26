@@ -83,6 +83,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("generate-credit-note-from-invoice", invoiceId, reason),
   getCreditNoteItems: (creditNoteId) => ipcRenderer.invoke("get-credit-note-items", creditNoteId),
   
+  // --- Purchase Orders API ---
+  getPurchaseOrders: () => ipcRenderer.invoke("get-purchase-orders"),
+  createPurchaseOrder: (purchaseOrder) => ipcRenderer.invoke("create-purchase-order", purchaseOrder),
+  updatePurchaseOrderStatus: (id, status) =>
+    ipcRenderer.invoke("update-purchase-order-status", id, status),
+  generatePurchaseOrderFromSale: (saleId, deliveryDate) =>
+    ipcRenderer.invoke("generate-purchase-order-from-sale", saleId, deliveryDate),
+  getPurchaseOrderItems: (purchaseOrderId) => ipcRenderer.invoke("get-purchase-order-items", purchaseOrderId),
+  
   // --- Stock Movements API ---
   getStockMovements: () => ipcRenderer.invoke("get-stock-movements"),
   createStockMovement: (movement) => ipcRenderer.invoke("create-stock-movement", movement),

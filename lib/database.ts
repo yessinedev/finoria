@@ -74,6 +74,13 @@ interface ElectronAPI {
   generateCreditNoteFromInvoice: (invoiceId: number, reason: string) => Promise<any>;
   getCreditNoteItems: (creditNoteId: number) => Promise<any[]>;
 
+  // Purchase Orders
+  getPurchaseOrders: () => Promise<any[]>;
+  createPurchaseOrder: (purchaseOrder: any) => Promise<any>;
+  updatePurchaseOrderStatus: (id: number, status: string) => Promise<any>;
+  generatePurchaseOrderFromSale: (saleId: number, deliveryDate: string) => Promise<any>;
+  getPurchaseOrderItems: (purchaseOrderId: number) => Promise<any[]>;
+
   // Stock Movements
   getStockMovements: () => Promise<any[]>;
   createStockMovement: (movement: any) => Promise<any>;
@@ -508,6 +515,43 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getCreditNoteItems(creditNoteId) || Promise.resolve([]),
         "getCreditNoteItems"
+      ),
+  };
+
+  // --- Purchase Orders API ---
+  purchaseOrders = {
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getPurchaseOrders() || Promise.resolve([]),
+        "getPurchaseOrders"
+      ),
+    create: (purchaseOrder: any) =>
+      this.handle(
+        () =>
+          window.electronAPI?.createPurchaseOrder(purchaseOrder) ||
+          Promise.resolve(null),
+        "createPurchaseOrder"
+      ),
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.updatePurchaseOrderStatus(id, status) ||
+          Promise.resolve(null),
+        "updatePurchaseOrderStatus"
+      ),
+    generateFromSale: (saleId: number, deliveryDate: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.generatePurchaseOrderFromSale(saleId, deliveryDate) ||
+          Promise.resolve(null),
+        "generatePurchaseOrderFromSale"
+      ),
+    getItems: (purchaseOrderId: number) =>
+      this.handle(
+        () =>
+          window.electronAPI?.getPurchaseOrderItems(purchaseOrderId) ||
+          Promise.resolve([]),
+        "getPurchaseOrderItems"
       ),
   };
 
