@@ -961,13 +961,13 @@ export default function SupplierOrders() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={5} className="text-center">
                   Chargement...
                 </TableCell>
               </TableRow>
             ) : currentOrders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={5} className="text-center">
                   Aucune commande trouvée
                 </TableCell>
               </TableRow>
@@ -1000,19 +1000,17 @@ export default function SupplierOrders() {
                     {order.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
-                    <StatusDropdown
-                      currentValue={order.status}
-                      options={[
-                        { value: "En attente", label: "En attente", variant: "secondary" },
-                        { value: "Confirmée", label: "Confirmée", variant: "default" },
-                        { value: "Livrée", label: "Livrée", variant: "default" },
-                        { value: "Annulée", label: "Annulée", variant: "destructive" },
-                      ]}
-                      onStatusChange={(newStatus) => handleStatusChange(order.id, newStatus)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2 items-center">
+                      <StatusDropdown
+                        currentValue={order.status}
+                        options={[
+                          { value: "En attente", label: "En attente", variant: "secondary" },
+                          { value: "Confirmée", label: "Confirmée", variant: "default" },
+                          { value: "Livrée", label: "Livrée", variant: "default" },
+                          { value: "Annulée", label: "Annulée", variant: "destructive" },
+                        ]}
+                        onStatusChange={(newStatus) => handleStatusChange(order.id, newStatus)}
+                      />
                       <Button
                         variant="outline"
                         size="sm"

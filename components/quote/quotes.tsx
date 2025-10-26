@@ -30,6 +30,7 @@ import { QuotePDFDocument } from "./quote-pdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
 
 // TODO: Move to types.ts and backend
 export type QuoteStatus = "Brouillon" | "Envoyé" | "Accepté" | "Refusé";
@@ -127,28 +128,6 @@ export default function Quotes() {
       label: "Validité",
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
-    },
-    {
-      key: "status" as keyof Quote,
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "Brouillon", value: "Brouillon" },
-        { label: "Envoyé", value: "Envoyé" },
-        { label: "Accepté", value: "Accepté" },
-        { label: "Refusé", value: "Refusé" },
-      ],
-      render: (value: QuoteStatus) => (
-        <Badge
-          variant={getStatusVariant(value)}
-          className="flex items-center gap-1 w-fit"
-        >
-          {getStatusIcon(value)}
-          {value}
-        </Badge>
-      ),
     },
   ];
 
@@ -400,6 +379,27 @@ export default function Quotes() {
     }
   };
 
+  const handleStatusChange = async (quoteId: number, newStatus: string) => {
+    try {
+      const result = await db.quotes.updateStatus(quoteId, newStatus);
+      if (result.success) {
+        await loadData(); // Refresh the list
+        toast({
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
+        });
+      } else {
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
+    }
+  };
+
   // TODO: Add quote creation and preview logic
 
   if (loading) {
@@ -455,7 +455,17 @@ export default function Quotes() {
             loading={loading}
             emptyMessage="Aucun devis trouvé"
             actions={(quote) => (
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 items-center">
+                <StatusDropdown
+                  currentValue={quote.status}
+                  options={[
+                    { value: "Brouillon", label: "Brouillon", variant: "outline" },
+                    { value: "Envoyé", label: "Envoyé", variant: "secondary" },
+                    { value: "Accepté", label: "Accepté", variant: "default" },
+                    { value: "Refusé", label: "Refusé", variant: "destructive" },
+                  ]}
+                  onStatusChange={(newStatus) => handleStatusChange(quote.id, newStatus)}
+                />
                 <Button 
                   variant="outline" 
                   size="sm" 

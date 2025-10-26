@@ -212,4 +212,26 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       throw new Error("Erreur lors de la récupération des articles du devis");
     }
   });
+  
+  // Update quote status
+  ipcMain.handle("update-quote-status", async (event, id, status) => {
+    try {
+      const stmt = db.prepare(
+        "UPDATE quotes SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?"
+      );
+      stmt.run(status, id);
+      
+      const updatedQuote = {
+        id,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      notifyDataChange("quotes", "update", updatedQuote);
+      return updatedQuote;
+    } catch (error) {
+      console.error("Error updating quote status:", error);
+      throw new Error("Erreur lors de la mise à jour du statut du devis");
+    }
+  });
 };

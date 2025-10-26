@@ -387,16 +387,6 @@ export default function SettingsPage() {
                 Installer la mise à jour ({updateInfo?.version})
               </Button>
             )}
-            <Button
-              onClick={handleSaveSettings}
-              disabled={isSubmitting}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {isSubmitting
-                ? "Enregistrement..."
-                : "Enregistrer les modifications"}
-            </Button>
           </div>
 
           {/* Company Information */}
