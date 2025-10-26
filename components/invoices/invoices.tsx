@@ -208,6 +208,7 @@ export default function Invoices() {
               items: [
                 {
                   id: 1,
+                  productId: 1, // Add productId
                   productName: "Consultation technique",
                   description: "Consultation technique d'une heure",
                   quantity: 1,
@@ -329,6 +330,7 @@ export default function Invoices() {
         items: invoice.items || [
           {
             id: 1,
+            productId: 1, // Add productId
             productName: "Consultation technique",
             description: "Consultation technique d'une heure",
             quantity: 1,

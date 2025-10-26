@@ -50,8 +50,16 @@ export default function CreditNotes() {
 
   // Form state for creating credit notes
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [reason, setReason] = useState("");
   const [creating, setCreating] = useState(false);
+  
+  // State for tracking selected items and their credit quantities
+  const [creditItems, setCreditItems] = useState<Record<number, { 
+    selected: boolean; 
+    creditQuantity: number;
+    creditDiscount?: number;
+  }>>({});
 
   // DataTable logic
   const filteredCreditNotesByStatus = creditNotes.filter((creditNote) => {
@@ -256,6 +264,38 @@ export default function CreditNotes() {
     });
   };
 
+  const handleInvoiceSelect = async (invoiceId: number | null) => {
+    setSelectedInvoiceId(invoiceId);
+    
+    if (invoiceId) {
+      // Find the selected invoice
+      const invoice = invoices.find(inv => inv.id === invoiceId) || null;
+      setSelectedInvoice(invoice);
+      
+      // Initialize credit items state
+      if (invoice && invoice.items) {
+        const initialCreditItems: Record<number, { 
+          selected: boolean; 
+          creditQuantity: number;
+          creditDiscount?: number;
+        }> = {};
+        
+        invoice.items.forEach(item => {
+          initialCreditItems[item.id] = {
+            selected: true, // By default, select all items
+            creditQuantity: item.quantity, // By default, credit full quantity
+            creditDiscount: item.discount || 0 // Keep original discount
+          };
+        });
+        
+        setCreditItems(initialCreditItems);
+      }
+    } else {
+      setSelectedInvoice(null);
+      setCreditItems({});
+    }
+  };
+
   const handleCreateCreditNote = async () => {
     if (!selectedInvoiceId || !reason) {
       toast({
@@ -266,17 +306,85 @@ export default function CreditNotes() {
       return;
     }
 
+    // Check if at least one item is selected
+    const hasSelectedItems = Object.values(creditItems).some(item => item.selected);
+    if (!hasSelectedItems) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner au moins un article à créditer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setCreating(true);
     try {
-      const result = await db.creditNotes.generateFromInvoice(selectedInvoiceId, reason);
+      // Prepare credit note items based on selected items
+      const creditNoteItems = selectedInvoice?.items
+        .filter(item => creditItems[item.id]?.selected)
+        .map(item => {
+          const creditItem = creditItems[item.id];
+          const creditQuantity = creditItem?.creditQuantity || 0;
+          const creditDiscount = creditItem?.creditDiscount || item.discount || 0;
+          
+          // Calculate total price based on credited quantity
+          const totalPrice = creditQuantity * item.unitPrice * (1 - creditDiscount / 100);
+          
+          return {
+            productId: item.productId,
+            productName: item.productName,
+            quantity: creditQuantity,
+            unitPrice: item.unitPrice,
+            discount: creditDiscount,
+            totalPrice: totalPrice
+          };
+        }) || [];
+
+      // Calculate totals
+      const amount = creditNoteItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+      const totalAmount = creditNoteItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      const taxAmount = totalAmount - amount; // Simplified tax calculation
+
+      // Generate a unique credit note number
+      // We need to get the last credit note number from the database
+      // For now, we'll generate a temporary number - in a real implementation,
+      // this would be done on the backend
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const timestamp = String(now.getTime()).slice(-4); // Last 4 digits of timestamp
+      const creditNoteNumber = `AV-${year}${month}${day}-${timestamp}`;
+
+      const creditNoteData = {
+        originalInvoiceId: selectedInvoiceId,
+        clientId: selectedInvoice?.clientId || 0,
+        amount: amount,
+        taxAmount: taxAmount,
+        totalAmount: totalAmount,
+        reason: reason,
+        status: "En attente",
+        dueDate: new Date().toISOString(),
+        items: creditNoteItems
+      };
+
+      const result = await db.creditNotes.create(creditNoteData);
       if (result.success) {
+        // Automatically confirm the credit note to trigger inventory rollback
+        const confirmResult = await db.creditNotes.updateStatus(result.data.id, "Confirmée");
+        if (!confirmResult.success) {
+          throw new Error("Erreur lors de la confirmation de la facture d'avoir");
+        }
+        
         await loadData(); // Refresh the list
         setIsCreating(false);
         setSelectedInvoiceId(null);
+        setSelectedInvoice(null);
+        setCreditItems({});
         setReason("");
         toast({
           title: "Succès",
-          description: "Facture d'avoir créée avec succès",
+          description: "Facture d'avoir créée et confirmée avec succès. Le stock a été mis à jour.",
         });
       } else {
         throw new Error(result.error || "Erreur lors de la création de la facture d'avoir");
@@ -506,22 +614,31 @@ export default function CreditNotes() {
       </Card>
 
       {/* Create Credit Note Modal */}
-      <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isCreating} onOpenChange={(open) => {
+        setIsCreating(open);
+        if (!open) {
+          setSelectedInvoiceId(null);
+          setSelectedInvoice(null);
+          setCreditItems({});
+          setReason("");
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Créer une facture d'avoir
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-auto py-4 space-y-4">
             <div>
               <Label htmlFor="invoice">Facture d'origine *</Label>
               <select
                 id="invoice"
                 value={selectedInvoiceId || ""}
-                onChange={(e) => setSelectedInvoiceId(Number(e.target.value) || null)}
+                onChange={(e) => handleInvoiceSelect(Number(e.target.value) || null)}
                 className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={creating}
               >
                 <option value="">Sélectionnez une facture</option>
                 {invoices
@@ -534,6 +651,92 @@ export default function CreditNotes() {
               </select>
             </div>
 
+            {selectedInvoice && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Articles de la facture</h3>
+                  <div className="border rounded">
+                    <table className="w-full">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-2 w-10">
+                            <input
+                              type="checkbox"
+                              checked={Object.values(creditItems).every(item => item.selected)}
+                              onChange={(e) => {
+                                const newCreditItems = {...creditItems};
+                                Object.keys(newCreditItems).forEach(key => {
+                                  newCreditItems[Number(key)].selected = e.target.checked;
+                                });
+                                setCreditItems(newCreditItems);
+                              }}
+                              className="h-4 w-4"
+                            />
+                          </th>
+                          <th className="text-left p-2">Produit</th>
+                          <th className="text-right p-2">Quantité facturée</th>
+                          <th className="text-right p-2">Quantité à créditer</th>
+                          <th className="text-right p-2">Prix unitaire</th>
+                          <th className="text-right p-2">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedInvoice.items.map((item) => {
+                          const creditItem = creditItems[item.id] || { selected: false, creditQuantity: 0 };
+                          return (
+                            <tr key={item.id} className="border-t">
+                              <td className="p-2">
+                                <input
+                                  type="checkbox"
+                                  checked={creditItem.selected}
+                                  onChange={(e) => {
+                                    setCreditItems({
+                                      ...creditItems,
+                                      [item.id]: {
+                                        ...creditItem,
+                                        selected: e.target.checked
+                                      }
+                                    });
+                                  }}
+                                  className="h-4 w-4"
+                                />
+                              </td>
+                              <td className="p-2">{item.productName}</td>
+                              <td className="p-2 text-right">{item.quantity}</td>
+                              <td className="p-2">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={item.quantity}
+                                  value={creditItem.creditQuantity}
+                                  onChange={(e) => {
+                                    const newQuantity = Math.min(Math.max(0, Number(e.target.value)), item.quantity);
+                                    setCreditItems({
+                                      ...creditItems,
+                                      [item.id]: {
+                                        ...creditItem,
+                                        creditQuantity: newQuantity
+                                      }
+                                    });
+                                  }}
+                                  className="w-20 text-right"
+                                  disabled={!creditItem.selected}
+                                />
+                              </td>
+                              <td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td>
+                              <td className="p-2 text-right">
+                                {formatCurrency(creditItem.selected ? (creditItem.creditQuantity * item.unitPrice) : 0)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="reason">Motif de l'avoir *</Label>
               <Textarea
@@ -542,6 +745,7 @@ export default function CreditNotes() {
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Indiquez le motif de cette facture d'avoir..."
                 rows={4}
+                disabled={creating}
               />
             </div>
           </div>
@@ -551,14 +755,17 @@ export default function CreditNotes() {
               onClick={() => {
                 setIsCreating(false);
                 setSelectedInvoiceId(null);
+                setSelectedInvoice(null);
+                setCreditItems({});
                 setReason("");
               }}
+              disabled={creating}
             >
               Annuler
             </Button>
             <Button
               onClick={handleCreateCreditNote}
-              disabled={creating || !selectedInvoiceId || !reason}
+              disabled={creating || !selectedInvoiceId || !reason || !Object.values(creditItems).some(item => item.selected)}
             >
               {creating ? "Création en cours..." : "Créer l'avoir"}
             </Button>
@@ -583,9 +790,42 @@ export default function CreditNotes() {
                     <h2 className="text-2xl font-bold">Facture d'avoir #{selectedCreditNote.number}</h2>
                     <p className="text-muted-foreground">Date d'émission: {new Date(selectedCreditNote.issueDate).toLocaleDateString("fr-FR")}</p>
                   </div>
-                  <Badge variant={getStatusVariant(selectedCreditNote.status)}>
-                    {selectedCreditNote.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getStatusVariant(selectedCreditNote.status)}>
+                      {selectedCreditNote.status}
+                    </Badge>
+                    {selectedCreditNote.status === "En attente" && (
+                      <Button 
+                        size="sm" 
+                        onClick={async () => {
+                          try {
+                            const result = await db.creditNotes.updateStatus(selectedCreditNote.id, "Confirmée");
+                            if (result.success) {
+                              await loadData();
+                              setSelectedCreditNote({
+                                ...selectedCreditNote,
+                                status: "Confirmée"
+                              });
+                              toast({
+                                title: "Succès",
+                                description: "Facture d'avoir confirmée. Le stock a été mis à jour.",
+                              });
+                            } else {
+                              throw new Error(result.error || "Erreur lors de la confirmation");
+                            }
+                          } catch (error) {
+                            toast({
+                              title: "Erreur",
+                              description: "Erreur lors de la confirmation de la facture d'avoir",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Confirmer
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

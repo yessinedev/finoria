@@ -149,6 +149,7 @@ export interface Invoice {
   id: number;
   number: string;
   saleId: number;
+  clientId: number;
   clientName: string;
   clientCompany: string;
   clientEmail: string;
@@ -168,6 +169,7 @@ export interface Invoice {
 
 export interface InvoiceItem {
   id: number;
+  productId: number;
   productName: string;
   description: string;
   quantity: number;
