@@ -33,6 +33,7 @@ import { PDFViewer, pdf } from "@react-pdf/renderer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
 
 export default function CreditNotes() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
@@ -44,7 +45,6 @@ export default function CreditNotes() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const { toast } = useToast();
 
@@ -62,12 +62,7 @@ export default function CreditNotes() {
   }>>({});
 
   // DataTable logic
-  const filteredCreditNotesByStatus = creditNotes.filter((creditNote) => {
-    if (statusFilter === "all") return true;
-    return creditNote.status === statusFilter;
-  });
-
-  const filteredCreditNotesByDate = filteredCreditNotesByStatus.filter((creditNote) => {
+  const filteredCreditNotesByDate = creditNotes.filter((creditNote) => {
     if (dateFilter === "all") return true;
     const creditNoteDate = new Date(creditNote.issueDate);
     const now = new Date();
@@ -140,25 +135,6 @@ export default function CreditNotes() {
       label: "Date d'émission",
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
-    },
-    {
-      key: "status" as keyof CreditNote,
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "Tous", value: "all" },
-        { label: "En attente", value: "En attente" },
-        { label: "Confirmée", value: "Confirmée" },
-        { label: "Annulée", value: "Annulée" },
-      ],
-      render: (value: CreditNote["status"]) => (
-        <Badge variant={getStatusVariant(value)} className="flex items-center gap-1 w-fit">
-          {getStatusIcon(value)}
-          {value}
-        </Badge>
-      ),
     },
   ];
 
@@ -432,16 +408,15 @@ export default function CreditNotes() {
 
   const renderActions = (creditNote: CreditNote) => (
     <div className="flex justify-end gap-2 items-center">
-      {/* Status dropdown for direct update */}
-      <select
-        value={creditNote.status}
-        onChange={(e) => handleStatusChange(creditNote.id, e.target.value)}
-        className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="En attente">En attente</option>
-        <option value="Confirmée">Confirmée</option>
-        <option value="Annulée">Annulée</option>
-      </select>
+      <StatusDropdown
+        currentValue={creditNote.status}
+        options={[
+          { value: "En attente", label: "En attente", variant: "secondary" },
+          { value: "Confirmée", label: "Confirmée", variant: "default" },
+          { value: "Annulée", label: "Annulée", variant: "destructive" },
+        ]}
+        onStatusChange={(newStatus) => handleStatusChange(creditNote.id, newStatus)}
+      />
       
       <Button variant="outline" size="sm" onClick={() => handleViewCreditNote(creditNote)}>
         <Eye className="h-4 w-4" />
@@ -541,21 +516,6 @@ export default function CreditNotes() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <Label htmlFor="statusFilter">Filtrer par statut</Label>
-              <select
-                id="statusFilter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="En attente">En attente</option>
-                <option value="Confirmée">Confirmée</option>
-                <option value="Annulée">Annulée</option>
-              </select>
-            </div>
-
-            <div className="flex-1">
               <Label htmlFor="dateFilter">Filtrer par période</Label>
               <select
                 id="dateFilter"
@@ -571,11 +531,10 @@ export default function CreditNotes() {
               </select>
             </div>
 
-            {(statusFilter !== "all" || dateFilter !== "all") && (
+            {dateFilter !== "all" && (
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStatusFilter("all");
                   setDateFilter("all");
                   clearFilters();
                 }}

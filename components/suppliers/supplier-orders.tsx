@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/popover";
 import { supplierOrderSchema, SupplierOrderFormData } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
 
 export default function SupplierOrders() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
@@ -612,53 +613,14 @@ export default function SupplierOrders() {
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
     try {
-      // Find the order to update
-      const order = orders.find(o => o.id === orderId);
-      if (!order) return;
-
-      // Update the order status
-      const updatedOrder = { ...order, status: newStatus };
-      const result = await db.supplierOrders.update(orderId, updatedOrder);
-      
+      const result = await db.supplierOrders.updateStatus(orderId, newStatus);
       if (result.success) {
-        // Check if status changed to "Livrée" and update stock if needed
-        const previousStatus = order.status;
-        if (previousStatus !== "Livrée" && newStatus === "Livrée") {
-          // Update product stock for each item in the order
-          for (const item of (order.items || [])) {
-            try {
-              // Get current stock
-              const stockResponse = await db.products.getStock(item.productId);
-              const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
-              
-              // Update stock (add quantity from purchase order)
-              const newStock = currentStock + item.quantity;
-              await db.products.updateStock(item.productId, newStock);
-              
-              // Create stock movement record
-              await db.stockMovements.create({
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                movementType: 'IN',
-                sourceType: 'commande_fournisseur',
-                sourceId: orderId,
-                reference: `Order #${orderId}`,
-                reason: "Commande d'achat livrée"
-              });
-            } catch (stockError) {
-              console.error(`Failed to update stock for product ${item.productId}:`, stockError);
-            }
-          }
-        }
-        
-        await loadOrders();
-      } else {
         toast({
-          title: "Erreur",
-          description: result.error || "Erreur lors de la mise à jour du statut",
-          variant: "destructive",
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
         });
+      } else {
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
       }
     } catch (error) {
       toast({
@@ -968,11 +930,10 @@ export default function SupplierOrders() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="cursor-pointer" onClick={() => requestSort('supplierName')}>
+              <TableHead>
                 <div className="flex items-center gap-1">
                   <ShoppingCart className="h-4 w-4" />
                   <span>Fournisseur</span>
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead className="cursor-pointer" onClick={() => requestSort('orderDate')}>
@@ -986,13 +947,6 @@ export default function SupplierOrders() {
                 <div className="flex items-center gap-1">
                   <ShoppingCart className="h-4 w-4" />
                   <span>Montant</span>
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead className="cursor-pointer" onClick={() => requestSort('status')}>
-                <div className="flex items-center gap-1">
-                  <ShoppingCart className="h-4 w-4" />
-                  <span>Statut</span>
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </div>
               </TableHead>
@@ -1046,17 +1000,16 @@ export default function SupplierOrders() {
                     {order.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
-                    {/* Status dropdown for direct update */}
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="En attente">En attente</option>
-                      <option value="Confirmée">Confirmée</option>
-                      <option value="Livrée">Livrée</option>
-                      <option value="Annulée">Annulée</option>
-                    </select>
+                    <StatusDropdown
+                      currentValue={order.status}
+                      options={[
+                        { value: "En attente", label: "En attente", variant: "secondary" },
+                        { value: "Confirmée", label: "Confirmée", variant: "default" },
+                        { value: "Livrée", label: "Livrée", variant: "default" },
+                        { value: "Annulée", label: "Annulée", variant: "destructive" },
+                      ]}
+                      onStatusChange={(newStatus) => handleStatusChange(order.id, newStatus)}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">

@@ -544,5 +544,27 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Update supplier order status
+  ipcMain.handle("update-supplier-order-status", async (event, id, status) => {
+    try {
+      const stmt = db.prepare(
+        "UPDATE supplier_orders SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?"
+      );
+      stmt.run(status, id);
+      
+      const updatedOrder = {
+        id,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      notifyDataChange("supplier_orders", "update", updatedOrder);
+      return updatedOrder;
+    } catch (error) {
+      console.error("Error updating supplier order status:", error);
+      throw new Error("Erreur lors de la mise à jour du statut de la commande fournisseur");
+    }
+  });
+
 
 };

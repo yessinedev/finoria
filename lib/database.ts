@@ -285,6 +285,13 @@ class DatabaseService {
           window.electronAPI?.deleteSupplierOrder(id) || Promise.resolve(false),
         "deleteSupplierOrder"
       ),
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.updateSupplierOrderStatus(id, status) ||
+          Promise.resolve(null),
+        "updateSupplierOrderStatus"
+      ),
   };
 
   // --- Supplier Invoices API ---

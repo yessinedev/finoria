@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { EntitySelect } from "@/components/common/EntitySelect"
+import { StatusDropdown } from "@/components/common/StatusDropdown";
 import {
   FileText,
   Download,
@@ -33,6 +34,7 @@ import { db } from "@/lib/database"
 import type { Invoice, Sale } from "@/types/types"
 import { pdf } from "@react-pdf/renderer"
 import { InvoicePDFDocument } from "./invoice-pdf"
+import { toast } from "@/components/ui/use-toast";
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -84,7 +86,7 @@ export default function Invoices() {
     filters,
   } = useDataTable(filteredInvoicesByDate, { key: "issueDate", direction: "desc" })
 
-  const columns = [
+  const invoicesColumns = [
     {
       key: "number" as keyof Invoice,
       label: "N° Facture",
@@ -105,7 +107,9 @@ export default function Invoices() {
       render: (value: string, invoice: Invoice) => (
         <div>
           <div className="font-medium">{value}</div>
-          <div className="text-sm text-muted-foreground">{invoice.clientCompany}</div>
+          <div className="text-sm text-muted-foreground">
+            {invoice.clientCompany}
+          </div>
         </div>
       ),
     },
@@ -137,27 +141,7 @@ export default function Invoices() {
         )
       },
     },
-    {
-      key: "status" as keyof Invoice,
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "En attente", value: "En attente" },
-        { label: "Payée", value: "Payée" },
-        { label: "En retard", value: "En retard" },
-        { label: "Annulée", value: "Annulée" },
-      ],
-      render: (value: Invoice["status"], invoice: Invoice) => (
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusVariant(value)} className="flex items-center gap-1 w-fit">
-            {getStatusIcon(value)}
-            {value}
-          </Badge>
-        </div>
-      ),
-    },
+    // Removed the separate status column since it's now integrated into actions
   ]
 
   useEffect((): (() => void) => {
@@ -368,17 +352,23 @@ export default function Invoices() {
 
   const handleStatusChange = async (invoiceId: number, newStatus: string) => {
     try {
-      const result = await db.invoices.updateStatus(invoiceId, newStatus)
+      const result = await db.invoices.updateStatus(invoiceId, newStatus);
       if (result.success) {
-        await loadData()
-        // Don't close the preview modal since we're updating directly from the table
+        toast({
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
+        });
       } else {
-        setError(result.error || "Erreur lors de la mise à jour")
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
       }
     } catch (error) {
-      setError("Erreur lors de la mise à jour du statut")
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   // Calculate statistics
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
@@ -399,32 +389,29 @@ export default function Invoices() {
 
   const renderActions = (invoice: Invoice) => (
     <div className="flex justify-end gap-2 items-center">
-      {/* Status dropdown for direct update */}
-      <select
-        value={invoice.status}
-        onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
-        className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="En attente">En attente</option>
-        <option value="Payée">Payée</option>
-        <option value="En retard">En retard</option>
-        <option value="Annulée">Annulée</option>
-      </select>
+      <StatusDropdown
+        currentValue={invoice.status}
+        options={[
+          { value: "En attente", label: "En attente", variant: "secondary" },
+          { value: "Payée", label: "Payée", variant: "default" },
+          { value: "En retard", label: "En retard", variant: "destructive" },
+          { value: "Annulée", label: "Annulée", variant: "outline" },
+        ]}
+        onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
+      />
       
-      <Button variant="outline" size="sm" onClick={async () => await handleViewInvoice(invoice)}>
+      <Button variant="outline" size="sm" onClick={() => handleViewInvoice(invoice)}>
         <Eye className="h-4 w-4" />
       </Button>
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleDownloadPDF(invoice)}
-        disabled={generatingPDF === invoice.id}
-      >
-        {generatingPDF === invoice.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+      <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(invoice)} disabled={generatingPDF === invoice.id}>
+        {generatingPDF === invoice.id ? (
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : (
+          <Download className="h-4 w-4" />
+        )}
       </Button>
     </div>
-  )
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -611,7 +598,7 @@ export default function Invoices() {
         <CardContent>
           <DataTable
             data={filteredInvoices}
-            columns={columns}
+            columns={invoicesColumns}
             sortConfig={sortConfig}
             searchTerm={searchTerm}
             filters={filters}

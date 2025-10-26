@@ -27,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
+import { Edit, Trash2 } from "lucide-react";
 
 export default function Sales() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -105,32 +107,6 @@ export default function Sales() {
       label: "Date",
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
-    },
-    {
-      key: "status" as keyof Sale,
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "En attente", value: "En attente" },
-        { label: "Confirmée", value: "Confirmée" },
-        { label: "Livrée", value: "Livrée" },
-        { label: "Annulée", value: "Annulée" },
-      ],
-      render: (value: string) => (
-        <Badge
-          variant={
-            value === "Confirmée"
-              ? "default"
-              : value === "Livrée"
-              ? "default"
-              : "secondary"
-          }
-        >
-          {value}
-        </Badge>
-      ),
     },
   ];
 
@@ -396,12 +372,19 @@ export default function Sales() {
     try {
       const result = await db.sales.updateStatus(saleId, newStatus);
       if (result.success) {
-        await loadData();
+        toast({
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
+        });
       } else {
-        setError(result.error || "Erreur lors de la mise à jour du statut");
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
       }
     } catch (error) {
-      setError("Erreur lors de la mise à jour du statut");
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
     }
   };
 
@@ -501,25 +484,7 @@ export default function Sales() {
               onClearFilters={clearFilters}
               loading={loading}
               emptyMessage="Aucune vente trouvée"
-              actions={(sale) => (
-                <div className="flex justify-end gap-2 items-center">
-                  {/* Status dropdown for direct update */}
-                  <select
-                    value={sale.status}
-                    onChange={(e) => handleStatusChange(sale.id, e.target.value)}
-                    className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="En attente">En attente</option>
-                    <option value="Confirmée">Confirmée</option>
-                    <option value="Livrée">Livrée</option>
-                    <option value="Annulée">Annulée</option>
-                  </select>
-                  
-                  <Button variant="outline" size="sm" onClick={() => handleViewSale(sale)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              actions={(sale) => renderActions(sale)}
             />
           </CardContent>
         </Card>
@@ -565,6 +530,25 @@ export default function Sales() {
         open={isSaleDetailsOpen}
         onClose={() => setIsSaleDetailsOpen(false)}
       />
+    </div>
+  );
+
+  const renderActions = (sale: Sale) => (
+    <div className="flex justify-end gap-2 items-center">
+      <StatusDropdown
+        currentValue={sale.status}
+        options={[
+          { value: "En attente", label: "En attente", variant: "secondary" },
+          { value: "Confirmée", label: "Confirmée", variant: "default" },
+          { value: "Livrée", label: "Livrée", variant: "default" },
+          { value: "Annulée", label: "Annulée", variant: "outline" },
+        ]}
+        onStatusChange={(newStatus) => handleStatusChange(sale.id, newStatus)}
+      />
+      
+      <Button variant="outline" size="sm" onClick={() => handleViewSale(sale)}>
+        <Eye className="h-4 w-4" />
+      </Button>
     </div>
   );
 }

@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/popover";
 import { supplierInvoiceSchema, SupplierInvoiceFormData } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
 
 export default function SupplierInvoices() {
   const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
@@ -560,13 +561,12 @@ export default function SupplierInvoices() {
     try {
       const result = await db.supplierInvoices.updateStatus(invoiceId, newStatus);
       if (result.success) {
-        await loadInvoices();
-      } else {
         toast({
-          title: "Erreur",
-          description: result.error || "Erreur lors de la mise à jour du statut",
-          variant: "destructive",
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
         });
+      } else {
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
       }
     } catch (error) {
       toast({
@@ -1094,12 +1094,6 @@ Commande #{order.id} - {order.supplierName}
               <TableHead>
                 <div className="flex items-center gap-1">
                   <FileText className="h-4 w-4" />
-                  <span>Statut</span>
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <FileText className="h-4 w-4" />
                   <span>Actions</span>
                 </div>
               </TableHead>
@@ -1165,20 +1159,18 @@ Commande #{order.id} - {order.supplierName}
                     {invoice.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
-                    {/* Status dropdown for direct update */}
-                    <select
-                      value={invoice.status}
-                      onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
-                      className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="En attente">En attente</option>
-                      <option value="Payée">Payée</option>
-                      <option value="En retard">En retard</option>
-                      <option value="Annulée">Annulée</option>
-                    </select>
-                  </TableCell>
-                  <TableCell>
                     <div className="flex space-x-2">
+                      <StatusDropdown
+                        currentValue={invoice.status}
+                        options={[
+                          { value: "En attente", label: "En attente", variant: "secondary" },
+                          { value: "Payée", label: "Payée", variant: "default" },
+                          { value: "En retard", label: "En retard", variant: "destructive" },
+                          { value: "Annulée", label: "Annulée", variant: "outline" },
+                        ]}
+                        onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
+                      />
+                      
                       <Button
                         variant="outline"
                         size="sm"

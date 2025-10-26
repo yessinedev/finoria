@@ -25,6 +25,7 @@ import type { PurchaseOrder, Sale } from "@/types/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
 
 export default function PurchaseOrders() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -36,7 +37,6 @@ export default function PurchaseOrders() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const { toast } = useToast();
 
@@ -46,12 +46,7 @@ export default function PurchaseOrders() {
   const [creating, setCreating] = useState(false);
 
   // DataTable logic
-  const filteredPurchaseOrdersByStatus = purchaseOrders.filter((purchaseOrder) => {
-    if (statusFilter === "all") return true;
-    return purchaseOrder.status === statusFilter;
-  });
-
-  const filteredPurchaseOrdersByDate = filteredPurchaseOrdersByStatus.filter((purchaseOrder) => {
+  const filteredPurchaseOrdersByDate = purchaseOrders.filter((purchaseOrder) => {
     if (dateFilter === "all") return true;
     const purchaseOrderDate = new Date(purchaseOrder.orderDate);
     const now = new Date();
@@ -124,26 +119,6 @@ export default function PurchaseOrders() {
       label: "Date de commande",
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
-    },
-    {
-      key: "status" as keyof PurchaseOrder,
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "Tous", value: "all" },
-        { label: "En attente", value: "En attente" },
-        { label: "Confirmée", value: "Confirmée" },
-        { label: "Livrée", value: "Livrée" },
-        { label: "Annulée", value: "Annulée" },
-      ],
-      render: (value: PurchaseOrder["status"]) => (
-        <Badge variant={getStatusVariant(value)} className="flex items-center gap-1 w-fit">
-          {getStatusIcon(value)}
-          {value}
-        </Badge>
-      ),
     },
   ];
 
@@ -322,17 +297,16 @@ export default function PurchaseOrders() {
 
   const renderActions = (purchaseOrder: PurchaseOrder) => (
     <div className="flex justify-end gap-2 items-center">
-      {/* Status dropdown for direct update */}
-      <select
-        value={purchaseOrder.status}
-        onChange={(e) => handleStatusChange(purchaseOrder.id, e.target.value)}
-        className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="En attente">En attente</option>
-        <option value="Confirmée">Confirmée</option>
-        <option value="Livrée">Livrée</option>
-        <option value="Annulée">Annulée</option>
-      </select>
+      <StatusDropdown
+        currentValue={purchaseOrder.status}
+        options={[
+          { value: "En attente", label: "En attente", variant: "secondary" },
+          { value: "Confirmée", label: "Confirmée", variant: "default" },
+          { value: "Livrée", label: "Livrée", variant: "default" },
+          { value: "Annulée", label: "Annulée", variant: "destructive" },
+        ]}
+        onStatusChange={(newStatus) => handleStatusChange(purchaseOrder.id, newStatus)}
+      />
       
       <Button variant="outline" size="sm" onClick={() => handleViewPurchaseOrder(purchaseOrder)}>
         <Eye className="h-4 w-4" />
@@ -432,22 +406,6 @@ export default function PurchaseOrders() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <Label htmlFor="statusFilter">Filtrer par statut</Label>
-              <select
-                id="statusFilter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="En attente">En attente</option>
-                <option value="Confirmée">Confirmée</option>
-                <option value="Livrée">Livrée</option>
-                <option value="Annulée">Annulée</option>
-              </select>
-            </div>
-
-            <div className="flex-1">
               <Label htmlFor="dateFilter">Filtrer par période</Label>
               <select
                 id="dateFilter"
@@ -463,11 +421,10 @@ export default function PurchaseOrders() {
               </select>
             </div>
 
-            {(statusFilter !== "all" || dateFilter !== "all") && (
+            {dateFilter !== "all" && (
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStatusFilter("all");
                   setDateFilter("all");
                   clearFilters();
                 }}
