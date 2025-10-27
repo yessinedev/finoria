@@ -208,13 +208,6 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
           </View>
         </View>
 
-        {/* Notes */}
-        {purchaseOrder.notes && purchaseOrder.notes.trim() !== '' && (
-          <Text style={styles.notes}>{purchaseOrder.notes}</Text>
-        )}
-
-        {/* Footer */}
-        {/* Removed: Gestion & Facturation - GestVente SARL - 123 Rue de l'Entreprise, 75001 Paris - Tél: 01 23 45 67 89 - contact@gestvente.fr */}
       </Page>
     </Document>
   );

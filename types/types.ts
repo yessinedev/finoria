@@ -343,6 +343,54 @@ export interface ReceptionNoteItem {
   unitPrice: number;
 }
 
+export interface PurchaseOrder {
+  id: number;
+  number: string;
+  saleId: number;
+  clientId: number;
+  clientName: string;
+  clientCompany?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  orderDate: string;
+  deliveryDate?: string;
+  items?: PurchaseOrderItem[];
+}
+
+export interface PurchaseOrderItem {
+  id: number;
+  productId: number;
+  productName: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  totalPrice: number;
+}
+
+export interface DeliveryReceipt {
+  id: number;
+  saleId: number;
+  deliveryNumber: string;
+  driverName?: string;
+  vehicleRegistration?: string;
+  deliveryDate: string;
+  createdAt: string;
+  items: DeliveryReceiptItem[];
+}
+
+export interface DeliveryReceiptItem {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface CompanyInfo {
   name: string
   address: string
