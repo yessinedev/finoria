@@ -69,6 +69,7 @@ import {
 import { supplierInvoiceSchema, SupplierInvoiceFormData } from "@/lib/validation/schemas";
 import { z } from "zod";
 import { StatusDropdown } from "@/components/common/StatusDropdown";
+import { EntitySelect } from "@/components/common/EntitySelect";
 
 export default function SupplierInvoices() {
   const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
@@ -702,25 +703,17 @@ export default function SupplierInvoices() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="supplierId">Fournisseur *</Label>
-                <Select
+                <EntitySelect
+                  label="Fournisseur *"
+                  id="supplierId"
                   value={formData.supplierId.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, supplierId: Number(value) })}
-                >
-                  <SelectTrigger className={errors.supplierId ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Sélectionner un fournisseur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                        {supplier.name} {supplier.company && `(${supplier.company})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.supplierId && (
-                  <p className="text-sm text-red-500">{errors.supplierId}</p>
-                )}
+                  onChange={(value) => setFormData({ ...formData, supplierId: Number(value) })}
+                  options={suppliers}
+                  getOptionLabel={(supplier) => `${supplier.name} ${supplier.company ? `(${supplier.company})` : ''}`}
+                  getOptionValue={(supplier) => supplier.id.toString()}
+                  required
+                  error={errors.supplierId}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="invoiceNumber">Numéro de facture *</Label>

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { Client, Product, LineItem } from "@/types/types";
 import { saleSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { EntitySelect } from "@/components/common/EntitySelect";
 
 interface SaleFormProps {
   clients: Client[];
@@ -159,28 +160,17 @@ export default function SaleForm(props: SaleFormProps) {
           </CardHeader>
           <CardContent>
             <div>
-              <Label htmlFor="client">Sélectionner un client *</Label>
-              <Select
+              <EntitySelect
+                label="Sélectionner un client *"
+                id="client"
                 value={selectedClient}
-                onValueChange={setSelectedClient}
-              >
-                <SelectTrigger className={errors.clientId ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Choisir un client..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem
-                      key={client.id}
-                      value={client.id.toString()}
-                    >
-                      {client.name} - {client.company}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.clientId && (
-                <p className="text-sm text-red-500 mt-1">{errors.clientId}</p>
-              )}
+                onChange={setSelectedClient}
+                options={clients}
+                getOptionLabel={(client) => `${client.name} - ${client.company}`}
+                getOptionValue={(client) => client.id.toString()}
+                required
+                error={errors.clientId}
+              />
             </div>
           </CardContent>
         </Card>
