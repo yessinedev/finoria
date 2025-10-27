@@ -91,6 +91,12 @@ interface ElectronAPI {
   deleteTvaRate: (id: number) => Promise<boolean>;
   getTvaRate: (id: number) => Promise<any>;
 
+  // Delivery Receipts
+  createDeliveryReceipt: (deliveryReceipt: any) => Promise<any>;
+  getDeliveryReceipts: () => Promise<any[]>;
+  getDeliveryReceipt: (id: number) => Promise<any>;
+  getDeliveryReceiptBySale: (saleId: number) => Promise<any>;
+  deleteDeliveryReceipt: (id: number) => Promise<boolean>;
 
   // Stock Movements
   getStockMovements: () => Promise<any[]>;
@@ -580,6 +586,35 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getTvaRate(id) || Promise.resolve(null),
         "getTvaRate"
+      ),
+  };
+
+  // --- Delivery Receipts API ---
+  deliveryReceipts = {
+    create: (deliveryReceipt: any) =>
+      this.handle(
+        () => window.electronAPI?.createDeliveryReceipt(deliveryReceipt) || Promise.resolve(null),
+        "createDeliveryReceipt"
+      ),
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getDeliveryReceipts() || Promise.resolve([]),
+        "getDeliveryReceipts"
+      ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getDeliveryReceipt(id) || Promise.resolve(null),
+        "getDeliveryReceipt"
+      ),
+    getBySale: (saleId: number) =>
+      this.handle(
+        () => window.electronAPI?.getDeliveryReceiptBySale(saleId) || Promise.resolve(null),
+        "getDeliveryReceiptBySale"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteDeliveryReceipt(id) || Promise.resolve(false),
+        "deleteDeliveryReceipt"
       ),
   };
 

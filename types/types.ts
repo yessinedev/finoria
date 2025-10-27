@@ -353,6 +353,26 @@ export interface PurchaseOrderItem {
   totalPrice: number;
 }
 
+export interface DeliveryReceipt {
+  id: number;
+  saleId: number;
+  deliveryNumber: string;
+  driverName?: string;
+  vehicleRegistration?: string;
+  deliveryDate: string;
+  createdAt: string;
+  items: DeliveryReceiptItem[];
+  sale?: Sale; // Reference to the original sale
+}
+
+export interface DeliveryReceiptItem {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface CompanyInfo {
   name: string
   address: string

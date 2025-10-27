@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   ArrowUpDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -31,6 +32,9 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { DeliveryReceiptPDFDocument } from "@/components/sales/delivery-receipt-pdf";
+import DeliveryReceiptForm from "@/components/sales/DeliveryReceiptForm";
 
 export default function Delivery() {
   const [deliveries, setDeliveries] = useState<any[]>([]);
@@ -39,6 +43,8 @@ export default function Delivery() {
   const [error, setError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deliveryToDelete, setDeliveryToDelete] = useState<any | null>(null);
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
   // Data table configuration
@@ -91,22 +97,16 @@ export default function Delivery() {
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
     },
     {
-      key: "status" as keyof any,
-      label: "Statut",
+      key: "driverName" as keyof any,
+      label: "Chauffeur",
       sortable: true,
       filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "En préparation", value: "En préparation" },
-        { label: "Expédié", value: "Expédié" },
-        { label: "Livré", value: "Livré" },
-        { label: "Annulé", value: "Annulé" },
-      ],
-      render: (value: string) => (
-        <Badge variant={getStatusVariant(value)}>
-          {value}
-        </Badge>
-      ),
+    },
+    {
+      key: "vehicleRegistration" as keyof any,
+      label: "Immatriculation",
+      sortable: true,
+      filterable: true,
     },
   ];
 
@@ -119,28 +119,27 @@ export default function Delivery() {
     setError(null);
 
     try {
-      // Load sales to create deliveries from
-      const salesResult = await db.sales.getAll();
-      if (salesResult.success) {
-        setSales(salesResult.data || []);
-        // Create mock deliveries from sales (in a real app, these would come from a database)
-        const mockDeliveries = (salesResult.data || []).map((sale: Sale, index: number) => ({
-          id: index + 1,
-          deliveryNumber: `BL-${new Date().getFullYear()}-${String(index + 1).padStart(4, '0')}`,
-          clientName: sale.clientName,
-          clientCompany: sale.clientCompany,
-          saleId: sale.id,
-          saleNumber: `CMD-${sale.id}`,
-          deliveryDate: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
-          status: ["En préparation", "Expédié", "Livré", "Annulé"][Math.floor(Math.random() * 4)],
-          items: sale.items || [],
+      // Load company settings
+      const settingsResult = await db.settings.get();
+      if (settingsResult.success) {
+        setCompanySettings(settingsResult.data);
+      }
+      
+      // Load delivery receipts
+      const deliveriesResult = await db.deliveryReceipts.getAll();
+      if (deliveriesResult.success) {
+        // Transform delivery receipts to match the expected format
+        const formattedDeliveries = (deliveriesResult.data || []).map((delivery: any) => ({
+          ...delivery,
+          saleNumber: `CMD-${delivery.saleId}`,
+          items: delivery.items || []
         }));
-        setDeliveries(mockDeliveries);
+        setDeliveries(formattedDeliveries);
       } else {
-        setError(salesResult.error || "Erreur lors du chargement des commandes");
+        setError(deliveriesResult.error || "Erreur lors du chargement des bons de livraison");
         toast({
           title: "Erreur",
-          description: salesResult.error || "Erreur lors du chargement des commandes",
+          description: deliveriesResult.error || "Erreur lors du chargement des bons de livraison",
           variant: "destructive",
         });
       }
@@ -157,29 +156,13 @@ export default function Delivery() {
     }
   };
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "Livré":
-        return "default";
-      case "Expédié":
-        return "secondary";
-      case "En préparation":
-        return "outline";
-      case "Annulé":
-        return "destructive";
-      default:
-        return "secondary";
-    }
-  };
-
   const handleViewDelivery = (delivery: any) => {
     // In a real app, this would open a delivery details modal
     alert(`Voir les détails du bon de livraison ${delivery.deliveryNumber}`);
   };
 
   const handleCreateDelivery = () => {
-    // In a real app, this would open a delivery creation form
-    alert("Créer un nouveau bon de livraison");
+    setIsFormOpen(true);
   };
 
   const handleEditDelivery = (delivery: any) => {
@@ -192,20 +175,57 @@ export default function Delivery() {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteDelivery = () => {
-    // In a real app, this would delete the delivery
-    toast({
-      title: "Succès",
-      description: "Bon de livraison supprimé avec succès",
-    });
-    // Refresh data
-    loadData();
-    setIsDeleteDialogOpen(false);
-    setDeliveryToDelete(null);
+  const confirmDeleteDelivery = async () => {
+    if (!deliveryToDelete) return;
+    
+    try {
+      const result = await db.deliveryReceipts.delete(deliveryToDelete.id);
+      if (result.success) {
+        toast({
+          title: "Succès",
+          description: "Bon de livraison supprimé avec succès",
+        });
+        // Refresh data
+        loadData();
+      } else {
+        throw new Error(result.error || "Failed to delete delivery receipt");
+      }
+    } catch (error) {
+      console.error("Failed to delete delivery receipt:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la suppression du bon de livraison",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeliveryToDelete(null);
+    }
+  };
+
+  const handleReceiptCreated = () => {
+    setIsFormOpen(false);
+    loadData(); // Refresh the delivery receipts list
   };
 
   const renderActions = (delivery: any) => (
     <div className="flex justify-end gap-2">
+      <PDFDownloadLink
+        document={
+          <DeliveryReceiptPDFDocument 
+            deliveryReceipt={delivery} 
+            sale={delivery.sale}
+            companySettings={companySettings}
+          />
+        }
+        fileName={`bon-de-livraison-${delivery.deliveryNumber}.pdf`}
+      >
+        {({ loading }) => (
+          <Button variant="outline" size="sm" disabled={loading}>
+            <Download className="h-4 w-4" />
+          </Button>
+        )}
+      </PDFDownloadLink>
       <Button variant="outline" size="sm" onClick={() => handleViewDelivery(delivery)}>
         <Eye className="h-4 w-4" />
       </Button>
@@ -276,6 +296,13 @@ export default function Delivery() {
           />
         </CardContent>
       </Card>
+
+      {/* Delivery Receipt Form */}
+      <DeliveryReceiptForm
+        open={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onReceiptCreated={handleReceiptCreated}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

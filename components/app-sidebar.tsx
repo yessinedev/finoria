@@ -17,6 +17,7 @@ import {
   Building2,
   Package,
   ChevronDown,
+  Truck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -29,6 +30,7 @@ export type NavigationItem =
   | "invoices"
   | "credit-notes"
   | "purchase-orders"
+  | "delivery-receipts"
   | "inventory"
   | "stock-movements"
   | "settings";
@@ -45,6 +47,7 @@ const navigationItems = [
       { id: "invoices", label: "Facture" },
       { id: "credit-notes", label: "Facture d'avoir" },
       { id: "purchase-orders", label: "Bon de commande" },
+      { id: "delivery-receipts", label: "Bon de livraison" },
     ],
   },
   {
@@ -120,10 +123,8 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/credit-notes";
       case "purchase-orders":
         return "/purchase-orders";
-      case "delivery":
-        return "/sales/delivery";
-      case "output":
-        return "/sales/output";
+      case "delivery-receipts":
+        return "/delivery-receipts";
       case "purchase-order":
         return "/suppliers/orders";
       case "supplier-invoice":

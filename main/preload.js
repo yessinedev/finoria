@@ -106,6 +106,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteTvaRate: (id) => ipcRenderer.invoke("delete-tva-rate", id),
   getTvaRate: (id) => ipcRenderer.invoke("get-tva-rate", id),
 
+  // --- Delivery Receipts API ---
+  createDeliveryReceipt: (deliveryReceipt) => ipcRenderer.invoke("create-delivery-receipt", deliveryReceipt),
+  getDeliveryReceipts: () => ipcRenderer.invoke("get-delivery-receipts"),
+  getDeliveryReceipt: (id) => ipcRenderer.invoke("get-delivery-receipt", id),
+  getDeliveryReceiptBySale: (saleId) => ipcRenderer.invoke("get-delivery-receipt-by-sale", saleId),
+  deleteDeliveryReceipt: (id) => ipcRenderer.invoke("delete-delivery-receipt", id),
 
   // --- Enterprise Settings API ---
   getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),
