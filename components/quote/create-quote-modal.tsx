@@ -25,16 +25,16 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
-  const [globalDiscount, setGlobalDiscount] = useState(0);
+  // Removed globalDiscount state
   // Removed taxRate - using per-item TVA calculation
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Financial calculations with per-item TVA
+  // Financial calculations with per-item TVA (removed global discount)
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-  const globalDiscountAmount = (subtotal * globalDiscount) / 100;
-  const discountedSubtotal = subtotal - globalDiscountAmount;
+  // Removed globalDiscountAmount calculation
+  const discountedSubtotal = subtotal; // No global discount applied
   // Calculate tax per item based on product TVA rates
   const taxAmount = lineItems.reduce((sum, item) => {
     // Get product TVA rate (this would need to be fetched from product data)
@@ -239,15 +239,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
                 <p className="text-sm text-red-500 mt-1">{errors.items}</p>
               )}
             </div>
-            <FormField
-              label="Remise globale (%)"
-              id="globalDiscount"
-              type="number"
-              value={globalDiscount.toString()}
-              onChange={(e) => setGlobalDiscount(Number(e.target.value))}
-              placeholder="0"
-            />
-
+            {/* Removed global discount form field */}
             <FormField
               label="Notes"
               id="notes"
@@ -267,10 +259,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
                   <span>Sous-total</span>
                   <span>{subtotal.toFixed(3)} DNT</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Remise globale</span>
-                  <span>-{globalDiscountAmount.toFixed(3)} DNT</span>
-                </div>
+                {/* Removed global discount display */}
                 <div className="flex justify-between text-sm">
                   <span>Sous-total remisé</span>
                   <span>{discountedSubtotal.toFixed(3)} DNT</span>

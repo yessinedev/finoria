@@ -2,7 +2,7 @@
 
 bugs:
  - sale/purchase, bon de commande status field should be removed front and back
- - remise globale should be removed from quote
+ - remise globale has been removed from quote
  - when converting a quote to invoice, a sale should be created with the quote's items
  
 

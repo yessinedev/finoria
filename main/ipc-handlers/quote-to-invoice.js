@@ -33,9 +33,84 @@ module.exports = (ipcMain, db, notifyDataChange) => {
                        String(lastNumber + 1).padStart(4, "0");
       }
       
-      // Create the invoice object
+      // Create a sale record with the same items as the quote
+      const saleStmt = db.prepare(`
+        INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, saleDate) 
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      
+      // Calculate discount amount from quote items
+      const discountAmount = items.reduce((sum, item) => {
+        return sum + (item.unitPrice * item.quantity * item.discount / 100);
+      }, 0);
+      
+      const saleResult = saleStmt.run(
+        quote.clientId,
+        quote.amount,
+        quote.taxAmount,
+        discountAmount,
+        new Date().toISOString()
+      );
+      
+      const saleId = saleResult.lastInsertRowid;
+      
+      // Insert sale items based on quote items
+      const insertSaleItem = db.prepare(`
+        INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, discount, totalPrice)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      // Prepare statement to get product TVA rate
+      const getProductTva = db.prepare(`
+        SELECT t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `);
+      
+      // Update product stock for non-service products
+      const updateStockStmt = db.prepare(`
+        UPDATE products 
+        SET stock = stock - ? 
+        WHERE id = ? AND category != 'Service'
+      `);
+      
+      // Calculate total tax amount for the sale based on individual product TVA rates
+      let totalTaxAmount = 0;
+      
+      for (const item of items) {
+        insertSaleItem.run(
+          saleId,
+          item.productId,
+          item.productName,
+          item.quantity,
+          item.unitPrice,
+          item.discount || 0,
+          item.totalPrice
+        );
+        
+        // Get product TVA rate and calculate tax for this item
+        const productTva = getProductTva.get(item.productId);
+        const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+        const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+        totalTaxAmount += itemTaxAmount;
+        
+        // Only reduce stock for non-service products
+        updateStockStmt.run(item.quantity, item.productId);
+      }
+      
+      // Update the sale with the calculated tax amount
+      const updateTaxStmt = db.prepare(`
+        UPDATE sales 
+        SET taxAmount = ? 
+        WHERE id = ?
+      `);
+      updateTaxStmt.run(totalTaxAmount, saleId);
+      
+      // Create the invoice object referencing the newly created sale
       const invoice = {
         number: invoiceNumber,
+        saleId: saleId, // Reference to the newly created sale
         quoteId: quoteId, // Store reference to the original quote
         clientId: quote.clientId,
         amount: quote.amount,
@@ -47,12 +122,13 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       // Insert the invoice
       const insertInvoice = db.prepare(`
-        INSERT INTO invoices (number, quoteId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (number, saleId, quoteId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const result = insertInvoice.run(
         invoice.number,
+        invoice.saleId,
         invoice.quoteId,
         invoice.clientId,
         invoice.amount,
@@ -100,6 +176,17 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       notifyDataChange("invoices", "create", newInvoice);
       notifyDataChange("quotes", "update", { id: quoteId, status: "Accepté" });
+      notifyDataChange("sales", "create", { 
+        id: saleId, 
+        clientId: quote.clientId,
+        totalAmount: quote.amount,
+        taxAmount: totalTaxAmount,
+        discountAmount: discountAmount,
+        saleDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        clientName: quote.clientName,
+        clientCompany: quote.clientCompany
+      });
       
       return newInvoice;
     } catch (error) {
