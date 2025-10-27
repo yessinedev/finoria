@@ -23,15 +23,15 @@ interface ElectronAPI {
   getSupplierOrders: () => Promise<any[]>;
   createSupplierOrder: (order: any) => Promise<any>;
   updateSupplierOrder: (id: number, order: any) => Promise<any>;
-  updateSupplierOrderStatus: (id: number, status: string) => Promise<any>;
   deleteSupplierOrder: (id: number) => Promise<boolean>;
+  // Removed updateSupplierOrderStatus function
 
   // Supplier Invoices
   getSupplierInvoices: () => Promise<any[]>;
   createSupplierInvoice: (invoice: any) => Promise<any>;
   updateSupplierInvoice: (id: number, invoice: any) => Promise<any>;
   deleteSupplierInvoice: (id: number) => Promise<boolean>;
-  updateSupplierInvoiceStatus: (id: number, status: string) => Promise<any>;
+  // Removed updateSupplierInvoiceStatus function
 
   // Products
   getProducts: () => Promise<any[]>;
@@ -48,7 +48,7 @@ interface ElectronAPI {
   getSales: () => Promise<any[]>;
   getSalesWithItems: () => Promise<any[]>;
   getSaleItems: (saleId: number) => Promise<any[]>;
-  updateSaleStatus: (id: number, status: string) => Promise<any>;
+  // Removed updateSaleStatus function
   deleteSale: (id: number) => Promise<boolean>;
 
   // Dashboard
@@ -57,7 +57,7 @@ interface ElectronAPI {
   // Invoices
   getInvoices: () => Promise<any[]>;
   createInvoice: (invoice: any) => Promise<any>;
-  updateInvoiceStatus: (id: number, status: string) => Promise<any>;
+  // Removed updateInvoiceStatus function
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
   generateInvoiceFromQuote: (quoteId: number) => Promise<any>;
   getInvoiceItems: (invoiceId: number) => Promise<any[]>;
@@ -66,21 +66,21 @@ interface ElectronAPI {
   getQuotes: () => Promise<any[]>;
   createQuote: (quote: any) => Promise<any>;
   updateQuote: (id: number, quote: any) => Promise<any>;
-  updateQuoteStatus: (id: number, status: string) => Promise<any>;
+  // Removed updateQuoteStatus function
   deleteQuote: (id: number) => Promise<boolean>;
   getQuoteItems: (quoteId: number) => Promise<any[]>;
 
   // Credit Notes
   getCreditNotes: () => Promise<any[]>;
   createCreditNote: (creditNote: any) => Promise<any>;
-  updateCreditNoteStatus: (id: number, status: string) => Promise<any>;
+  // Removed updateCreditNoteStatus function
   generateCreditNoteFromInvoice: (invoiceId: number, reason: string) => Promise<any>;
   getCreditNoteItems: (creditNoteId: number) => Promise<any[]>;
 
   // Purchase Orders
   getPurchaseOrders: () => Promise<any[]>;
   createPurchaseOrder: (purchaseOrder: any) => Promise<any>;
-  updatePurchaseOrderStatus: (id: number, status: string) => Promise<any>;
+  // Removed updatePurchaseOrderStatus function
   generatePurchaseOrderFromSale: (saleId: number, deliveryDate: string) => Promise<any>;
   getPurchaseOrderItems: (purchaseOrderId: number) => Promise<any[]>;
 
@@ -251,7 +251,8 @@ class DatabaseService {
     create: (supplier: any) =>
       this.handle(
         () =>
-          window.electronAPI?.createSupplier(supplier) || Promise.resolve(null),
+          window.electronAPI?.createSupplier(supplier) ||
+          Promise.resolve(null),
         "createSupplier"
       ),
     update: (id: number, supplier: any) =>
@@ -292,15 +293,17 @@ class DatabaseService {
     delete: (id: number) =>
       this.handle(
         () =>
-          window.electronAPI?.deleteSupplierOrder(id) || Promise.resolve(false),
+          window.electronAPI?.deleteSupplierOrder(id) ||
+          Promise.resolve(false),
         "deleteSupplierOrder"
       ),
-    updateStatus: (id: number, status: string) =>
+    // Removed updateStatus function
+    getItems: (orderId: number) =>
       this.handle(
         () =>
-          window.electronAPI?.updateSupplierOrderStatus(id, status) ||
-          Promise.resolve(null),
-        "updateSupplierOrderStatus"
+          window.electronAPI?.getPurchaseOrderItems(orderId) ||
+          Promise.resolve([]),
+        "getPurchaseOrderItems"
       ),
   };
 
@@ -332,13 +335,7 @@ class DatabaseService {
           Promise.resolve(false),
         "deleteSupplierInvoice"
       ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () =>
-          window.electronAPI?.updateSupplierInvoiceStatus(id, status) ||
-          Promise.resolve(null),
-        "updateSupplierInvoiceStatus"
-      ),
+    // Removed updateStatus function
   };
 
   // --- Products API ---
@@ -412,13 +409,7 @@ class DatabaseService {
         () => window.electronAPI?.getSaleItems(saleId) || Promise.resolve([]),
         "getSaleItems"
       ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () =>
-          window.electronAPI?.updateSaleStatus(id, status) ||
-          Promise.resolve(null),
-        "updateSaleStatus"
-      ),
+    // Removed updateStatus function
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteSale(id) || Promise.resolve(false),
@@ -450,13 +441,7 @@ class DatabaseService {
           window.electronAPI?.createInvoice(invoice) || Promise.resolve(null),
         "createInvoice"
       ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () =>
-          window.electronAPI?.updateInvoiceStatus(id, status) ||
-          Promise.resolve(null),
-        "updateInvoiceStatus"
-      ),
+    // Removed updateStatus function
     generateFromSale: (saleId: number) =>
       this.handle(
         () =>
@@ -496,12 +481,7 @@ class DatabaseService {
           window.electronAPI?.updateQuote(id, quote) || Promise.resolve(null),
         "updateQuote"
       ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () =>
-          window.electronAPI?.updateQuoteStatus(id, status) || Promise.resolve(null),
-        "updateQuoteStatus"
-      ),
+    // Removed updateStatus function
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteQuote(id) || Promise.resolve(false),
@@ -528,13 +508,7 @@ class DatabaseService {
           Promise.resolve(null),
         "createCreditNote"
       ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () =>
-          window.electronAPI?.updateCreditNoteStatus(id, status) ||
-          Promise.resolve(null),
-        "updateCreditNoteStatus"
-      ),
+    // Removed updateStatus function
     generateFromInvoice: (invoiceId: number, reason: string) =>
       this.handle(
         () =>
@@ -563,13 +537,7 @@ class DatabaseService {
           Promise.resolve(null),
         "createPurchaseOrder"
       ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () =>
-          window.electronAPI?.updatePurchaseOrderStatus(id, status) ||
-          Promise.resolve(null),
-        "updatePurchaseOrderStatus"
-      ),
+    // Removed updateStatus function
     generateFromSale: (saleId: number, deliveryDate: string) =>
       this.handle(
         () =>
@@ -702,4 +670,5 @@ class DatabaseService {
   };
 }
 
-export const db = new DatabaseService();
+const db = new DatabaseService();
+export { db };

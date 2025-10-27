@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { StatusDropdown } from "@/components/common/StatusDropdown";
+// Removed StatusDropdown import
 import { Edit, Trash2 } from "lucide-react";
 
 export default function Sales() {
@@ -198,103 +198,98 @@ export default function Sales() {
     setLineItems(
       lineItems.map((item) => {
         if (item.id === id) {
-          const updated = { ...item, [field]: value };
-          if (
-            field === "quantity" ||
-            field === "unitPrice" ||
-            field === "discount"
-          ) {
-            const discountAmount =
-              (updated.unitPrice * updated.quantity * updated.discount) / 100;
-            updated.total =
-              updated.unitPrice * updated.quantity - discountAmount;
+          const updatedItem = { ...item, [field]: value };
+          
+          // Recalculate total when quantity, unitPrice, or discount changes
+          if (["quantity", "unitPrice", "discount"].includes(field)) {
+            const quantity = field === "quantity" ? Number(value) : item.quantity;
+            const unitPrice = field === "unitPrice" ? Number(value) : item.unitPrice;
+            const discount = field === "discount" ? Number(value) : item.discount;
+            
+            const discountAmount = (unitPrice * quantity * discount) / 100;
+            updatedItem.total = unitPrice * quantity - discountAmount;
           }
-          return updated;
+          
+          return updatedItem;
         }
         return item;
       })
     );
   };
 
-  // Calculate totals with per-item TVA calculation
-  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-  // Removed globalDiscountAmount calculation
-  const discountedSubtotal = subtotal; // No global discount anymore
-  // Calculate tax per item based on product TVA rates
+  // Calculate totals
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0
+  );
+  
+  const totalDiscount = lineItems.reduce(
+    (sum, item) => sum + (item.unitPrice * item.quantity * item.discount) / 100,
+    0
+  );
+  
+  const discountedSubtotal = subtotal - totalDiscount;
+  
+  // Calculate tax amount based on individual item TVA rates
   const taxAmount = lineItems.reduce((sum, item) => {
-    // Get product TVA rate (this would need to be fetched from product data)
-    // For now, using a default rate until we implement product TVA fetching
-    const itemTvaRate = 19; // Default rate
-    return sum + (item.total * itemTvaRate / 100);
+    // Get product to determine TVA rate
+    const product = products.find(p => p.id === item.productId);
+    const tvaRate = product?.tvaId ? 19 : 0; // Default to 19% if product has TVA, 0 otherwise
+    const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount) / 100;
+    return sum + (itemTotal * tvaRate) / 100;
   }, 0);
-  const fodecAmount = (discountedSubtotal * fodecTax) / 100; // New FODEC amount
+  
+  // Calculate FODEC amount
+  const fodecAmount = (discountedSubtotal * fodecTax) / 100;
+  
+  // Final total including tax and FODEC
   const finalTotal = discountedSubtotal + taxAmount + fodecAmount;
 
   const handleSubmit = async (errors: Record<string, string>) => {
-    if (!selectedClient || lineItems.length === 0) {
-      setError(
-        "Veuillez sélectionner un client et ajouter au moins un article"
-      );
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
+    // Check stock availability before saving
+    const insufficientItems = [];
+    for (const item of lineItems) {
+      const product = products.find(p => p.id === item.productId);
+      if (product && product.stock !== undefined && product.stock < item.quantity) {
+        insufficientItems.push({
+          name: product.name,
+          requested: item.quantity,
+          available: product.stock
+        });
+      }
+    }
+
+    if (insufficientItems.length > 0) {
+      setStockAlertData({
+        insufficientItems,
+        onContinue: () => {
+          setShowStockAlert(false);
+          saveSale();
+        }
+      });
+      setShowStockAlert(true);
+      return;
+    }
+
+    await saveSale();
+  };
+
+  const saveSale = async () => {
     setSaving(true);
     setError(null);
 
     try {
-      // Check stock availability before proceeding
-      const stockCheckResults = [];
-      let hasInsufficientStock = false;
-
-      for (const item of lineItems) {
-        // Skip stock check for service products
-        const product = products.find(p => p.id === item.productId);
-        if (product && product.category === 'Service') {
-          continue;
-        }
-
-        const stockResponse = await db.products.getStock(item.productId);
-        const availableStock = stockResponse.success ? stockResponse.data : 0;
-        
-        if (availableStock < item.quantity) {
-          hasInsufficientStock = true;
-          stockCheckResults.push({
-            name: item.name,
-            requested: item.quantity,
-            available: availableStock
-          });
-        }
-      }
-
-      // If there's insufficient stock, show alert dialog
-      if (hasInsufficientStock) {
-        setStockAlertData({
-          insufficientItems: stockCheckResults,
-          onContinue: () => {
-            setShowStockAlert(false);
-            processSale();
-          }
-        });
-        setShowStockAlert(true);
-        setSaving(false);
-        return;
-      }
-
-      // If stock is sufficient, proceed with sale
-      await processSale();
-    } catch (error) {
-      setError("Erreur inattendue lors de la vérification du stock");
-      setSaving(false);
-    }
-  };
-
-  const processSale = async () => {
-    try {
       const saleData = {
-        clientId: Number.parseInt(selectedClient),
+        clientId: Number(selectedClient),
         items: lineItems.map((item) => ({
           productId: item.productId,
           productName: item.name,
+          description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discount: item.discount,
@@ -305,7 +300,7 @@ export default function Sales() {
         fodecAmount: fodecAmount, // Include FODEC amount
         discountAmount: 0, // No global discount
         finalAmount: finalTotal,
-        status: "En attente",
+        // Removed status field
         saleDate: new Date().toISOString(),
       };
 
@@ -374,25 +369,7 @@ export default function Sales() {
     setIsSaleDetailsOpen(true);
   };
 
-  const handleStatusChange = async (saleId: number, newStatus: string) => {
-    try {
-      const result = await db.sales.updateStatus(saleId, newStatus);
-      if (result.success) {
-        toast({
-          title: "Succès",
-          description: "Statut mis à jour avec succès",
-        });
-      } else {
-        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du statut",
-        variant: "destructive",
-      });
-    }
-  };
+  // Removed handleStatusChange function
 
   if (loading) {
     return (
@@ -490,7 +467,7 @@ export default function Sales() {
               onClearFilters={clearFilters}
               loading={loading}
               emptyMessage="Aucune vente trouvée"
-              actions={(sale) => renderActions(sale)}
+              // Removed actions prop since we're removing the status dropdown
             />
           </CardContent>
         </Card>
@@ -538,22 +515,5 @@ export default function Sales() {
     </div>
   );
 
-  const renderActions = (sale: Sale) => (
-    <div className="flex justify-end gap-2 items-center">
-      <StatusDropdown
-        currentValue={sale.status}
-        options={[
-          { value: "En attente", label: "En attente", variant: "secondary" },
-          { value: "Confirmée", label: "Confirmée", variant: "default" },
-          { value: "Livrée", label: "Livrée", variant: "default" },
-          { value: "Annulée", label: "Annulée", variant: "outline" },
-        ]}
-        onStatusChange={(newStatus) => handleStatusChange(sale.id, newStatus)}
-      />
-      
-      <Button variant="outline" size="sm" onClick={() => handleViewSale(sale)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-    </div>
-  );
+  // Removed renderActions function
 }

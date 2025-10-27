@@ -16,7 +16,7 @@ export const supplierOrderSchema = z.object({
   orderNumber: z.string().min(1, "Le numéro de commande est requis"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   orderDate: z.string().min(1, "La date de commande est requise"),
   deliveryDate: z.string().optional(),
   items: z.array(z.object({
@@ -37,7 +37,7 @@ export const supplierInvoiceSchema = z.object({
   amount: z.number().min(0, "Le montant doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().optional(),
   paymentDate: z.string().optional(),
@@ -83,7 +83,7 @@ export const saleSchema = z.object({
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   discountAmount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
   finalAmount: z.number().min(0, "Le montant final doit être positif").optional(),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   saleDate: z.string().min(1, "La date de vente est requise"),
   items: z.array(z.object({
     productId: z.number().min(1, "Le produit est requis"),
@@ -101,7 +101,7 @@ export const quoteSchema = z.object({
   amount: z.number().min(0, "Le montant doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().min(1, "La date d'échéance est requise"),
   items: z.array(z.object({
@@ -122,7 +122,7 @@ export const invoiceSchema = z.object({
   amount: z.number().min(0, "Le montant doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().min(1, "La date d'échéance est requise"),
   items: z.array(z.object({

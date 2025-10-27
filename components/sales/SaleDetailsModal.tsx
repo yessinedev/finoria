@@ -1,10 +1,6 @@
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { db } from "@/lib/database";
+// Removed Select component imports since we're removing status functionality
 import type { Sale } from "@/types/types";
-import { useToast } from "@/hooks/use-toast";
 
 interface SaleDetailsModalProps {
   sale: Sale | null;
@@ -13,35 +9,11 @@ interface SaleDetailsModalProps {
 }
 
 export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsModalProps) {
-  const [status, setStatus] = useState(sale?.status || "En attente");
-  const { toast } = useToast();
+  // Removed status state since we're removing status functionality
   
   if (!sale) return null;
   
-  const handleStatusChange = async (newStatus: string) => {
-    try {
-      const result = await db.sales.updateStatus(sale.id, newStatus);
-      if (result.success) {
-        setStatus(newStatus);
-        toast({
-          title: "Succès",
-          description: "Statut mis à jour avec succès",
-        });
-      } else {
-        toast({
-          title: "Erreur",
-          description: result.error || "Erreur lors de la mise à jour du statut",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du statut",
-        variant: "destructive",
-      });
-    }
-  };
+  // Removed handleStatusChange function since we're removing status functionality
   
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -56,20 +28,7 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
             <div><strong>Montant HT:</strong> {sale.totalAmount.toFixed(3)} DNT</div>
             <div><strong>TVA:</strong> {sale.taxAmount.toFixed(3)} DNT</div>
             <div><strong>Montant TTC:</strong> {(sale.totalAmount + sale.taxAmount).toFixed(3)} DNT</div>
-            <div>
-              <strong>Statut:</strong>
-              <Select value={status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="En attente">En attente</SelectItem>
-                  <SelectItem value="Confirmée">Confirmée</SelectItem>
-                  <SelectItem value="Livrée">Livrée</SelectItem>
-                  <SelectItem value="Annulée">Annulée</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Removed status field display */}
           </div>
           
           <div>

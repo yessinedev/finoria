@@ -50,8 +50,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       }
       
       const insertPurchaseOrder = db.prepare(`
-        INSERT INTO purchase_orders (number, saleId, clientId, amount, taxAmount, totalAmount, status, deliveryDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO purchase_orders (number, saleId, clientId, amount, taxAmount, totalAmount, deliveryDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       const insertItem = db.prepare(`
@@ -82,7 +82,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         purchaseOrder.amount,
         totalTaxAmount,
         purchaseOrder.totalAmount,
-        purchaseOrder.status,
         purchaseOrder.deliveryDate
       );
       
@@ -120,59 +119,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
-  ipcMain.handle("update-purchase-order-status", async (event, id, status) => {
-    try {
-      // Get the current purchase order to check if we need to update stock
-      const currentPurchaseOrder = db.prepare("SELECT * FROM purchase_orders WHERE id = ?").get(id);
-      
-      // Update the purchase order status
-      const stmt = db.prepare("UPDATE purchase_orders SET status = ? WHERE id = ?");
-      stmt.run(status, id);
-      
-      // If the status is being changed to "Livrée" and wasn't already "Livrée", update the stock
-      if (status === "Livrée" && currentPurchaseOrder.status !== "Livrée") {
-        // Get purchase order items
-        const items = db.prepare("SELECT * FROM purchase_order_items WHERE purchaseOrderId = ?").all(id);
-        
-        // Update product stock for each item (add the quantity that was ordered)
-        const updateStockStmt = db.prepare(`
-          UPDATE products 
-          SET stock = stock + ? 
-          WHERE id = ? AND category != 'Service'
-        `);
-        
-        // Create stock movement records for the addition
-        const insertMovementStmt = db.prepare(`
-          INSERT INTO stock_movements (
-            productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const item of items) {
-          // Only update stock for non-service products
-          updateStockStmt.run(item.quantity, item.productId);
-          
-          // Create stock movement record for the addition
-          insertMovementStmt.run(
-            item.productId,
-            item.productName,
-            item.quantity,
-            'IN',
-            'purchase_order',
-            id,
-            `PO-${id}`, 
-            'Bon de commande livré'
-          );
-        }
-      }
-      
-      notifyDataChange("purchase-orders", "update", { id, status });
-      return { id, status };
-    } catch (error) {
-      console.error("Error updating purchase order status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut du bon de commande");
-    }
-  });
+  // Removed update-purchase-order-status handler
   
   ipcMain.handle("generate-purchase-order-from-sale", async (event, saleId, deliveryDate) => {
     try {
@@ -231,14 +178,13 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         amount: sale.totalAmount - totalTaxAmount,
         taxAmount: totalTaxAmount,
         totalAmount: sale.totalAmount,
-        status: "En attente",
         deliveryDate: deliveryDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
       };
       
       // Insert the purchase order
       const insertPurchaseOrder = db.prepare(`
-        INSERT INTO purchase_orders (number, saleId, clientId, amount, taxAmount, totalAmount, status, deliveryDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO purchase_orders (number, saleId, clientId, amount, taxAmount, totalAmount, deliveryDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       const result = insertPurchaseOrder.run(
@@ -248,7 +194,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         purchaseOrder.amount,
         purchaseOrder.taxAmount,
         purchaseOrder.totalAmount,
-        purchaseOrder.status,
         purchaseOrder.deliveryDate
       );
       

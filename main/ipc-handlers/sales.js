@@ -5,8 +5,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       try {
         // Insert sale
         const saleStmt = db.prepare(`
-          INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, fodecAmount, status, saleDate) 
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, fodecAmount, saleDate) 
+          VALUES (?, ?, ?, ?, ?, ?)
         `);
         const saleResult = saleStmt.run(
           saleData.clientId,
@@ -14,7 +14,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           saleData.taxAmount,
           saleData.discountAmount || 0,
           saleData.fodecAmount || 0, // New FODEC amount
-          saleData.status || "Confirmé",
           saleData.saleDate || new Date().toISOString()
         );
         const saleId = saleResult.lastInsertRowid;
@@ -164,103 +163,48 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
-  ipcMain.handle("update-sale-status", async (event, id, status) => {
-    try {
-      // Get the current sale to check if we need to return stock
-      const currentSale = db.prepare("SELECT * FROM sales WHERE id = ?").get(id);
-      
-      // Update the sale status
-      const stmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
-      stmt.run(status, id);
-      
-      // If the status is being changed to "Annulée" and wasn't already "Annulée", return the stock
-      if (status === "Annulée" && currentSale.status !== "Annulée") {
-        // Get sale items
-        const items = db.prepare("SELECT * FROM sale_items WHERE saleId = ?").all(id);
-        
-        // Return stock for each item (add back the quantity that was deducted)
-        const updateStockStmt = db.prepare(`
-          UPDATE products 
-          SET stock = stock + ? 
-          WHERE id = ? AND category != 'Service'
-        `);
-        
-        // Create stock movement records for the return
-        const insertMovementStmt = db.prepare(`
-          INSERT INTO stock_movements (
-            productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const item of items) {
-          // Only return stock for non-service products
-          updateStockStmt.run(item.quantity, item.productId);
-          
-          // Create stock movement record for the return
-          insertMovementStmt.run(
-            item.productId,
-            item.productName,
-            item.quantity,
-            'IN',
-            'sale_cancellation',
-            id,
-            `SALE-${id}`, 
-            'Vente annulée'
-          );
-        }
-      }
-      
-      notifyDataChange("sales", "update", { id, status });
-      return { id, status };
-    } catch (error) {
-      console.error("Error updating sale status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut de vente");
-    }
-  });
+  // Removed update-sale-status handler
 
   ipcMain.handle("delete-sale", async (event, id) => {
     try {
-      // First check if sale exists and get its status
+      // First check if sale exists
       const sale = db.prepare("SELECT * FROM sales WHERE id = ?").get(id);
       if (!sale) {
         throw new Error("Vente non trouvée");
       }
 
-      // If sale is not already cancelled, we should cancel it first to return stock
-      if (sale.status !== "Annulée") {
-        // Get sale items
-        const items = db.prepare("SELECT * FROM sale_items WHERE saleId = ?").all(id);
+      // Get sale items
+      const items = db.prepare("SELECT * FROM sale_items WHERE saleId = ?").all(id);
+      
+      // Return stock for each item (add back the quantity that was deducted)
+      const updateStockStmt = db.prepare(`
+        UPDATE products 
+        SET stock = stock + ? 
+        WHERE id = ? AND category != 'Service'
+      `);
+      
+      // Create stock movement records for the return
+      const insertMovementStmt = db.prepare(`
+        INSERT INTO stock_movements (
+          productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const item of items) {
+        // Only return stock for non-service products
+        updateStockStmt.run(item.quantity, item.productId);
         
-        // Return stock for each item (add back the quantity that was deducted)
-        const updateStockStmt = db.prepare(`
-          UPDATE products 
-          SET stock = stock + ? 
-          WHERE id = ? AND category != 'Service'
-        `);
-        
-        // Create stock movement records for the return
-        const insertMovementStmt = db.prepare(`
-          INSERT INTO stock_movements (
-            productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const item of items) {
-          // Only return stock for non-service products
-          updateStockStmt.run(item.quantity, item.productId);
-          
-          // Create stock movement record for the return
-          insertMovementStmt.run(
-            item.productId,
-            item.productName,
-            item.quantity,
-            'IN',
-            'sale_cancellation',
-            id,
-            `SALE-${id}`, 
-            'Vente annulée'
-          );
-        }
+        // Create stock movement record for the return
+        insertMovementStmt.run(
+          item.productId,
+          item.productName,
+          item.quantity,
+          'IN',
+          'sale_cancellation',
+          id,
+          `SALE-${id}`, 
+          'Vente annulée'
+        );
       }
 
       // Delete sale items first (due to foreign key constraint)

@@ -107,7 +107,7 @@ export default function SaleForm(props: SaleFormProps) {
         taxAmount: taxAmount,
         discountAmount: 0, // Removed global discount
         finalAmount: finalTotal,
-        status: "Confirmé",
+        // Removed status field
         saleDate: new Date().toISOString(),
         items: lineItems.map(item => ({
           productId: item.productId,

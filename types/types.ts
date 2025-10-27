@@ -80,7 +80,7 @@ export interface Sale {
   discountAmount?: number;
   fodecAmount?: number; // New FODEC tax amount
   finalAmount?: number;
-  status: string;
+  // Removed status field
   saleDate: string;
   items?: SaleItem[];
 }
@@ -107,7 +107,7 @@ export interface SupplierOrder {
   supplierAddress?: string;
   totalAmount: number;
   taxAmount: number;
-  status: string;
+  // Removed status field
   orderDate: string;
   deliveryDate?: string;
   items?: SupplierOrderItem[];
@@ -141,7 +141,7 @@ export interface SupplierInvoice {
   issueDate: string;
   dueDate?: string;
   paymentDate?: string;
-  status: string;
+  // Removed status field
   items?: SupplierInvoiceItem[];
 }
 
@@ -173,7 +173,7 @@ export interface Invoice {
   totalAmount: number;
   issueDate: string;
   dueDate: string;
-  status: InvoiceStatus;
+  // Removed status field
   items: InvoiceItem[];
   notes?: string;
   paymentTerms?: string;
@@ -205,7 +205,7 @@ export interface Quote {
   issueDate: string;
   dueDate: string;
   paymentTerms?: string;
-  status: "En attente" | "Accepté" | "Refusé" | "Envoyé" | "Brouillon";
+  // Removed status field
   items: LineItem[];
   notes?: string;
 }
@@ -225,7 +225,7 @@ export interface DashboardStats {
     client: string;
     amount: number;
     date: string;
-    status: string;
+    // Removed status field
   }>;
   salesByMonth: Array<{
     month: string;
@@ -303,7 +303,7 @@ export interface CreditNote {
   reason: string;
   issueDate: string;
   dueDate?: string;
-  status: "En attente" | "Confirmée" | "Annulée";
+  // Removed status field
   items: CreditNoteItem[];
   notes?: string;
   createdAt: string;
@@ -335,7 +335,7 @@ export interface PurchaseOrder {
   amount: number;
   taxAmount: number;
   totalAmount: number;
-  status: "En attente" | "Confirmée" | "Livrée" | "Annulée";
+  // Removed status field
   orderDate: string;
   deliveryDate?: string;
   items: PurchaseOrderItem[];

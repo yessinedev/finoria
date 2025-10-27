@@ -3,20 +3,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   FileText,
-  Download,
-  Eye,
   Plus,
   AlertCircle,
-  Clock,
-  CheckCircle,
-  XCircle,
   Filter,
+  Eye,
+  Download,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -25,7 +21,18 @@ import type { PurchaseOrder, Sale } from "@/types/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { StatusDropdown } from "@/components/common/StatusDropdown";
+import { pdf } from "@react-pdf/renderer";
+import { PurchaseOrderPDFDocument } from "./purchase-order-pdf";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function PurchaseOrders() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -38,6 +45,7 @@ export default function PurchaseOrders() {
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [generatingPDF, setGeneratingPDF] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Form state for creating purchase orders
@@ -68,6 +76,8 @@ export default function PurchaseOrders() {
 
   const {
     data: filteredPurchaseOrders,
+    searchTerm: tableSearchTerm,
+    setSearchTerm: setTableSearchTerm,
     handleSort,
     handleFilter,
     clearFilters,
@@ -78,23 +88,9 @@ export default function PurchaseOrders() {
   const columns = [
     {
       key: "number" as keyof PurchaseOrder,
-      label: "N° Bon de commande",
+      label: "Numéro",
       sortable: true,
       filterable: true,
-      render: (value: string) => (
-        <div className="flex items-center gap-1">
-          <FileText className="h-4 w-4" />
-          <span className="font-mono font-medium text-primary">{value}</span>
-        </div>
-      ),
-    },
-    {
-      key: "saleId" as keyof PurchaseOrder,
-      label: "Vente d'origine",
-      sortable: true,
-      render: (value: number, purchaseOrder: PurchaseOrder) => (
-        <span className="font-mono font-medium">VTE-{value}</span>
-      ),
     },
     {
       key: "clientName" as keyof PurchaseOrder,
@@ -164,55 +160,20 @@ export default function PurchaseOrders() {
     }
   };
 
-  const getStatusVariant = (status: PurchaseOrder["status"]) => {
-    switch (status) {
-      case "Livrée":
-        return "default";
-      case "Confirmée":
-        return "secondary";
-      case "En attente":
-        return "outline";
-      case "Annulée":
-        return "destructive";
-      default:
-        return "secondary";
-    }
-  };
-
-  const getStatusIcon = (status: PurchaseOrder["status"]) => {
-    switch (status) {
-      case "Livrée":
-        return <CheckCircle className="h-3 w-3" />;
-      case "Confirmée":
-        return <Clock className="h-3 w-3" />;
-      case "En attente":
-        return null;
-      case "Annulée":
-        return <XCircle className="h-3 w-3" />;
-      default:
-        return null;
-    }
-  };
-
   const handleViewPurchaseOrder = async (purchaseOrder: PurchaseOrder) => {
     // If the purchase order doesn't have items, fetch them
-    if (!purchaseOrder.items || !Array.isArray(purchaseOrder.items) || purchaseOrder.items.length === 0) {
+    if (!purchaseOrder.items || purchaseOrder.items.length === 0) {
       try {
         const itemsResult = await db.purchaseOrders.getItems(purchaseOrder.id);
         if (itemsResult.success) {
-          const updatedPurchaseOrder = {
+          setSelectedPurchaseOrder({
             ...purchaseOrder,
-            items: itemsResult.data || []
-          };
-          setSelectedPurchaseOrder(updatedPurchaseOrder);
+            items: itemsResult.data || [],
+          });
         } else {
-          // If fetching items fails, still show the purchase order without items
           setSelectedPurchaseOrder(purchaseOrder);
-          console.error("Error fetching purchase order items:", itemsResult.error);
         }
       } catch (error) {
-        console.error("Error fetching purchase order items:", error);
-        // Still show the purchase order without items
         setSelectedPurchaseOrder(purchaseOrder);
       }
     } else {
@@ -222,11 +183,36 @@ export default function PurchaseOrders() {
   };
 
   const handleDownloadPurchaseOrder = async (purchaseOrder: PurchaseOrder) => {
-    // For now, we'll just show a toast since we don't have a PDF implementation yet
-    toast({
-      title: "Téléchargement",
-      description: "La fonction de téléchargement sera implémentée dans une prochaine version.",
-    });
+    setGeneratingPDF(purchaseOrder.id);
+    try {
+      // If the purchase order doesn't have items, we need to add them
+      const purchaseOrderWithItems = {
+        ...purchaseOrder,
+        items: purchaseOrder.items || [],
+      };
+      
+      const blob = await pdf(<PurchaseOrderPDFDocument purchaseOrder={purchaseOrderWithItems} companySettings={companySettings} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bon-de-commande-${purchaseOrder.number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setError("Erreur lors de la génération du PDF");
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la génération du PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPDF(null);
+    }
   };
 
   const handleCreatePurchaseOrder = async () => {
@@ -265,49 +251,8 @@ export default function PurchaseOrders() {
     }
   };
 
-  const handleStatusChange = async (purchaseOrderId: number, newStatus: string) => {
-    try {
-      const result = await db.purchaseOrders.updateStatus(purchaseOrderId, newStatus);
-      if (result.success) {
-        await loadData();
-        toast({
-          title: "Succès",
-          description: "Statut mis à jour avec succès",
-        });
-      } else {
-        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du statut",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Calculate statistics
-  const totalAmount = filteredPurchaseOrders.reduce((sum, purchaseOrder) => sum + purchaseOrder.totalAmount, 0);
-  const deliveredAmount = filteredPurchaseOrders
-    .filter((purchaseOrder) => purchaseOrder.status === "Livrée")
-    .reduce((sum, purchaseOrder) => sum + purchaseOrder.totalAmount, 0);
-  const pendingAmount = filteredPurchaseOrders
-    .filter((purchaseOrder) => purchaseOrder.status === "En attente")
-    .reduce((sum, purchaseOrder) => sum + purchaseOrder.totalAmount, 0);
-
   const renderActions = (purchaseOrder: PurchaseOrder) => (
     <div className="flex justify-end gap-2 items-center">
-      <StatusDropdown
-        currentValue={purchaseOrder.status}
-        options={[
-          { value: "En attente", label: "En attente", variant: "secondary" },
-          { value: "Confirmée", label: "Confirmée", variant: "default" },
-          { value: "Livrée", label: "Livrée", variant: "default" },
-          { value: "Annulée", label: "Annulée", variant: "destructive" },
-        ]}
-        onStatusChange={(newStatus) => handleStatusChange(purchaseOrder.id, newStatus)}
-      />
-      
       <Button variant="outline" size="sm" onClick={() => handleViewPurchaseOrder(purchaseOrder)}>
         <Eye className="h-4 w-4" />
       </Button>
@@ -316,11 +261,19 @@ export default function PurchaseOrders() {
         variant="outline"
         size="sm"
         onClick={() => handleDownloadPurchaseOrder(purchaseOrder)}
+        disabled={generatingPDF === purchaseOrder.id}
       >
-        <Download className="h-4 w-4" />
+        {generatingPDF === purchaseOrder.id ? (
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : (
+          <Download className="h-4 w-4" />
+        )}
       </Button>
     </div>
   );
+
+  // Calculate statistics
+  const totalAmount = filteredPurchaseOrders.reduce((sum, purchaseOrder) => sum + purchaseOrder.totalAmount, 0);
 
   if (loading) {
     return (
@@ -366,30 +319,6 @@ export default function PurchaseOrders() {
                 <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalAmount)}</p>
               </div>
               <FileText className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-600 font-medium">Montant livré</p>
-                <p className="text-2xl font-bold text-green-900">{formatCurrency(deliveredAmount)}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-orange-600 font-medium">En attente</p>
-                <p className="text-2xl font-bold text-orange-900">{formatCurrency(pendingAmount)}</p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
@@ -449,22 +378,22 @@ export default function PurchaseOrders() {
             data={filteredPurchaseOrders}
             columns={columns}
             sortConfig={sortConfig}
-            searchTerm={searchTerm}
+            searchTerm={tableSearchTerm}
             filters={filters}
             onSort={handleSort}
-            onSearch={setSearchTerm}
+            onSearch={setTableSearchTerm}
             onFilter={handleFilter}
             onClearFilters={clearFilters}
             loading={loading}
             emptyMessage="Aucun bon de commande trouvé"
-            actions={renderActions}
+            actions={(purchaseOrder) => renderActions(purchaseOrder)}
           />
         </CardContent>
       </Card>
 
-      {/* Create Purchase Order Modal */}
+      {/* Create Purchase Order Dialog */}
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -481,13 +410,11 @@ export default function PurchaseOrders() {
                 className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Sélectionnez une vente</option>
-                {sales
-                  .filter(sale => sale.status !== "Annulée")
-                  .map((sale) => (
-                    <option key={sale.id} value={sale.id}>
-                      VTE-{sale.id} - {sale.clientName} ({formatCurrency(sale.totalAmount + sale.taxAmount)})
-                    </option>
-                  ))}
+                {sales.map((sale) => (
+                  <option key={sale.id} value={sale.id}>
+                    VTE-{sale.id} - {sale.clientName} ({formatCurrency(sale.totalAmount + sale.taxAmount)})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -542,9 +469,6 @@ export default function PurchaseOrders() {
                       <p className="text-muted-foreground">Date de livraison prévue: {new Date(selectedPurchaseOrder.deliveryDate).toLocaleDateString("fr-FR")}</p>
                     )}
                   </div>
-                  <Badge variant={getStatusVariant(selectedPurchaseOrder.status)}>
-                    {selectedPurchaseOrder.status}
-                  </Badge>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
