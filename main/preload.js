@@ -99,6 +99,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createStockMovement: (movement) => ipcRenderer.invoke("create-stock-movement", movement),
   getStockMovementsByProduct: (productId) => ipcRenderer.invoke("get-stock-movements-by-product", productId),
 
+  // --- TVA API ---
+  getTvaRates: () => ipcRenderer.invoke("get-tva-rates"),
+  createTvaRate: (tvaRate) => ipcRenderer.invoke("create-tva-rate", tvaRate),
+  updateTvaRate: (id, tvaRate) => ipcRenderer.invoke("update-tva-rate", id, tvaRate),
+  deleteTvaRate: (id) => ipcRenderer.invoke("delete-tva-rate", id),
+  getTvaRate: (id) => ipcRenderer.invoke("get-tva-rate", id),
+
 
   // --- Enterprise Settings API ---
   getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),

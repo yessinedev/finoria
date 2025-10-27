@@ -60,6 +60,12 @@ export const productSchema = z.object({
   purchasePrice: z.number().min(0, "Le prix d'achat doit être positif").optional(),
   category: z.string().min(1, "La catégorie est requise"),
   stock: z.number().min(0, "Le stock doit être positif ou nul"),
+  reference: z.string().optional(),
+  tvaId: z.number().optional(),
+  sellingPriceHT: z.number().min(0, "Le prix de vente HT doit être positif").optional(),
+  sellingPriceTTC: z.number().min(0, "Le prix de vente TTC doit être positif").optional(),
+  purchasePriceHT: z.number().min(0, "Le prix d'achat HT doit être positif").optional(),
+  weightedAverageCostHT: z.number().min(0, "Le coût unitaire moyen pondéré HT doit être positif").optional(),
 });
 
 // Client validation schema

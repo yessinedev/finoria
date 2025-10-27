@@ -6,7 +6,7 @@ import { FormField } from "@/components/common/FormField";
 import { EntitySelect } from "@/components/common/EntitySelect";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import type { Category, Product } from "@/types/types";
+import type { Category, Product, TVA } from "@/types/types";
 import { productSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
 
@@ -16,6 +16,7 @@ interface ProductFormModalProps {
   onSubmit: (formData: any, editingProduct: Product | null) => Promise<void>;
   editingProduct: Product | null;
   categories: Category[];
+  tvaRates: TVA[];
   saving: boolean;
   error: string | null;
   formData: any;
@@ -29,6 +30,7 @@ export default function ProductFormModal({
   onSubmit,
   editingProduct,
   categories,
+  tvaRates,
   saving,
   error,
   formData,
@@ -53,6 +55,12 @@ export default function ProductFormModal({
         category: formData.category,
         stock: formData.stock,
         isActive: formData.isActive,
+        reference: formData.reference,
+        tvaId: formData.tvaId,
+        sellingPriceHT: formData.sellingPriceHT,
+        sellingPriceTTC: formData.sellingPriceTTC,
+        purchasePriceHT: formData.purchasePriceHT,
+        weightedAverageCostHT: formData.weightedAverageCostHT,
       };
       
       // Only include purchasePrice in validation if it's provided
@@ -168,6 +176,109 @@ export default function ProductFormModal({
               onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
               error={errors.stock}
             />
+          </div>
+          
+          {/* New VAT and pricing fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              label="Référence"
+              id="reference"
+              value={formData.reference || ""}
+              onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+              error={errors.reference}
+            />
+            <EntitySelect
+              label="Taux de TVA"
+              id="tvaId"
+              value={formData.tvaId || ""}
+              onChange={(value) => setFormData({ ...formData, tvaId: value ? Number(value) : undefined })}
+              options={tvaRates}
+              getOptionLabel={(tva) => `${tva.rate}%`}
+              getOptionValue={(tva) => tva.id.toString()}
+              error={errors.tvaId}
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="sellingPriceHT">Prix de vente HT (DNT)</Label>
+              <Input
+                id="sellingPriceHT"
+                type="number"
+                step="0.001"
+                value={formData.sellingPriceHT?.toString() || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || value === null) {
+                    setFormData({ ...formData, sellingPriceHT: undefined });
+                  } else {
+                    const numValue = Number.parseFloat(value);
+                    setFormData({ ...formData, sellingPriceHT: isNaN(numValue) ? undefined : numValue });
+                  }
+                }}
+              />
+              {errors.sellingPriceHT && <div className="text-xs text-red-600">{errors.sellingPriceHT}</div>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sellingPriceTTC">Prix de vente TTC (DNT)</Label>
+              <Input
+                id="sellingPriceTTC"
+                type="number"
+                step="0.001"
+                value={formData.sellingPriceTTC?.toString() || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || value === null) {
+                    setFormData({ ...formData, sellingPriceTTC: undefined });
+                  } else {
+                    const numValue = Number.parseFloat(value);
+                    setFormData({ ...formData, sellingPriceTTC: isNaN(numValue) ? undefined : numValue });
+                  }
+                }}
+              />
+              {errors.sellingPriceTTC && <div className="text-xs text-red-600">{errors.sellingPriceTTC}</div>}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="purchasePriceHT">Prix d'achat HT (DNT)</Label>
+              <Input
+                id="purchasePriceHT"
+                type="number"
+                step="0.001"
+                value={formData.purchasePriceHT?.toString() || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || value === null) {
+                    setFormData({ ...formData, purchasePriceHT: undefined });
+                  } else {
+                    const numValue = Number.parseFloat(value);
+                    setFormData({ ...formData, purchasePriceHT: isNaN(numValue) ? undefined : numValue });
+                  }
+                }}
+              />
+              {errors.purchasePriceHT && <div className="text-xs text-red-600">{errors.purchasePriceHT}</div>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="weightedAverageCostHT">Coût unitaire moyen pondéré HT (DNT)</Label>
+              <Input
+                id="weightedAverageCostHT"
+                type="number"
+                step="0.001"
+                value={formData.weightedAverageCostHT?.toString() || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || value === null) {
+                    setFormData({ ...formData, weightedAverageCostHT: undefined });
+                  } else {
+                    const numValue = Number.parseFloat(value);
+                    setFormData({ ...formData, weightedAverageCostHT: isNaN(numValue) ? undefined : numValue });
+                  }
+                }}
+              />
+              {errors.weightedAverageCostHT && <div className="text-xs text-red-600">{errors.weightedAverageCostHT}</div>}
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <input

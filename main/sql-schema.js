@@ -52,9 +52,16 @@ function createTables(db) {
       category TEXT NOT NULL,
       stock INTEGER DEFAULT 0,
       isActive BOOLEAN DEFAULT 1,
+      reference TEXT,
+      tvaId INTEGER,
+      sellingPriceHT REAL,
+      sellingPriceTTC REAL,
+      purchasePriceHT REAL,
+      weightedAverageCostHT REAL,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (category) REFERENCES categories(name)
+      FOREIGN KEY (category) REFERENCES categories(name),
+      FOREIGN KEY (tvaId) REFERENCES tva(id)
     )
   `);
 
@@ -265,6 +272,17 @@ function createTables(db) {
     )
   `);
 
+  // TVA table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tva (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rate REAL NOT NULL,
+      isActive BOOLEAN DEFAULT 1,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Client payments table
   db.exec(`
     CREATE TABLE IF NOT EXISTS client_payments (
@@ -387,6 +405,61 @@ function createTables(db) {
     // Column might already exist, which is fine
     if (!error.message.includes("duplicate column name")) {
       console.error("Error adding quoteId column to invoices:", error);
+    }
+  }
+  
+  // Add new columns to products table if they don't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN reference TEXT");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding reference column to products:", error);
+    }
+  }
+  
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN tvaId INTEGER REFERENCES tva(id)");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding tvaId column to products:", error);
+    }
+  }
+  
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN sellingPriceHT REAL");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding sellingPriceHT column to products:", error);
+    }
+  }
+  
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN sellingPriceTTC REAL");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding sellingPriceTTC column to products:", error);
+    }
+  }
+  
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN purchasePriceHT REAL");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding purchasePriceHT column to products:", error);
+    }
+  }
+  
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN weightedAverageCostHT REAL");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding weightedAverageCostHT column to products:", error);
     }
   }
   

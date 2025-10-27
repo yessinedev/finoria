@@ -84,6 +84,14 @@ interface ElectronAPI {
   generatePurchaseOrderFromSale: (saleId: number, deliveryDate: string) => Promise<any>;
   getPurchaseOrderItems: (purchaseOrderId: number) => Promise<any[]>;
 
+  // TVA
+  getTvaRates: () => Promise<any[]>;
+  createTvaRate: (tvaRate: any) => Promise<any>;
+  updateTvaRate: (id: number, tvaRate: any) => Promise<any>;
+  deleteTvaRate: (id: number) => Promise<boolean>;
+  getTvaRate: (id: number) => Promise<any>;
+
+
   // Stock Movements
   getStockMovements: () => Promise<any[]>;
   createStockMovement: (movement: any) => Promise<any>;
@@ -575,6 +583,35 @@ class DatabaseService {
           window.electronAPI?.getPurchaseOrderItems(purchaseOrderId) ||
           Promise.resolve([]),
         "getPurchaseOrderItems"
+      ),
+  };
+
+  // --- TVA API ---
+  tva = {
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getTvaRates() || Promise.resolve([]),
+        "getTvaRates"
+      ),
+    create: (tvaRate: any) =>
+      this.handle(
+        () => window.electronAPI?.createTvaRate(tvaRate) || Promise.resolve(null),
+        "createTvaRate"
+      ),
+    update: (id: number, tvaRate: any) =>
+      this.handle(
+        () => window.electronAPI?.updateTvaRate(id, tvaRate) || Promise.resolve(null),
+        "updateTvaRate"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteTvaRate(id) || Promise.resolve(false),
+        "deleteTvaRate"
+      ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getTvaRate(id) || Promise.resolve(null),
+        "getTvaRate"
       ),
   };
 

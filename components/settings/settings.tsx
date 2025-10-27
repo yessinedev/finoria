@@ -18,10 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
+import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle, Percent } from "lucide-react";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
+import VatManagement from "./VatManagement";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -547,6 +548,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* VAT Management */}
+          <VatManagement />
 
           {/* Save Button */}
         </div>

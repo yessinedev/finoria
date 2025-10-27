@@ -5,13 +5,13 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag } from "lucide-react"
+import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag, Percent } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import ProductFormModal from "@/components/products/ProductFormModal"
 import CategoryManagerModal from "@/components/category/CategoryManagerModal"
 import { db } from "@/lib/database"
-import type { Product, Category } from "@/types/types"
+import type { Product, Category, TVA } from "@/types/types"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -27,6 +27,7 @@ import Link from "next/link"
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [tvaRates, setTvaRates] = useState<TVA[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -45,6 +46,12 @@ export default function Products() {
     category: "",
     stock: 0,
     isActive: true,
+    reference: "",
+    tvaId: undefined,
+    sellingPriceHT: undefined,
+    sellingPriceTTC: undefined,
+    purchasePriceHT: undefined,
+    weightedAverageCostHT: undefined,
   })
 
   // Data table configuration
@@ -143,7 +150,11 @@ export default function Products() {
     setError(null)
 
     try {
-      const [productsResult, categoriesResult] = await Promise.all([db.products.getAll(), db.categories.getAll()])
+      const [productsResult, categoriesResult, tvaResult] = await Promise.all([
+        db.products.getAll(), 
+        db.categories.getAll(),
+        db.tva.getAll()
+      ])
 
       if (productsResult.success) {
         setProducts(productsResult.data || [])
@@ -155,6 +166,12 @@ export default function Products() {
         setCategories(categoriesResult.data || [])
       } else {
         setError(categoriesResult.error || "Erreur lors du chargement des catégories")
+      }
+      
+      if (tvaResult.success) {
+        setTvaRates(tvaResult.data || [])
+      } else {
+        setError(tvaResult.error || "Erreur lors du chargement des taux de TVA")
       }
     } catch (error) {
       setError("Erreur inattendue lors du chargement")
@@ -203,7 +220,21 @@ export default function Products() {
   }
 
   const resetForm = () => {
-    setFormData({ name: "", description: "", price: 0, purchasePrice: undefined, category: "", stock: 0, isActive: true })
+    setFormData({ 
+      name: "", 
+      description: "", 
+      price: 0, 
+      purchasePrice: undefined, 
+      category: "", 
+      stock: 0, 
+      isActive: true,
+      reference: "",
+      tvaId: undefined,
+      sellingPriceHT: undefined,
+      sellingPriceTTC: undefined,
+      purchasePriceHT: undefined,
+      weightedAverageCostHT: undefined,
+    })
     setEditingProduct(null)
     setIsDialogOpen(false)
     setError(null)
@@ -219,6 +250,12 @@ export default function Products() {
       category: product.category,
       stock: product.stock,
       isActive: product.isActive,
+      reference: product.reference || "",
+      tvaId: product.tvaId,
+      sellingPriceHT: product.sellingPriceHT,
+      sellingPriceTTC: product.sellingPriceTTC,
+      purchasePriceHT: product.purchasePriceHT,
+      weightedAverageCostHT: product.weightedAverageCostHT,
     })
     setIsDialogOpen(true)
   }
@@ -321,6 +358,7 @@ export default function Products() {
             onSubmit={handleProductFormSubmit}
             editingProduct={editingProduct}
             categories={categories}
+            tvaRates={tvaRates}
             saving={saving}
             error={error}
             formData={formData}

@@ -78,6 +78,7 @@ export default function SupplierOrders() {
     key: 'orderDate', 
     direction: 'desc' 
   });
+  const [companySettings, setCompanySettings] = useState<any>(null);
   
   // Inline editing state
   const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
@@ -116,6 +117,7 @@ export default function SupplierOrders() {
     loadOrders();
     loadSuppliers();
     loadProducts();
+    loadCompanySettings();
   }, []);
 
   useEffect(() => {
@@ -197,6 +199,17 @@ export default function SupplierOrders() {
     }
   };
 
+  const loadCompanySettings = async () => {
+    try {
+      const settingsResult = await db.settings.get();
+      if (settingsResult.success && settingsResult.data) {
+        setCompanySettings(settingsResult.data);
+      }
+    } catch (error) {
+      console.error("Error loading company settings:", error);
+    }
+  };
+
   const validateForm = () => {
     try {
       // Validate main form data
@@ -247,8 +260,9 @@ export default function SupplierOrders() {
 
     try {
       // Calculate totals
+      const vatRate = companySettings?.tvaRate || 19;
       const subtotal = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * 0.19; // 19% VAT
+      const taxAmount = subtotal * (vatRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       const orderData = {
@@ -325,8 +339,9 @@ export default function SupplierOrders() {
     
     try {
       // Calculate totals
+      const vatRate = companySettings?.tvaRate || 19;
       const subtotal = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * 0.19; // 19% VAT
+      const taxAmount = subtotal * (vatRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       const orderData = {
@@ -896,6 +911,24 @@ export default function SupplierOrders() {
 
 
 
+              {/* Totals Section */}
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Sous-total:</span>
+                  <span>{orderItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(3)} DNT</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>TVA ({companySettings?.tvaRate || 19}%):</span>
+                  <span>{(orderItems.reduce((sum, item) => sum + item.totalPrice, 0) * (companySettings?.tvaRate || 19) / 100).toFixed(3)} DNT</span>
+                </div>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between font-semibold">
+                    <span>Total TTC:</span>
+                    <span>{(orderItems.reduce((sum, item) => sum + item.totalPrice, 0) * (1 + (companySettings?.tvaRate || 19) / 100)).toFixed(3)} DNT</span>
+                  </div>
+                </div>
+              </div>
+              
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"

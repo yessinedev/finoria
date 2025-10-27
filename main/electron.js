@@ -155,7 +155,8 @@ app.whenReady().then(async () => {
     "updates",
     "credit-notes",
     "purchase-orders",
-    "quote-to-invoice"
+    "quote-to-invoice",
+    "tva"
   ].forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
   });

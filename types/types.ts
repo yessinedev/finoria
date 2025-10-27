@@ -7,6 +7,14 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface TVA {
+  id: number;
+  rate: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -16,6 +24,12 @@ export interface Product {
   category: string;
   stock: number;
   isActive: boolean;
+  reference?: string;
+  tvaId?: number;
+  sellingPriceHT?: number;
+  sellingPriceTTC?: number;
+  purchasePriceHT?: number;
+  weightedAverageCostHT?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -331,8 +331,9 @@ export default function SupplierInvoices() {
 
     try {
       // Calculate totals
+      const vatRate = companySettings?.tvaRate || 19;
       const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * 0.19; // 19% VAT
+      const taxAmount = subtotal * (vatRate / 100);
       const totalAmount = subtotal + taxAmount;
       
       const invoiceData = {
@@ -381,8 +382,9 @@ export default function SupplierInvoices() {
     
     try {
       // Calculate totals
+      const vatRate = companySettings?.tvaRate || 19;
       const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * 0.19; // 19% VAT
+      const taxAmount = subtotal * (vatRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       const invoiceData = {
@@ -971,6 +973,24 @@ Commande #{order.id} - {order.supplierName}
               </Table>
             </div>
 
+            {/* Totals Section */}
+            <div className="border-t pt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Sous-total:</span>
+                <span>{invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(3)} DNT</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>TVA ({companySettings?.tvaRate || 19}%):</span>
+                <span>{(invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0) * (companySettings?.tvaRate || 19) / 100).toFixed(3)} DNT</span>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between font-semibold">
+                  <span>Total TTC:</span>
+                  <span>{(invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0) * (1 + (companySettings?.tvaRate || 19) / 100)).toFixed(3)} DNT</span>
+                </div>
+              </div>
+            </div>
+                          
             <div className="flex justify-end space-x-2">
               <Button
                 type="button"
