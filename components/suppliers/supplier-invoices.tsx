@@ -110,7 +110,6 @@ export default function SupplierInvoices() {
     amount: 0,
     taxAmount: 0,
     totalAmount: 0,
-    status: "En attente",
     issueDate: new Date().toISOString().split("T")[0],
     dueDate: "",
     paymentDate: "",
@@ -470,7 +469,6 @@ export default function SupplierInvoices() {
       amount: 0,
       taxAmount: 0,
       totalAmount: 0,
-      status: "En attente",
       issueDate: new Date().toISOString().split("T")[0],
       dueDate: "",
       paymentDate: "",
@@ -512,7 +510,6 @@ export default function SupplierInvoices() {
       amount: invoice.amount,
       taxAmount: invoice.taxAmount,
       totalAmount: invoice.totalAmount,
-      status: invoice.status,
       issueDate: invoice.issueDate.split("T")[0],
       dueDate: invoice.dueDate ? invoice.dueDate.split("T")[0] : "",
       paymentDate: invoice.paymentDate ? invoice.paymentDate.split("T")[0] : "",
@@ -538,20 +535,7 @@ export default function SupplierInvoices() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "En attente":
-        return <Badge variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">En attente</Badge>;
-      case "Payée":
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Payée</Badge>;
-      case "En retard":
-        return <Badge variant="destructive">En retard</Badge>;
-      case "Annulée":
-        return <Badge variant="destructive">Annulée</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+  // Status functionality removed
 
   const handleViewInvoice = (invoice: SupplierInvoice) => {
     setSelectedInvoice(invoice);
@@ -579,25 +563,7 @@ export default function SupplierInvoices() {
     }
   };
 
-  const handleStatusChange = async (invoiceId: number, newStatus: string) => {
-    try {
-      const result = await db.supplierInvoices.updateStatus(invoiceId, newStatus);
-      if (result.success) {
-        toast({
-          title: "Succès",
-          description: "Statut mis à jour avec succès",
-        });
-      } else {
-        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du statut",
-        variant: "destructive",
-      });
-    }
-  };
+  // Status functionality removed
 
   // Inline editing functions
   const startEditing = (invoiceId: number, field: string, value: string) => {
@@ -697,15 +663,9 @@ export default function SupplierInvoices() {
 
   // Calculate statistics
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-  const paidAmount = filteredInvoices
-    .filter((invoice) => invoice.status === "Payée")
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-  const pendingAmount = filteredInvoices
-    .filter((invoice) => invoice.status === "En attente")
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-  const overdueAmount = filteredInvoices
-    .filter((invoice) => invoice.status === "En retard")
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+  const paidAmount = 0; // Status functionality removed
+  const pendingAmount = 0; // Status functionality removed
+  const overdueAmount = 0; // Status functionality removed
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -834,23 +794,7 @@ Commande #{order.id} - {order.supplierName}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Statut</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="En attente">En attente</SelectItem>
-                  <SelectItem value="Payée">Payée</SelectItem>
-                  <SelectItem value="En retard">En retard</SelectItem>
-                  <SelectItem value="Annulée">Annulée</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Status functionality removed */}
 
             <div className="space-y-2">
               <Label>Articles</Label>
@@ -1074,7 +1018,7 @@ Commande #{order.id} - {order.supplierName}
               <p className="text-2xl font-bold text-orange-900">{formatCurrency(pendingAmount)}</p>
               <div className="flex items-center text-xs text-orange-600 mt-1">
                 <Clock className="h-3 w-3 mr-1" />
-                {invoices.filter((i) => i.status === "En attente").length} facture(s)
+                0 facture(s)
               </div>
             </div>
             <Clock className="h-8 w-8 text-orange-600" />
@@ -1088,7 +1032,7 @@ Commande #{order.id} - {order.supplierName}
               <p className="text-2xl font-bold text-red-900">{formatCurrency(overdueAmount)}</p>
               <div className="flex items-center text-xs text-red-600 mt-1">
                 <ArrowUpDown className="h-3 w-3 mr-1" />
-                {invoices.filter((i) => i.status === "En retard").length} facture(s)
+                0 facture(s)
               </div>
             </div>
             <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -1210,17 +1154,6 @@ Commande #{order.id} - {order.supplierName}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <StatusDropdown
-                        currentValue={invoice.status}
-                        options={[
-                          { value: "En attente", label: "En attente", variant: "secondary" },
-                          { value: "Payée", label: "Payée", variant: "default" },
-                          { value: "En retard", label: "En retard", variant: "destructive" },
-                          { value: "Annulée", label: "Annulée", variant: "outline" },
-                        ]}
-                        onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
-                      />
-                      
                       <Button
                         variant="outline"
                         size="sm"

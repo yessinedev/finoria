@@ -59,9 +59,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { supplierOrderSchema, SupplierOrderFormData } from "@/lib/validation/schemas";
+import { supplierOrderSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
-import { StatusDropdown } from "@/components/common/StatusDropdown";
 
 export default function SupplierOrders() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
@@ -97,7 +96,6 @@ export default function SupplierOrders() {
     orderNumber: "",
     totalAmount: 0,
     taxAmount: 0,
-    status: "En attente",
     orderDate: new Date().toISOString().split("T")[0],
     deliveryDate: "",
   });
@@ -285,10 +283,8 @@ export default function SupplierOrders() {
 
       const response = await db.supplierOrders.create(orderData);
       if (response.success && response.data) {
-        // Only update product stock if the order status is "Livrée"
-        // According to requirements, stock should only be updated when status is "Livrée"
-        if (formData.status === "Livrée") {
-          for (const item of orderItems) {
+        // Update product stock when creating order
+        for (const item of orderItems) {
             try {
               // Get current stock
               const stockResponse = await db.products.getStock(item.productId);
@@ -313,7 +309,6 @@ export default function SupplierOrders() {
               console.error(`Failed to update stock for product ${item.productId}:`, stockError);
             }
           }
-        }
         
         // Refresh orders to get the complete data with supplier information
         await loadOrders();
@@ -374,42 +369,8 @@ export default function SupplierOrders() {
 
       const response = await db.supplierOrders.update(currentOrder.id, orderData);
       if (response.success && response.data) {
-        // Check if status changed to "Livrée" and update stock if needed
-        const previousStatus = currentOrder.status;
-        const newStatus = formData.status;
-        
-        // If status changed to "Livrée", update stock
-        if (previousStatus !== "Livrée" && newStatus === "Livrée" && orderItems.length > 0) {
-          // Update product stock for each item in the order
-          for (const item of orderItems) {
-            try {
-              // Get current stock
-              const stockResponse = await db.products.getStock(item.productId);
-              const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
-              
-              // Update stock (add quantity from purchase order)
-              const newStock = currentStock + item.quantity;
-              await db.products.updateStock(item.productId, newStock);
-              
-              // Create stock movement record
-              await db.stockMovements.create({
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                movementType: 'IN',
-                sourceType: 'supplier_order',
-                sourceId: response.data.id,
-                reference: `Order #${response.data.id}`,
-                reason: 'Commande d\'achat livrée'
-              });
-            } catch (stockError) {
-              console.error(`Failed to update stock for product ${item.productId}:`, stockError);
-            }
-          }
-        }
-        
-        // Handle stock updates for order items when not related to status change
-        if (previousStatus !== "Livrée" && newStatus !== "Livrée" && orderItems.length > 0) {
+        // Handle stock updates for order items
+        if (orderItems.length > 0) {
           // Handle quantity changes for non-delivered orders
           // First, we need to get the original order to understand what changed
           const originalOrder = orders.find(o => o.id === currentOrder.id);
@@ -536,7 +497,6 @@ export default function SupplierOrders() {
       orderNumber: `PO-${Date.now()}`,
       totalAmount: 0,
       taxAmount: 0,
-      status: "En attente",
       orderDate: new Date().toISOString().split("T")[0],
       deliveryDate: "",
     });
@@ -560,7 +520,6 @@ export default function SupplierOrders() {
       orderNumber: order.orderNumber,
       totalAmount: order.totalAmount,
       taxAmount: order.taxAmount,
-      status: order.status,
       orderDate: order.orderDate.split("T")[0],
       deliveryDate: order.deliveryDate ? order.deliveryDate.split("T")[0] : "",
     });
@@ -585,20 +544,7 @@ export default function SupplierOrders() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "En attente":
-        return <Badge variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">En attente</Badge>;
-      case "Confirmée":
-        return <Badge variant="default">Confirmée</Badge>;
-      case "Livrée":
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Livrée</Badge>;
-      case "Annulée":
-        return <Badge variant="destructive">Annulée</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+  // Status functionality removed
 
   const addOrderItem = () => {
     if (!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0) return;
@@ -646,25 +592,7 @@ export default function SupplierOrders() {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  const handleStatusChange = async (orderId: number, newStatus: string) => {
-    try {
-      const result = await db.supplierOrders.updateStatus(orderId, newStatus);
-      if (result.success) {
-        toast({
-          title: "Succès",
-          description: "Statut mis à jour avec succès",
-        });
-      } else {
-        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du statut",
-        variant: "destructive",
-      });
-    }
-  };
+  // Status functionality removed
 
   // Inline editing functions
   const startEditing = (orderId: number, field: string, value: string) => {
@@ -709,8 +637,6 @@ export default function SupplierOrders() {
       });
     }
   };
-
-  
 
   return (
     <div className="p-6 space-y-6">
@@ -929,8 +855,6 @@ export default function SupplierOrders() {
                 </div>
               )}
 
-
-
               {/* Totals Section */}
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -1063,17 +987,7 @@ export default function SupplierOrders() {
                     {order.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2 items-center">
-                      <StatusDropdown
-                        currentValue={order.status}
-                        options={[
-                          { value: "En attente", label: "En attente", variant: "secondary" },
-                          { value: "Confirmée", label: "Confirmée", variant: "default" },
-                          { value: "Livrée", label: "Livrée", variant: "default" },
-                          { value: "Annulée", label: "Annulée", variant: "destructive" },
-                        ]}
-                        onStatusChange={(newStatus) => handleStatusChange(order.id, newStatus)}
-                      />
+                    <div className="flex space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
