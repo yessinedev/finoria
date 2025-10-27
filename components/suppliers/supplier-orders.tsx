@@ -113,6 +113,7 @@ export default function SupplierOrders() {
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [itemQuantity, setItemQuantity] = useState(1);
   const [itemUnitPrice, setItemUnitPrice] = useState(0);
+  const [itemDiscount, setItemDiscount] = useState(0); // Add discount state
 
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -522,6 +523,7 @@ export default function SupplierOrders() {
     setSelectedProduct(null);
     setItemQuantity(1);
     setItemUnitPrice(0);
+    setItemDiscount(0);
     setCurrentOrder(null);
     setErrors({});
     setItemErrors({});
@@ -545,6 +547,7 @@ export default function SupplierOrders() {
     setCurrentOrder(order);
     setErrors({});
     setItemErrors({});
+    setItemDiscount(0);
     setIsDialogOpen(true);
   };
 
@@ -570,7 +573,9 @@ export default function SupplierOrders() {
     const product = products.find(p => p.id === selectedProduct);
     if (!product) return;
 
-    const totalPrice = itemQuantity * itemUnitPrice;
+    // Calculate discounted price
+    const discountAmount = (itemUnitPrice * itemQuantity * itemDiscount) / 100;
+    const totalPrice = (itemUnitPrice * itemQuantity) - discountAmount;
 
     const newItem = {
       id: Date.now(), // Temporary ID for new items
@@ -578,7 +583,7 @@ export default function SupplierOrders() {
       productName: product.name,
       quantity: itemQuantity,
       unitPrice: itemUnitPrice,
-      discount: 0, // Default discount value
+      discount: itemDiscount, // Use the discount value
       totalPrice: parseFloat(totalPrice.toFixed(2)),
     };
 
@@ -586,6 +591,7 @@ export default function SupplierOrders() {
     setSelectedProduct(null);
     setItemQuantity(1);
     setItemUnitPrice(product.purchasePriceHT || 0);
+    setItemDiscount(0); // Reset discount to 0
     setItemErrors({}); // Clear item errors when adding new item
   };
 
@@ -810,10 +816,22 @@ export default function SupplierOrders() {
                       onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
                     />
                   </div>
+                  <div className="md:col-span-1">
+                    <Label htmlFor="itemDiscount">Remise %</Label>
+                    <Input
+                      id="itemDiscount"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={itemDiscount}
+                      onChange={(e) => setItemDiscount(Number(e.target.value) || 0)}
+                    />
+                  </div>
                   <div className="md:col-span-2">
                     <Label>Total</Label>
                     <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {(itemQuantity * itemUnitPrice).toFixed(3)} DNT
+                      {((itemQuantity * itemUnitPrice) - ((itemQuantity * itemUnitPrice * itemDiscount) / 100)).toFixed(3)} DNT
                     </div>
                   </div>
                   <div className="md:col-span-1">
@@ -838,6 +856,7 @@ export default function SupplierOrders() {
                         <TableHead>Produit</TableHead>
                         <TableHead className="w-20">Quantité</TableHead>
                         <TableHead className="w-24">Prix unit.</TableHead>
+                        <TableHead className="w-20">Remise %</TableHead>
                         <TableHead className="w-24">Total</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
@@ -848,6 +867,7 @@ export default function SupplierOrders() {
                           <TableCell className="font-medium">{item.productName}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
                           <TableCell>{item.unitPrice.toFixed(3)} DNT</TableCell>
+                          <TableCell>{item.discount.toFixed(2)}%</TableCell>
                           <TableCell>{item.totalPrice.toFixed(3)} DNT</TableCell>
                           <TableCell>
                             <Button

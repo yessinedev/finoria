@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
-import type { SupplierOrder, SupplierOrderItem } from "@/types/types";
+import type { PurchaseOrder, PurchaseOrderItem } from "@/types/types";
 import { formatCurrency, formatQuantity } from "@/lib/utils";
 
 const styles = StyleSheet.create({
@@ -139,7 +139,7 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString("fr-FR");
 }
 
-export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { purchaseOrder: SupplierOrder; companySettings?: any }) {
+export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { purchaseOrder: PurchaseOrder; companySettings?: any }) {
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -158,7 +158,7 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
             )}
           </View>
           <View>
-            <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{purchaseOrder.orderNumber}</Text>
+            <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{purchaseOrder.number}</Text>
             <Text style={styles.subtitle}>Date: {formatDate(purchaseOrder.orderDate)}</Text>
             {purchaseOrder.deliveryDate && (
               <Text style={styles.subtitle}>Livraison prévue: {formatDate(purchaseOrder.deliveryDate)}</Text>
@@ -179,12 +179,11 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Client */}
             <Text style={styles.cardTitle}>Destinataire</Text>
-            <Text style={styles.cardContent}>{purchaseOrder.supplierName}</Text>
-            {purchaseOrder.supplierCompany && <Text style={styles.cardContent}>{purchaseOrder.supplierCompany}</Text>}
-            {purchaseOrder.supplierAddress && <Text style={styles.cardContent}>{purchaseOrder.supplierAddress}</Text>
-}
-            {purchaseOrder.supplierPhone && <Text style={styles.cardContent}>{purchaseOrder.supplierPhone}</Text>}
-            {purchaseOrder.supplierEmail && <Text style={styles.cardContent}>{purchaseOrder.supplierEmail}</Text>}
+            <Text style={styles.cardContent}>{purchaseOrder.clientName}</Text>
+            {purchaseOrder.clientCompany && <Text style={styles.cardContent}>{purchaseOrder.clientCompany}</Text>}
+            {purchaseOrder.clientAddress && <Text style={styles.cardContent}>{purchaseOrder.clientAddress}</Text>}
+            {purchaseOrder.clientPhone && <Text style={styles.cardContent}>{purchaseOrder.clientPhone}</Text>}
+            {purchaseOrder.clientEmail && <Text style={styles.cardContent}>{purchaseOrder.clientEmail}</Text>}
           </View>
         </View>
 
@@ -197,7 +196,7 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
             <Text style={styles.tableCell}>Remise</Text>
             <Text style={styles.tableCell}>Total HT</Text>
           </View>
-          {Array.isArray(purchaseOrder.items) && purchaseOrder.items.map((item: SupplierOrderItem, idx: number) => (
+          {Array.isArray(purchaseOrder.items) && purchaseOrder.items.map((item: PurchaseOrderItem, idx: number) => (
             <View style={styles.tableRow} key={item.id || idx}>
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
               <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
@@ -229,7 +228,6 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
             <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(purchaseOrder.totalAmount || 0)}</Text>
           </View>
         </View>
-
       </Page>
     </Document>
   );
