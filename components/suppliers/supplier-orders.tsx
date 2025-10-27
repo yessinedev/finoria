@@ -32,7 +32,8 @@ import {
   AlertTriangle,
   ArrowUpDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Package
 } from "lucide-react";
 import { db } from "@/lib/database";
 import { SupplierOrder, Supplier, Product } from "@/types/types";
@@ -62,6 +63,7 @@ import {
 import { supplierOrderSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
 import { EntitySelect } from "@/components/common/EntitySelect";
+import ReceptionNoteForm from "@/components/suppliers/ReceptionNoteForm";
 
 export default function SupplierOrders() {
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
@@ -79,6 +81,10 @@ export default function SupplierOrders() {
     direction: 'desc' 
   });
   const [companySettings, setCompanySettings] = useState<any>(null);
+  
+  // Reception note state
+  const [isReceptionFormOpen, setIsReceptionFormOpen] = useState(false);
+  const [selectedOrderForReception, setSelectedOrderForReception] = useState<SupplierOrder | null>(null);
   
   // Inline editing state
   const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
@@ -490,6 +496,17 @@ export default function SupplierOrders() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCreateReceptionNote = (order: SupplierOrder) => {
+    setSelectedOrderForReception(order);
+    setIsReceptionFormOpen(true);
+  };
+
+  const handleReceptionNoteCreated = () => {
+    setIsReceptionFormOpen(false);
+    setSelectedOrderForReception(null);
+    // You might want to refresh the orders list or show a notification
   };
 
   const resetForm = () => {
@@ -991,6 +1008,13 @@ export default function SupplierOrders() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleCreateReceptionNote(order)}
+                      >
+                        <Package className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => openDeleteDialog(order)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -1063,6 +1087,17 @@ export default function SupplierOrders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reception Note Form */}
+      <ReceptionNoteForm
+        supplierOrder={selectedOrderForReception}
+        open={isReceptionFormOpen}
+        onClose={() => {
+          setIsReceptionFormOpen(false);
+          setSelectedOrderForReception(null);
+        }}
+        onNoteCreated={handleReceptionNoteCreated}
+      />
     </div>
   );
 }

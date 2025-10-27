@@ -113,6 +113,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getDeliveryReceiptBySale: (saleId) => ipcRenderer.invoke("get-delivery-receipt-by-sale", saleId),
   deleteDeliveryReceipt: (id) => ipcRenderer.invoke("delete-delivery-receipt", id),
 
+  // --- Reception Notes API ---
+  createReceptionNote: (receptionNote) => ipcRenderer.invoke("create-reception-note", receptionNote),
+  getReceptionNotes: () => ipcRenderer.invoke("get-reception-notes"),
+  getReceptionNote: (id) => ipcRenderer.invoke("get-reception-note", id),
+  getReceptionNoteByOrder: (supplierOrderId) => ipcRenderer.invoke("get-reception-note-by-order", supplierOrderId),
+  deleteReceptionNote: (id) => ipcRenderer.invoke("delete-reception-note", id),
+
   // --- Enterprise Settings API ---
   getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),
   createEnterpriseSettings: (settings) => ipcRenderer.invoke("create-enterprise-settings", settings),

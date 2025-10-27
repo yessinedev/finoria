@@ -98,6 +98,13 @@ interface ElectronAPI {
   getDeliveryReceiptBySale: (saleId: number) => Promise<any>;
   deleteDeliveryReceipt: (id: number) => Promise<boolean>;
 
+  // Reception Notes
+  createReceptionNote: (receptionNote: any) => Promise<any>;
+  getReceptionNotes: () => Promise<any[]>;
+  getReceptionNote: (id: number) => Promise<any>;
+  getReceptionNoteByOrder: (supplierOrderId: number) => Promise<any>;
+  deleteReceptionNote: (id: number) => Promise<boolean>;
+
   // Stock Movements
   getStockMovements: () => Promise<any[]>;
   createStockMovement: (movement: any) => Promise<any>;
@@ -615,6 +622,35 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.deleteDeliveryReceipt(id) || Promise.resolve(false),
         "deleteDeliveryReceipt"
+      ),
+  };
+
+  // --- Reception Notes API ---
+  receptionNotes = {
+    create: (receptionNote: any) =>
+      this.handle(
+        () => window.electronAPI?.createReceptionNote(receptionNote) || Promise.resolve(null),
+        "createReceptionNote"
+      ),
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getReceptionNotes() || Promise.resolve([]),
+        "getReceptionNotes"
+      ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getReceptionNote(id) || Promise.resolve(null),
+        "getReceptionNote"
+      ),
+    getByOrder: (supplierOrderId: number) =>
+      this.handle(
+        () => window.electronAPI?.getReceptionNoteByOrder(supplierOrderId) || Promise.resolve(null),
+        "getReceptionNoteByOrder"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteReceptionNote(id) || Promise.resolve(false),
+        "deleteReceptionNote"
       ),
   };
 

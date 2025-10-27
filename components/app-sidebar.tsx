@@ -31,6 +31,7 @@ export type NavigationItem =
   | "credit-notes"
   | "purchase-orders"
   | "delivery-receipts"
+  | "reception-notes"
   | "inventory"
   | "stock-movements"
   | "settings";
@@ -57,6 +58,7 @@ const navigationItems = [
     children: [
       { id: "purchase-order", label: "Commande fournisseur" },
       { id: "supplier-invoice", label: "Facture fournisseur" },
+      { id: "reception-notes", label: "Bon de réception" },
     ],
   },
 
@@ -129,6 +131,8 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/suppliers/orders";
       case "supplier-invoice":
         return "/suppliers/invoices";
+      case "reception-notes":
+        return "/suppliers/reception-notes";
       case "suppliers":
         return "/suppliers";
       case "inventory":

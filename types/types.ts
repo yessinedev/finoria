@@ -321,55 +321,25 @@ export interface CreditNoteItem {
   totalPrice: number;
 }
 
-export interface PurchaseOrder {
+export interface ReceptionNote {
   id: number;
-  number: string;
-  saleId: number;
-  clientId: number;
-  clientName: string;
-  clientCompany?: string;
-  clientEmail?: string;
-  clientPhone?: string;
-  clientAddress?: string;
-  clientTaxId?: string;
-  amount: number;
-  taxAmount: number;
-  totalAmount: number;
-  // Removed status field
-  orderDate: string;
-  deliveryDate?: string;
-  items: PurchaseOrderItem[];
-  notes?: string;
-}
-
-export interface PurchaseOrderItem {
-  id: number;
-  productId: number;
-  productName: string;
-  description?: string;
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  totalPrice: number;
-}
-
-export interface DeliveryReceipt {
-  id: number;
-  saleId: number;
-  deliveryNumber: string;
+  supplierOrderId: number;
+  receptionNumber: string;
   driverName?: string;
   vehicleRegistration?: string;
-  deliveryDate: string;
+  receptionDate: string;
+  notes?: string;
   createdAt: string;
-  items: DeliveryReceiptItem[];
-  sale?: Sale; // Reference to the original sale
+  items: ReceptionNoteItem[];
+  supplierOrder?: SupplierOrder; // Reference to the original supplier order
 }
 
-export interface DeliveryReceiptItem {
+export interface ReceptionNoteItem {
   id: number;
   productId: number;
   productName: string;
-  quantity: number;
+  orderedQuantity: number;
+  receivedQuantity: number;
   unitPrice: number;
 }
 
