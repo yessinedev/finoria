@@ -19,8 +19,6 @@ export interface Product {
   id: number;
   name: string;
   description: string;
-  price: number; // selling price
-  purchasePrice?: number; // purchase price
   category: string;
   stock: number;
   isActive: boolean;
@@ -308,6 +306,8 @@ export interface CreditNote {
   status: "En attente" | "Confirmée" | "Annulée";
   items: CreditNoteItem[];
   notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreditNoteItem {

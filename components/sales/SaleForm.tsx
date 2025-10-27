@@ -245,7 +245,7 @@ export default function SaleForm(props: SaleFormProps) {
                                   </Badge>
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                  {product.price.toFixed(3)} DNT • {product.description}
+                                  {product.sellingPriceHT ? `${product.sellingPriceHT.toFixed(3)} DNT` : "N/A"} • {product.description}
                                 </span>
                               </div>
                             </CommandItem>
@@ -290,7 +290,7 @@ export default function SaleForm(props: SaleFormProps) {
                     ? (() => {
                         const product = products.find((p) => p.id === selectedProduct);
                         return product 
-                          ? `${product.price.toFixed(3)} DNT`
+                          ? `${product.sellingPriceHT ? product.sellingPriceHT.toFixed(3) : "N/A"} DNT`
                           : "0.000 DNT";
                       })()
                     : "0.000 DNT"}

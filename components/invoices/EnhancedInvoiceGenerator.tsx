@@ -209,8 +209,8 @@ export default function EnhancedInvoiceGenerator({
     const product = products.find((p) => p.id === selectedProduct);
     if (!product) return;
 
-    const discountAmount = (product.price * newItemQuantity * newItemDiscount) / 100;
-    const total = product.price * newItemQuantity - discountAmount;
+    const discountAmount = (product.sellingPriceHT * newItemQuantity * newItemDiscount) / 100;
+    const total = product.sellingPriceHT * newItemQuantity - discountAmount;
 
     const item = {
       id: Date.now(),
@@ -218,7 +218,7 @@ export default function EnhancedInvoiceGenerator({
       productName: product.name,
       description: product.description,
       quantity: newItemQuantity,
-      unitPrice: product.price,
+      unitPrice: product.sellingPriceHT,
       discount: newItemDiscount,
       totalPrice: total,
     };
@@ -660,7 +660,7 @@ export default function EnhancedInvoiceGenerator({
                               value={selectedProduct?.toString() || ""}
                               onChange={(value) => setSelectedProduct(Number(value) || null)}
                               options={products.filter(p => p.isActive)}
-                              getOptionLabel={(product) => `${product.name} (${product.price.toFixed(3)} DNT)`}
+                              getOptionLabel={(product) => `${product.name} (${product.sellingPriceHT ? product.sellingPriceHT.toFixed(3) : "N/A"} DNT)`}
                               getOptionValue={(product) => product.id.toString()}
                               placeholder="Sélectionner un produit"
                             />
@@ -701,7 +701,7 @@ export default function EnhancedInvoiceGenerator({
                                 ? (() => {
                                     const product = products.find((p) => p.id === selectedProduct);
                                     return product 
-                                      ? `${product.price.toFixed(3)} DNT`
+                                      ? `${product.sellingPriceHT ? product.sellingPriceHT.toFixed(3) : "N/A"} DNT`
                                       : "0.000 DNT";
                                   })()
                                 : "0.000 DNT"}

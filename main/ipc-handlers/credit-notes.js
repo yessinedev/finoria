@@ -52,8 +52,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       }
       
       const insertCreditNote = db.prepare(`
-        INSERT INTO credit_notes (number, originalInvoiceId, clientId, amount, taxAmount, totalAmount, reason, status, dueDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO credit_notes (number, originalInvoiceId, clientId, amount, taxAmount, totalAmount, reason, status, dueDate, updatedAt) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `);
       
       const insertItem = db.prepare(`

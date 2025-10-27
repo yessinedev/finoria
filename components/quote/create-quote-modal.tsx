@@ -118,9 +118,9 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
       name: product.name,
       description: product.description,
       quantity: newItemQuantity,
-      unitPrice: product.price,
+      unitPrice: product.sellingPriceHT,
       discount: newItemDiscount,
-      total: product.price * newItemQuantity * (1 - newItemDiscount / 100),
+      total: product.sellingPriceHT * newItemQuantity * (1 - newItemDiscount / 100),
     };
     setLineItems((prev) => [...prev, item]);
     setSelectedProduct(null);

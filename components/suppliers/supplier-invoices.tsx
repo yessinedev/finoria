@@ -884,7 +884,7 @@ Commande #{order.id} - {order.supplierName}
                                   value={product.name}
                                   onSelect={() => {
                                     setSelectedProduct(product.id);
-                                    setItemUnitPrice(product.purchasePrice || product.price || 0);
+                                    setItemUnitPrice(product.purchasePriceHT || 0);
                                     setProductSearchOpen(false);
                                   }}
                                 >
@@ -895,7 +895,7 @@ Commande #{order.id} - {order.supplierName}
                                       </span>
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                      Achat: {product.purchasePrice ? product.purchasePrice.toFixed(3) : 'N/A'} DNT • Stock: {product.stock}
+                                      Achat: {product.purchasePriceHT ? product.purchasePriceHT.toFixed(3) : 'N/A'} DNT • Stock: {product.stock}
                                     </span>
                                   </div>
                                 </CommandItem>

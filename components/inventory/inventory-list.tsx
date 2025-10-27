@@ -208,10 +208,10 @@ export default function InventoryList() {
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => requestSort('price')}>
+                  <TableHead className="cursor-pointer" onClick={() => requestSort('sellingPriceHT')}>
                     <div className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
-                      <span>Prix vente</span>
+                      <span>Prix vente HT</span>
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </TableHead>
@@ -264,10 +264,10 @@ export default function InventoryList() {
                         <Badge variant="secondary">{product.category}</Badge>
                       </TableCell>
                       <TableCell>
-                        {product.price.toFixed(3)} DNT
+                        {product.sellingPriceHT ? `${product.sellingPriceHT.toFixed(3)} DNT` : "N/A"}
                       </TableCell>
                       <TableCell>
-                        {product.purchasePrice ? `${product.purchasePrice.toFixed(3)} DNT` : "N/A"}
+                        {product.purchasePriceHT ? `${product.purchasePriceHT.toFixed(3)} DNT` : "N/A"}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

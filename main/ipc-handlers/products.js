@@ -36,14 +36,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-product", async (event, product) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO products (name, description, price, purchasePrice, category, stock, isActive, reference, tvaId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, weightedAverageCostHT) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (name, description, category, stock, isActive, reference, tvaId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, weightedAverageCostHT) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         product.name,
         product.description,
-        product.price,
-        product.purchasePrice || null,
         product.category,
         product.stock,
         product.isActive ? 1 : 0,
@@ -120,14 +118,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE products 
-        SET name = ?, description = ?, price = ?, purchasePrice = ?, category = ?, stock = ?, isActive = ?, reference = ?, tvaId = ?, sellingPriceHT = ?, sellingPriceTTC = ?, purchasePriceHT = ?, weightedAverageCostHT = ?, updatedAt = CURRENT_TIMESTAMP 
+        SET name = ?, description = ?, category = ?, stock = ?, isActive = ?, reference = ?, tvaId = ?, sellingPriceHT = ?, sellingPriceTTC = ?, purchasePriceHT = ?, weightedAverageCostHT = ?, updatedAt = CURRENT_TIMESTAMP 
         WHERE id = ?
       `);
       stmt.run(
         product.name,
         product.description,
-        product.price,
-        product.purchasePrice || null,
         product.category,
         product.stock,
         product.isActive ? 1 : 0,

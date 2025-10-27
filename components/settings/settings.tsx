@@ -63,7 +63,7 @@ export default function SettingsPage() {
       // If your IPC returns { data: company }
       const c = res?.data;
       console.log("company: ", res);
-      if (c) {
+      if (c && c.id) {
         console.log("Company data received:", c);
         setCompany(c);
         setCompanyFields({
@@ -85,7 +85,23 @@ export default function SettingsPage() {
 
         });
       } else {
-        console.log("No company data received");
+        console.log("No company data received or invalid company data");
+        // Initialize with empty company data
+        setCompany(null);
+        setCompanyFields({
+          name: "",
+          address: "",
+          phone: "",
+          email: "",
+          website: "",
+          city: "",
+          country: "",
+        });
+        setTaxFields({
+          taxId: "",
+          taxStatus: "",
+          tvaNumber: "",
+        });
       }
     };
 
@@ -137,23 +153,43 @@ export default function SettingsPage() {
   };
 
   const handleSaveSettings = async () => {
-    if (!company) return;
+    // Don't return early if there's no company - we should create one in that case
     // Only save if something changed
-    const companyChanged = Object.keys(companyFields).some(
-      (key) =>
-        companyFields[key as keyof typeof companyFields] !==
-        (company[key as keyof CompanyData] || "")
-    );
-    const taxChanged = Object.keys(taxFields).some(
-      (key) =>
-        taxFields[key as keyof typeof taxFields] !==
-        (company[key as keyof CompanyData] || "")
-    );
+    let companyChanged = false;
+    let taxChanged = false;
+    
+    if (company) {
+      // Check if company fields changed
+      companyChanged = Object.keys(companyFields).some(
+        (key) =>
+          companyFields[key as keyof typeof companyFields] !==
+          (company[key as keyof CompanyData] ?? "")
+      );
+      
+      // Check if tax fields changed (using correct field mapping)
+      taxChanged = Object.keys(taxFields).some(
+        (key) => {
+          // Special handling for tvaNumber since it's stored as a number in company but string in taxFields
+          if (key === 'tvaNumber') {
+            const companyValue = company.tvaNumber !== null && company.tvaNumber !== undefined 
+              ? String(company.tvaNumber) 
+              : "";
+            return taxFields.tvaNumber !== companyValue;
+          }
+          return taxFields[key as keyof typeof taxFields] !==
+            (company[key as keyof CompanyData] ?? "");
+        }
+      );
+    } else {
+      // If there's no company, we should create one
+      companyChanged = true;
+    }
+    
     if (!companyChanged && !taxChanged) return;
 
     setIsSubmitting(true);
 
-    // Prepare the data for update
+    // Prepare the data for update/create
     const updateData = {
       ...companyFields,
       taxId: taxFields.taxId,
@@ -164,12 +200,43 @@ export default function SettingsPage() {
           : null,
     };
 
-    console.log("Updating company with data:", updateData);
+    console.log("Saving company data:", updateData);
 
-    const result = await db.settings.update(company.id, updateData);
-    console.log("Update result:", result);
+    let result;
+    if (company && company.id) {
+      // Update existing company
+      result = await db.settings.update(company.id, updateData);
+    } else {
+      // Create new company
+      result = await db.settings.create(updateData);
+    }
+    
+    console.log("Save result:", result);
 
     if (result.success) {
+      // Update local state with the new/updated company data
+      if (result.data) {
+        setCompany(result.data);
+        // Update form fields to match saved data
+        setCompanyFields({
+          name: result.data.name || "",
+          address: result.data.address || "",
+          phone: result.data.phone || "",
+          email: result.data.email || "",
+          website: result.data.website || "",
+          city: result.data.city || "",
+          country: result.data.country || "",
+        });
+        setTaxFields({
+          taxId: result.data.taxId || "",
+          taxStatus: result.data.taxStatus || "",
+          tvaNumber:
+            result.data.tvaNumber !== null && result.data.tvaNumber !== undefined
+              ? String(result.data.tvaNumber)
+              : "",
+        });
+      }
+      
       toast({
         title: "Succès",
         description: "Paramètres enregistrés avec succès",

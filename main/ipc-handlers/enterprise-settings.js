@@ -16,6 +16,28 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           .get();
       }
 
+      // If still no settings, create a default empty company record
+      if (!settings) {
+        const stmt = db.prepare(`
+          INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const result = stmt.run("", "", "", "", "", "", "", "", "", null);
+        settings = { 
+          id: result.lastInsertRowid, 
+          name: "", 
+          address: "", 
+          city: "", 
+          country: "", 
+          phone: "", 
+          email: "", 
+          website: "", 
+          taxId: "", 
+          taxStatus: "", 
+          tvaNumber: null 
+        };
+      }
+
       return settings || null;
     } catch (error) {
       console.error("Error getting enterprise settings:", error);
@@ -32,15 +54,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
-        settings.name,
-        settings.address,
-        settings.city,
-        settings.country,
-        settings.phone,
-        settings.email,
-        settings.website,
-        settings.taxId,
-        settings.taxStatus,
+        settings.name || "",
+        settings.address || "",
+        settings.city || "",
+        settings.country || "",
+        settings.phone || "",
+        settings.email || "",
+        settings.website || "",
+        settings.taxId || "",
+        settings.taxStatus || "",
         settings.tvaNumber
       );
 
@@ -64,15 +86,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         WHERE id = ?
       `);
       const result = stmt.run(
-        settings.name,
-        settings.address,
-        settings.city,
-        settings.country,
-        settings.phone,
-        settings.email,
-        settings.website,
-        settings.taxId,
-        settings.taxStatus,
+        settings.name || "",
+        settings.address || "",
+        settings.city || "",
+        settings.country || "",
+        settings.phone || "",
+        settings.email || "",
+        settings.website || "",
+        settings.taxId || "",
+        settings.taxStatus || "",
         settings.tvaNumber,
         id
       );

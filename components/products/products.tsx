@@ -41,8 +41,6 @@ export default function Products() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    price: 0,
-    purchasePrice: undefined,
     category: "",
     stock: 0,
     isActive: true,
@@ -102,13 +100,20 @@ export default function Products() {
       key: "price" as keyof Product,
       label: "Prix de vente",
       sortable: true,
-      render: (value: number) => `${value.toFixed(3)} DNT`,
+      render: (value: number, product: Product) => {
+        // Use sellingPriceTTC if available, otherwise fall back to sellingPriceHT
+        const price = product.sellingPriceTTC ?? product.sellingPriceHT ?? 0;
+        return price ? `${price.toFixed(2)} DNT` : "—";
+      },
     },
     {
       key: "purchasePrice" as keyof Product,
       label: "Prix d'achat",
       sortable: true,
-      render: (value: number) => value ? `${value.toFixed(3)} DNT` : "—",
+      render: (value: number, product: Product) => {
+        const price = product.purchasePriceHT ?? 0;
+        return price ? `${price.toFixed(2)} DNT` : "—";
+      },
     },
     {
       key: "stock" as keyof Product,
@@ -223,8 +228,6 @@ export default function Products() {
     setFormData({ 
       name: "", 
       description: "", 
-      price: 0, 
-      purchasePrice: undefined, 
       category: "", 
       stock: 0, 
       isActive: true,
@@ -245,8 +248,7 @@ export default function Products() {
     setFormData({
       name: product.name,
       description: product.description,
-      price: product.price,
-      purchasePrice: product.purchasePrice,
+
       category: product.category,
       stock: product.stock,
       isActive: product.isActive,

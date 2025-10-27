@@ -47,8 +47,6 @@ function createTables(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       description TEXT,
-      price REAL NOT NULL,
-      purchasePrice REAL,
       category TEXT NOT NULL,
       stock INTEGER DEFAULT 0,
       isActive BOOLEAN DEFAULT 1,
@@ -399,11 +397,21 @@ function createTables(db) {
   
   // Add quoteId column to invoices table if it doesn't exist (for existing databases)
   try {
-    db.exec("ALTER TABLE invoices ADD COLUMN quoteId INTEGER REFERENCES quotes(id)");
+    db.exec("ALTER TABLE invoices ADD COLUMN quoteId INTEGER");
   } catch (error) {
     // Column might already exist, which is fine
     if (!error.message.includes("duplicate column name")) {
       console.error("Error adding quoteId column to invoices:", error);
+    }
+  }
+  
+  // Add updatedAt column to credit_notes table if it doesn't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE credit_notes ADD COLUMN updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP");
+  } catch (error) {
+    // Column might already exist, which is fine
+    if (!error.message.includes("duplicate column name")) {
+      console.error("Error adding updatedAt column to credit_notes:", error);
     }
   }
   
@@ -477,6 +485,7 @@ function createTables(db) {
       issueDate DATETIME DEFAULT CURRENT_TIMESTAMP,
       dueDate DATETIME,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (originalInvoiceId) REFERENCES invoices(id),
       FOREIGN KEY (clientId) REFERENCES clients(id)
     )

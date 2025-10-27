@@ -56,8 +56,6 @@ export const supplierInvoiceSchema = z.object({
 export const productSchema = z.object({
   name: z.string().min(1, "Le nom du produit est requis"),
   description: z.string().optional(),
-  price: z.number().min(0, "Le prix de vente doit être positif"),
-  purchasePrice: z.number().min(0, "Le prix d'achat doit être positif").optional(),
   category: z.string().min(1, "La catégorie est requise"),
   stock: z.number().min(0, "Le stock doit être positif ou nul"),
   reference: z.string().optional(),

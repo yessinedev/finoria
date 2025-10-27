@@ -164,8 +164,8 @@ export default function Sales() {
       );
     } else {
       const discountAmount =
-        (product.price * newItemQuantity * newItemDiscount) / 100;
-      const total = product.price * newItemQuantity - discountAmount;
+        (product.sellingPriceHT * newItemQuantity * newItemDiscount) / 100;
+      const total = product.sellingPriceHT * newItemQuantity - discountAmount;
 
       const item: LineItem = {
         id: Date.now(),
@@ -173,7 +173,7 @@ export default function Sales() {
         name: product.name,
         description: product.description,
         quantity: newItemQuantity,
-        unitPrice: product.price,
+        unitPrice: product.sellingPriceHT,
         discount: newItemDiscount,
         total: total,
       };
