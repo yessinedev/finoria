@@ -399,6 +399,7 @@ export interface CompanyInfo {
   website?: string
   city: string
   country: string
+  logo?: string
 }
 
 export interface TaxInfo {

@@ -28,6 +28,14 @@ import { Supplier } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
 import { supplierSchema, SupplierFormData } from "@/lib/validation/schemas";
 import { z } from "zod";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -39,6 +47,10 @@ export default function Suppliers() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const { toast } = useToast();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -65,6 +77,14 @@ export default function Suppliers() {
     );
     setFilteredSuppliers(filtered);
   }, [searchTerm, suppliers]);
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSuppliers = filteredSuppliers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const loadSuppliers = async () => {
     try {
@@ -397,14 +417,14 @@ export default function Suppliers() {
                   Chargement...
                 </TableCell>
               </TableRow>
-            ) : filteredSuppliers.length === 0 ? (
+            ) : currentSuppliers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center">
                   Aucun fournisseur trouvé
                 </TableCell>
               </TableRow>
             ) : (
-              filteredSuppliers.map((supplier) => (
+              currentSuppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell>{supplier.company || "-"}</TableCell>
@@ -434,6 +454,44 @@ export default function Suppliers() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-muted-foreground">
+            Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredSuppliers.length)} sur {filteredSuppliers.length} fournisseurs
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => paginate(currentPage - 1)}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    onClick={() => paginate(page)}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => paginate(currentPage + 1)}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

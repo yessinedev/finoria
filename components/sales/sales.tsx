@@ -29,6 +29,14 @@ import {
 } from "@/components/ui/alert-dialog";
 // Removed StatusDropdown import
 import { Edit, Trash2 } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function Sales() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -51,6 +59,10 @@ export default function Sales() {
   const [isSaleDetailsOpen, setIsSaleDetailsOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // State for stock alert dialog
   const [showStockAlert, setShowStockAlert] = useState(false);
@@ -79,7 +91,14 @@ export default function Sales() {
       (sale.fodecAmount ?? 0) - // Include FODEC amount if exists
       (sale.discountAmount ?? 0),
   }));
-  
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSales = enrichedSales.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(enrichedSales.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const salesColumns = [
     {
@@ -456,7 +475,7 @@ export default function Sales() {
           </CardHeader>
           <CardContent>
             <DataTable
-              data={enrichedSales}
+              data={currentSales}
               columns={salesColumns}
               sortConfig={sortConfig}
               searchTerm={searchTerm}
@@ -469,6 +488,44 @@ export default function Sales() {
               emptyMessage="Aucune vente trouvée"
               // Removed actions prop since we're removing the status dropdown
             />
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, enrichedSales.length)} sur {enrichedSales.length} ventes
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => paginate(currentPage - 1)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => paginate(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => paginate(currentPage + 1)}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
