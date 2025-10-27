@@ -33,8 +33,7 @@ interface SaleFormProps {
   removeLineItem: (id: number) => void;
   updateLineItem: (id: number, field: keyof LineItem, value: string | number) => void;
   // Removed globalDiscount and setGlobalDiscount
-  taxRate: number;
-  setTaxRate: (rate: number) => void;
+  // Removed taxRate and setTaxRate - using per-item TVA calculation
   fodecTax: number; // New FODEC tax state
   setFodecTax: (rate: number) => void; // New FODEC tax setter
   subtotal: number;
@@ -69,8 +68,7 @@ export default function SaleForm(props: SaleFormProps) {
     removeLineItem,
     updateLineItem,
     // Removed globalDiscount and setGlobalDiscount
-    taxRate,
-    setTaxRate,
+    // Removed taxRate and setTaxRate - using per-item TVA calculation
     fodecTax, // New FODEC tax
     setFodecTax, // New FODEC tax setter
     subtotal,
@@ -426,20 +424,7 @@ export default function SaleForm(props: SaleFormProps) {
                 />
               </div>
             </div>
-            {/* Tax Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="taxRate">Taux de TVA (%)</Label>
-              <Input
-                id="taxRate"
-                type="number"
-                min="0"
-                max="100"
-                value={taxRate}
-                onChange={(e) =>
-                  setTaxRate(Number.parseFloat(e.target.value) || 0)
-                }
-              />
-            </div>
+
             {/* Totals */}
             <div className="space-y-2 pt-4 border-t">
               <div className="flex justify-between text-sm">
@@ -451,7 +436,7 @@ export default function SaleForm(props: SaleFormProps) {
                 <span>{discountedSubtotal.toFixed(3)} DNT</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>TVA ({taxRate}%):</span>
+                <span>TVA (par article):</span>
                 <span>{taxAmount.toFixed(3)} DNT</span>
               </div>
               {fodecTax > 0 && (

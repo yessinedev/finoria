@@ -53,7 +53,6 @@ export default function SettingsPage() {
     taxId: "",
     taxStatus: "",
     tvaNumber: "",
-    tvaRate: "",
   });
 
   useEffect(() => {
@@ -83,10 +82,7 @@ export default function SettingsPage() {
             c.tvaNumber !== null && c.tvaNumber !== undefined
               ? String(c.tvaNumber)
               : "",
-          tvaRate:
-            c.tvaRate !== null && c.tvaRate !== undefined
-              ? String(c.tvaRate)
-              : "",
+
         });
       } else {
         console.log("No company data received");
@@ -166,8 +162,6 @@ export default function SettingsPage() {
         taxFields.tvaNumber !== ""
           ? parseInt(taxFields.tvaNumber) || null
           : null,
-      tvaRate:
-        taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) || null : null,
     };
 
     console.log("Updating company with data:", updateData);
@@ -425,6 +419,24 @@ export default function SettingsPage() {
                   className="md:col-span-2"
                 />
                 <FormInput
+                  label="Ville"
+                  id="city"
+                  value={companyFields.city}
+                  onChange={(value) =>
+                    setCompanyFields((prev) => ({ ...prev, city: value }))
+                  }
+                  placeholder="Paris"
+                />
+                <FormInput
+                  label="Pays"
+                  id="country"
+                  value={companyFields.country}
+                  onChange={(value) =>
+                    setCompanyFields((prev) => ({ ...prev, country: value }))
+                  }
+                  placeholder="France"
+                />
+                <FormInput
                   label="Numéro de téléphone"
                   id="phone"
                   value={companyFields.phone}
@@ -514,22 +526,7 @@ export default function SettingsPage() {
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <FormInput
-                        label="Taux de TVA"
-                        type="number"
-                        id="tvaRate"
-                        value={taxFields.tvaRate?.toString() || ""}
-                        onChange={(value) =>
-                          setTaxFields((prev) => ({
-                            ...prev,
-                            tvaRate: value,
-                          }))
-                        }
-                        placeholder="19"
-                        required
-                      />
-                    </div>
+
                   </div>
                 )}
               </div>

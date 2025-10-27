@@ -58,6 +58,24 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         // Generate quote number if not provided
         const quoteNumber = quote.number || generateQuoteNumber(db);
         
+        // Calculate total tax amount for the quote based on individual product TVA rates
+        let totalTaxAmount = 0;
+        if (quote.items && Array.isArray(quote.items) && quote.items.length > 0) {
+          const getProductTva = db.prepare(`
+            SELECT t.rate as tvaRate 
+            FROM products p 
+            LEFT JOIN tva t ON p.tvaId = t.id 
+            WHERE p.id = ?
+          `);
+          
+          for (const item of quote.items) {
+            const productTva = getProductTva.get(item.productId);
+            const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+            const itemTaxAmount = ((item.unitPrice * item.quantity * (1 - item.discount / 100)) * itemTvaRate / 100);
+            totalTaxAmount += itemTaxAmount;
+          }
+        }
+        
         const stmt = db.prepare(`
           INSERT INTO quotes (number, clientId, amount, taxAmount, totalAmount, status, issueDate, dueDate, createdAt) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -66,7 +84,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           quoteNumber,
           quote.clientId,
           quote.amount,
-          quote.taxAmount,
+          totalTaxAmount,
           quote.totalAmount,
           quote.status || "En attente",
           quote.issueDate || new Date().toISOString(),
@@ -123,6 +141,24 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("update-quote", async (event, id, quote) => {
     const trx = db.transaction(() => {
       try {
+        // Calculate total tax amount for the quote based on individual product TVA rates
+        let totalTaxAmount = 0;
+        if (quote.items && Array.isArray(quote.items) && quote.items.length > 0) {
+          const getProductTva = db.prepare(`
+            SELECT t.rate as tvaRate 
+            FROM products p 
+            LEFT JOIN tva t ON p.tvaId = t.id 
+            WHERE p.id = ?
+          `);
+          
+          for (const item of quote.items) {
+            const productTva = getProductTva.get(item.productId);
+            const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+            const itemTaxAmount = ((item.unitPrice * item.quantity * (1 - item.discount / 100)) * itemTvaRate / 100);
+            totalTaxAmount += itemTaxAmount;
+          }
+        }
+        
         const stmt = db.prepare(`
           UPDATE quotes 
           SET clientId = ?, amount = ?, taxAmount = ?, totalAmount = ?, status = ?, issueDate = ?, dueDate = ?, updatedAt = CURRENT_TIMESTAMP 
@@ -131,7 +167,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         const result = stmt.run(
           quote.clientId,
           quote.amount,
-          quote.taxAmount,
+          totalTaxAmount,
           quote.totalAmount,
           quote.status,
           quote.issueDate,

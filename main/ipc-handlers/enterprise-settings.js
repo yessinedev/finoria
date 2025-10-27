@@ -28,8 +28,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-enterprise-settings", async (event, settings) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, tvaRate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         settings.name,
@@ -41,8 +41,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.website,
         settings.taxId,
         settings.taxStatus,
-        settings.tvaNumber,
-        settings.tvaRate
+        settings.tvaNumber
       );
 
       const newSettings = { id: result.lastInsertRowid, ...settings };
@@ -61,7 +60,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE companies 
-        SET name = ?, address = ?, city = ?, country = ?, phone = ?, email = ?, website = ?, taxId = ?, taxStatus = ?, tvaNumber = ?, tvaRate = ?
+        SET name = ?, address = ?, city = ?, country = ?, phone = ?, email = ?, website = ?, taxId = ?, taxStatus = ?, tvaNumber = ?
         WHERE id = ?
       `);
       const result = stmt.run(
@@ -75,7 +74,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.taxId,
         settings.taxStatus,
         settings.tvaNumber,
-        settings.tvaRate,
         id
       );
 

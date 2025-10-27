@@ -25,12 +25,23 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
         
+        // Prepare statement to get product TVA rate
+        const getProductTva = db.prepare(`
+          SELECT t.rate as tvaRate 
+          FROM products p 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE p.id = ?
+        `);
+        
         // Update product stock for non-service products
         const updateStockStmt = db.prepare(`
           UPDATE products 
           SET stock = stock - ? 
           WHERE id = ? AND category != 'Service'
         `);
+        
+        // Calculate total tax amount for the sale based on individual product TVA rates
+        let totalTaxAmount = 0;
         
         saleData.items.forEach((item) => {
           itemStmt.run(
@@ -43,10 +54,24 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.totalPrice
           );
           
+          // Get product TVA rate and calculate tax for this item
+          const productTva = getProductTva.get(item.productId);
+          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+          
           // Only reduce stock for non-service products
           // Fix: Make sure we're reducing the correct quantity for each product
           updateStockStmt.run(item.quantity, item.productId);
         });
+        
+        // Update the sale with the calculated tax amount
+        const updateTaxStmt = db.prepare(`
+          UPDATE sales 
+          SET taxAmount = ? 
+          WHERE id = ?
+        `);
+        updateTaxStmt.run(totalTaxAmount, saleId);
         return saleId;
       } catch (error) {
         console.error("Error in sale transaction:", error);
@@ -55,9 +80,18 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     });
     try {
       const saleId = transaction(sale);
+      // Get the updated sale with correct tax amount
+      const getUpdatedSale = db.prepare(`
+        SELECT s.*, c.name as clientName, c.company as clientCompany
+        FROM sales s
+        JOIN clients c ON s.clientId = c.id
+        WHERE s.id = ?
+      `).get(saleId);
+      
       const newSale = {
         id: saleId,
         ...sale,
+        taxAmount: getUpdatedSale.taxAmount,
         saleDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };

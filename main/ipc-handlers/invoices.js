@@ -42,13 +42,49 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
+      // Calculate total tax amount for the invoice based on individual product TVA rates
+      let totalTaxAmount = 0;
+      
+      // If we're creating from a sale, get the items from the sale
+      if (invoice.saleId) {
+        const getSaleItems = db.prepare(`
+          SELECT si.*, t.rate as tvaRate 
+          FROM sale_items si 
+          LEFT JOIN products p ON si.productId = p.id 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE si.saleId = ?
+        `);
+        const saleItems = getSaleItems.all(invoice.saleId);
+        
+        for (const item of saleItems) {
+          const itemTvaRate = item.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+        }
+      } else if (invoice.items && Array.isArray(invoice.items)) {
+        // Calculate tax for directly passed items
+        const getProductTva = db.prepare(`
+          SELECT t.rate as tvaRate 
+          FROM products p 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE p.id = ?
+        `);
+        
+        for (const item of invoice.items) {
+          const productTva = getProductTva.get(item.productId);
+          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+        }
+      }
+      
       const result = insertInvoice.run(
         invoice.number,
         invoice.saleId || null, // Allow null saleId
         invoice.quoteId || null, // Allow null quoteId
         invoice.clientId,
         invoice.amount,
-        invoice.taxAmount,
+        totalTaxAmount,
         invoice.totalAmount,
         invoice.status,
         invoice.dueDate

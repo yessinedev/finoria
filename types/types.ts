@@ -367,7 +367,6 @@ export interface TaxInfo {
   taxId: string
   taxStatus: string
   tvaNumber?: number
-  tvaRate?: number
 }
 
 export interface CreateCompanyData extends CompanyInfo, TaxInfo {}

@@ -61,12 +61,28 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
+      // Calculate total tax amount for the credit note based on individual product TVA rates
+      let totalTaxAmount = 0;
+      const getProductTva = db.prepare(`
+        SELECT t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `);
+      
+      for (const item of creditNote.items) {
+        const productTva = getProductTva.get(item.productId);
+        const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+        const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+        totalTaxAmount += itemTaxAmount;
+      }
+      
       const result = insertCreditNote.run(
         creditNoteNumber,
         creditNote.originalInvoiceId,
         creditNote.clientId,
         creditNote.amount,
-        creditNote.taxAmount,
+        totalTaxAmount,
         creditNote.totalAmount,
         creditNote.reason,
         creditNote.status,
@@ -115,7 +131,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const currentCreditNote = db.prepare("SELECT * FROM credit_notes WHERE id = ?").get(id);
       
       // Update the credit note status
-      const stmt = db.prepare("UPDATE credit_notes SET status = ? WHERE id = ?");
+      const stmt = db.prepare("UPDATE credit_notes SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?");
       stmt.run(status, id);
       
       // If the status is being changed to "Confirmée" and wasn't already "Confirmée", return the stock
@@ -196,13 +212,29 @@ module.exports = (ipcMain, db, notifyDataChange) => {
                           String(lastNumber + 1).padStart(4, "0");
       }
       
+      // Calculate total tax amount for the credit note based on individual product TVA rates
+      let totalTaxAmount = 0;
+      const getProductTva = db.prepare(`
+        SELECT t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `);
+      
+      for (const item of items) {
+        const productTva = getProductTva.get(item.productId);
+        const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+        const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+        totalTaxAmount += itemTaxAmount;
+      }
+      
       // Create the credit note object
       const creditNote = {
         number: creditNoteNumber,
         originalInvoiceId: invoiceId,
         clientId: invoice.clientId,
         amount: invoice.amount,
-        taxAmount: invoice.taxAmount,
+        taxAmount: totalTaxAmount,
         totalAmount: invoice.totalAmount,
         reason: reason,
         status: "En attente",

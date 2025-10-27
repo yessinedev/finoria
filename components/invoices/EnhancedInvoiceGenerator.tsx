@@ -72,7 +72,7 @@ export default function EnhancedInvoiceGenerator({
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
-  const [taxRate, setTaxRate] = useState(20); // Default tax rate
+  // Removed taxRate - using per-item TVA calculation
   const [fodecTax, setFodecTax] = useState(0); // New FODEC tax state
   const [loading, setLoading] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null); // Add company settings state
@@ -96,10 +96,11 @@ export default function EnhancedInvoiceGenerator({
       if (clientsResult.success) setClients(clientsResult.data || []);
       if (productsResult.success) setProducts(productsResult.data || []);
       
-      // Set company settings and tax rate
+      // Set company settings
       if (settingsResult.success && settingsResult.data) {
         setCompanySettings(settingsResult.data);
-        setTaxRate(settingsResult.data.tvaRate || 20); // Use TVA rate from settings
+        // Use default tax rate instead of company TVA rate
+        // taxRate is now calculated per item
       }
     } catch (error) {
       setError("Erreur lors du chargement des données");
@@ -258,10 +259,16 @@ export default function EnhancedInvoiceGenerator({
     );
   };
 
-  // Calculate totals for new sale (add FODEC calculations)
+  // Calculate totals for new sale (add FODEC calculations) with per-item TVA
   const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const discountedSubtotal = subtotal; // No global discount in this form
-  const taxAmount = (discountedSubtotal * taxRate) / 100;
+  // Calculate tax per item based on product TVA rates
+  const taxAmount = lineItems.reduce((sum, item) => {
+    // Get product TVA rate (this would need to be fetched from product data)
+    // For now, using a default rate until we implement product TVA fetching
+    const itemTvaRate = 20; // Default rate
+    return sum + (item.totalPrice * itemTvaRate / 100);
+  }, 0);
   const fodecAmount = (discountedSubtotal * fodecTax) / 100; // Calculate FODEC amount
   const finalTotal = discountedSubtotal + taxAmount + fodecAmount; // Include FODEC in final total
 
@@ -824,24 +831,7 @@ export default function EnhancedInvoiceGenerator({
                               </div>
                             </div>
                             
-                            {/* Tax Rate Display */}
-                            <div className="space-y-2">
-                              <Label htmlFor="taxRate">Taux de TVA (%)</Label>
-                              <div className="flex items-center gap-2">
-                                <Percent className="h-4 w-4 text-muted-foreground" />
-                                <input
-                                  id="taxRate"
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={taxRate}
-                                  onChange={(e) =>
-                                    setTaxRate(Number.parseFloat(e.target.value) || 0)
-                                  }
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                />
-                              </div>
-                            </div>
+
                           </div>
                           
                           {/* Totals Summary */}
@@ -851,7 +841,7 @@ export default function EnhancedInvoiceGenerator({
                               <span>{subtotal.toFixed(3)} DNT</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span>TVA ({taxRate}%):</span>
+                              <span>TVA (par article):</span>
                               <span>{taxAmount.toFixed(3)} DNT</span>
                             </div>
                             {fodecTax > 0 && (

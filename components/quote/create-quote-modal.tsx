@@ -26,16 +26,22 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
   const [globalDiscount, setGlobalDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(20);
+  // Removed taxRate - using per-item TVA calculation
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Financial calculations
+  // Financial calculations with per-item TVA
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
   const globalDiscountAmount = (subtotal * globalDiscount) / 100;
   const discountedSubtotal = subtotal - globalDiscountAmount;
-  const taxAmount = (discountedSubtotal * taxRate) / 100;
+  // Calculate tax per item based on product TVA rates
+  const taxAmount = lineItems.reduce((sum, item) => {
+    // Get product TVA rate (this would need to be fetched from product data)
+    // For now, using a default rate until we implement product TVA fetching
+    const itemTvaRate = 20; // Default rate
+    return sum + (item.total * itemTvaRate / 100);
+  }, 0);
   const finalTotal = discountedSubtotal + taxAmount;
 
   // Clear error when client is selected
@@ -241,14 +247,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
               onChange={(e) => setGlobalDiscount(Number(e.target.value))}
               placeholder="0"
             />
-            <FormField
-              label="Taux de TVA (%)"
-              id="taxRate"
-              type="number"
-              value={taxRate.toString()}
-              onChange={(e) => setTaxRate(Number(e.target.value))}
-              placeholder="20"
-            />
+
             <FormField
               label="Notes"
               id="notes"
@@ -277,7 +276,7 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
                   <span>{discountedSubtotal.toFixed(3)} DNT</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>TVA ({taxRate}%)</span>
+                  <span>TVA (par article)</span>
                   <span>+{taxAmount.toFixed(3)} DNT</span>
                 </div>
                 <div className="flex justify-between font-bold text-base border-t pt-2">

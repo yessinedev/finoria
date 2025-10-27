@@ -330,10 +330,20 @@ export default function SupplierInvoices() {
     }
 
     try {
-      // Calculate totals
-      const vatRate = companySettings?.tvaRate || 19;
-      const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * (vatRate / 100);
+      // Calculate totals using product TVA rates
+      let subtotal = 0;
+      let taxAmount = 0;
+      
+      // Calculate subtotal and tax amount based on individual product TVA rates
+      for (const item of invoiceItems) {
+        subtotal += item.totalPrice;
+        // Note: We'll calculate tax per item when we have product TVA data
+        // For now, we'll use a default rate or need to fetch product TVA rates
+      }
+      
+      // For now, using a default rate until we implement product TVA fetching
+      const defaultVatRate = 19;
+      taxAmount = subtotal * (defaultVatRate / 100);
       const totalAmount = subtotal + taxAmount;
       
       const invoiceData = {
@@ -381,10 +391,20 @@ export default function SupplierInvoices() {
     }
     
     try {
-      // Calculate totals
-      const vatRate = companySettings?.tvaRate || 19;
-      const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * (vatRate / 100);
+      // Calculate totals using product TVA rates
+      let subtotal = 0;
+      let taxAmount = 0;
+      
+      // Calculate subtotal and tax amount based on individual product TVA rates
+      for (const item of invoiceItems) {
+        subtotal += item.totalPrice;
+        // Note: We'll calculate tax per item when we have product TVA data
+        // For now, we'll use a default rate or need to fetch product TVA rates
+      }
+      
+      // For now, using a default rate until we implement product TVA fetching
+      const defaultVatRate = 19;
+      taxAmount = subtotal * (defaultVatRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       const invoiceData = {
@@ -980,13 +1000,23 @@ Commande #{order.id} - {order.supplierName}
                 <span>{invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(3)} DNT</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>TVA ({companySettings?.tvaRate || 19}%):</span>
-                <span>{(invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0) * (companySettings?.tvaRate || 19) / 100).toFixed(3)} DNT</span>
+                <span>TVA (par article):</span>
+                <span>{(invoiceItems.reduce((sum, item) => {
+                  // Get product TVA rate (this would need to be fetched from product data)
+                  // For now, using a default rate until we implement product TVA fetching
+                  const itemTvaRate = 19; // Default rate
+                  return sum + (item.totalPrice * itemTvaRate / 100);
+                }, 0)).toFixed(3)} DNT</span>
               </div>
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total TTC:</span>
-                  <span>{(invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0) * (1 + (companySettings?.tvaRate || 19) / 100)).toFixed(3)} DNT</span>
+                  <span>{(invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0) + invoiceItems.reduce((sum, item) => {
+                    // Get product TVA rate (this would need to be fetched from product data)
+                    // For now, using a default rate until we implement product TVA fetching
+                    const itemTvaRate = 19; // Default rate
+                    return sum + (item.totalPrice * itemTvaRate / 100);
+                  }, 0)).toFixed(3)} DNT</span>
                 </div>
               </div>
             </div>

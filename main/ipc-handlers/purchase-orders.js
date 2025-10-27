@@ -59,12 +59,28 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
+      // Calculate total tax amount for the purchase order based on individual product TVA rates
+      let totalTaxAmount = 0;
+      const getProductTva = db.prepare(`
+        SELECT t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `);
+      
+      for (const item of purchaseOrder.items) {
+        const productTva = getProductTva.get(item.productId);
+        const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+        const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+        totalTaxAmount += itemTaxAmount;
+      }
+      
       const result = insertPurchaseOrder.run(
         purchaseOrderNumber,
         purchaseOrder.saleId,
         purchaseOrder.clientId,
         purchaseOrder.amount,
-        purchaseOrder.taxAmount,
+        totalTaxAmount,
         purchaseOrder.totalAmount,
         purchaseOrder.status,
         purchaseOrder.deliveryDate
@@ -191,13 +207,29 @@ module.exports = (ipcMain, db, notifyDataChange) => {
                             String(lastNumber + 1).padStart(4, "0");
       }
       
+      // Calculate total tax amount for the purchase order based on individual product TVA rates
+      let totalTaxAmount = 0;
+      const getProductTva = db.prepare(`
+        SELECT t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `);
+      
+      for (const item of items) {
+        const productTva = getProductTva.get(item.productId);
+        const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+        const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+        totalTaxAmount += itemTaxAmount;
+      }
+      
       // Create the purchase order object
       const purchaseOrder = {
         number: purchaseOrderNumber,
         saleId: saleId,
         clientId: sale.clientId,
-        amount: sale.totalAmount - sale.taxAmount,
-        taxAmount: sale.taxAmount,
+        amount: sale.totalAmount - totalTaxAmount,
+        taxAmount: totalTaxAmount,
         totalAmount: sale.totalAmount,
         status: "En attente",
         deliveryDate: deliveryDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now

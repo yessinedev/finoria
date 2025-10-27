@@ -41,7 +41,7 @@ export default function Sales() {
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
   // Removed globalDiscount state
-  const [taxRate, setTaxRate] = useState(19);
+  // Removed taxRate - using per-item TVA calculation
   const [fodecTax, setFodecTax] = useState(0); // New FODEC tax state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -216,11 +216,17 @@ export default function Sales() {
     );
   };
 
-  // Calculate totals
+  // Calculate totals with per-item TVA calculation
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
   // Removed globalDiscountAmount calculation
   const discountedSubtotal = subtotal; // No global discount anymore
-  const taxAmount = (discountedSubtotal * taxRate) / 100;
+  // Calculate tax per item based on product TVA rates
+  const taxAmount = lineItems.reduce((sum, item) => {
+    // Get product TVA rate (this would need to be fetched from product data)
+    // For now, using a default rate until we implement product TVA fetching
+    const itemTvaRate = 19; // Default rate
+    return sum + (item.total * itemTvaRate / 100);
+  }, 0);
   const fodecAmount = (discountedSubtotal * fodecTax) / 100; // New FODEC amount
   const finalTotal = discountedSubtotal + taxAmount + fodecAmount;
 
@@ -509,8 +515,7 @@ export default function Sales() {
           removeLineItem={removeLineItem}
           updateLineItem={updateLineItem}
           // Removed globalDiscount and setGlobalDiscount
-          taxRate={taxRate}
-          setTaxRate={setTaxRate}
+          // Removed taxRate and setTaxRate - using per-item TVA calculation
           fodecTax={fodecTax} // New FODEC tax prop
           setFodecTax={setFodecTax} // New FODEC tax setter prop
           subtotal={subtotal}

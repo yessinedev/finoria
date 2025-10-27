@@ -2,7 +2,12 @@
 module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("get-products", async () => {
     try {
-      const products = db.prepare("SELECT * FROM products ORDER BY name").all();
+      const products = db.prepare(`
+        SELECT p.*, t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        ORDER BY p.name
+      `).all();
       return products;
     } catch (error) {
       console.error("Error getting products:", error);
@@ -12,7 +17,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("get-product-by-id", async (event, id) => {
     try {
-      const product = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
+      const product = db.prepare(`
+        SELECT p.*, t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `).get(id);
       if (!product) {
         throw new Error("Produit introuvable");
       }
@@ -26,8 +36,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-product", async (event, product) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO products (name, description, price, purchasePrice, category, stock, isActive) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (name, description, price, purchasePrice, category, stock, isActive, reference, tvaId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, weightedAverageCostHT) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         product.name,
@@ -36,7 +46,13 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         product.purchasePrice || null,
         product.category,
         product.stock,
-        product.isActive ? 1 : 0
+        product.isActive ? 1 : 0,
+        product.reference || null,
+        product.tvaId || null,
+        product.sellingPriceHT || null,
+        product.sellingPriceTTC || null,
+        product.purchasePriceHT || null,
+        product.weightedAverageCostHT || null
       );
       const newProduct = {
         id: result.lastInsertRowid,
@@ -104,7 +120,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE products 
-        SET name = ?, description = ?, price = ?, purchasePrice = ?, category = ?, stock = ?, isActive = ?, updatedAt = CURRENT_TIMESTAMP 
+        SET name = ?, description = ?, price = ?, purchasePrice = ?, category = ?, stock = ?, isActive = ?, reference = ?, tvaId = ?, sellingPriceHT = ?, sellingPriceTTC = ?, purchasePriceHT = ?, weightedAverageCostHT = ?, updatedAt = CURRENT_TIMESTAMP 
         WHERE id = ?
       `);
       stmt.run(
@@ -115,6 +131,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         product.category,
         product.stock,
         product.isActive ? 1 : 0,
+        product.reference || null,
+        product.tvaId || null,
+        product.sellingPriceHT || null,
+        product.sellingPriceTTC || null,
+        product.purchasePriceHT || null,
+        product.weightedAverageCostHT || null,
         id
       );
       const updatedProduct = {

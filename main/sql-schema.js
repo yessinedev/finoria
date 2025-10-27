@@ -267,8 +267,7 @@ function createTables(db) {
       website TEXT,
       taxId TEXT NOT NULL,
       taxStatus TEXT,
-      tvaNumber INTEGER,
-      tvaRate INTEGER
+      tvaNumber INTEGER
     )
   `);
 

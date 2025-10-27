@@ -158,6 +158,14 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
+      // Prepare statement to get product TVA rate
+      const getProductTva = db.prepare(`
+        SELECT t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `);
+      
       const updateProductStock = db.prepare(`
         UPDATE products SET stock = stock + ? WHERE id = ?
       `);
@@ -174,6 +182,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const orderId = orderResult.lastInsertRowid;
       
+      // Calculate total tax amount for the order based on individual product TVA rates
+      let totalTaxAmount = 0;
+      
       // Insert order items and update product stock
       for (const item of order.items) {
         insertItem.run(
@@ -186,14 +197,43 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           item.totalPrice
         );
         
+        // Get product TVA rate and calculate tax for this item
+        const productTva = getProductTva.get(item.productId);
+        const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+        const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+        totalTaxAmount += itemTaxAmount;
+        
         // Update product stock
         updateProductStock.run(item.quantity, item.productId);
       }
+      
+      // Update the order with the calculated tax amount
+      const updateTaxStmt = db.prepare(`
+        UPDATE supplier_orders 
+        SET taxAmount = ? 
+        WHERE id = ?
+      `);
+      updateTaxStmt.run(totalTaxAmount, orderId);
+      
+      // Get the updated order with correct tax amount
+      const getUpdatedOrder = db.prepare(`
+        SELECT 
+          so.*,
+          s.name as supplierName,
+          s.company as supplierCompany,
+          s.email as supplierEmail,
+          s.phone as supplierPhone,
+          s.address as supplierAddress
+        FROM supplier_orders so
+        JOIN suppliers s ON so.supplierId = s.id
+        WHERE so.id = ?
+      `).get(orderId);
       
       const newOrder = {
         id: orderId,
         orderNumber,
         ...order,
+        taxAmount: getUpdatedOrder.taxAmount,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -217,11 +257,29 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       `);
       
       // Update order
+      // Calculate total tax amount for the order based on individual product TVA rates
+      let totalTaxAmount = 0;
+      if (order.items && Array.isArray(order.items)) {
+        const getProductTva = db.prepare(`
+          SELECT t.rate as tvaRate 
+          FROM products p 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE p.id = ?
+        `);
+        
+        for (const item of order.items) {
+          const productTva = getProductTva.get(item.productId);
+          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+        }
+      }
+      
       const updateResult = updateOrder.run(
         order.supplierId,
         order.orderNumber,
         order.totalAmount,
-        order.taxAmount,
+        totalTaxAmount,
         order.status,
         order.orderDate,
         order.deliveryDate,
@@ -353,12 +411,30 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
+      // Calculate total tax amount for the invoice based on individual product TVA rates
+      let totalTaxAmount = 0;
+      if (invoice.items && Array.isArray(invoice.items)) {
+        const getProductTva = db.prepare(`
+          SELECT t.rate as tvaRate 
+          FROM products p 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE p.id = ?
+        `);
+        
+        for (const item of invoice.items) {
+          const productTva = getProductTva.get(item.productId);
+          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+        }
+      }
+      
       const invoiceResult = insertInvoice.run(
         invoice.supplierId,
         invoice.orderId,
         invoice.invoiceNumber,
         invoice.amount,
-        invoice.taxAmount,
+        totalTaxAmount,
         invoice.totalAmount,
         invoice.status,
         invoice.issueDate,
@@ -416,12 +492,30 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
+      // Calculate total tax amount for the invoice based on individual product TVA rates
+      let totalTaxAmount = 0;
+      if (invoice.items && Array.isArray(invoice.items)) {
+        const getProductTva = db.prepare(`
+          SELECT t.rate as tvaRate 
+          FROM products p 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE p.id = ?
+        `);
+        
+        for (const item of invoice.items) {
+          const productTva = getProductTva.get(item.productId);
+          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+        }
+      }
+      
       updateInvoice.run(
         invoice.supplierId,
         invoice.orderId,
         invoice.invoiceNumber,
         invoice.amount,
-        invoice.taxAmount,
+        totalTaxAmount,
         invoice.totalAmount,
         invoice.status,
         invoice.issueDate,

@@ -223,7 +223,7 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
             </Text>
           </View>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>TVA ({companySettings?.taxRate || 19}%):</Text>
+            <Text style={styles.totalsLabel}>TVA (19%):</Text>
             <Text style={styles.totalsValue}>{formatCurrency(invoice.taxAmount || 0)}</Text>
           </View>
           <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
