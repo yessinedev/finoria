@@ -22,7 +22,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, logo) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
-        const result = stmt.run(null, null, null, null, null, null, null, null, null, null, null);
+        const result = stmt.run("", "", "", "", "", "", "", "", "", null, "");
         settings = { 
           id: result.lastInsertRowid, 
           name: "", 
@@ -55,17 +55,17 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
-        settings.name || null,
-        settings.address || null,
-        settings.city || null,
-        settings.country || null,
-        settings.phone || null,
-        settings.email || null,
-        settings.website || null,
-        settings.taxId || null,
-        settings.taxStatus || null,
+        settings.name || "",
+        settings.address || "",
+        settings.city || "",
+        settings.country || "",
+        settings.phone || "",
+        settings.email || "",
+        settings.website || "",
+        settings.taxId || "",
+        settings.taxStatus || "",
         settings.tvaNumber,
-        settings.logo || null
+        settings.logo || ""
       );
 
       const newSettings = { id: result.lastInsertRowid, ...settings };
@@ -74,10 +74,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return newSettings;
     } catch (error) {
       console.error("Error creating enterprise settings:", error);
-      // Log the specific error for debugging
-      console.error("Settings data:", settings);
       throw new Error(
-        "Erreur lors de la création des paramètres de l'entreprise: " + (error.message || "Unknown error")
+        "Erreur lors de la création des paramètres de l'entreprise"
       );
     }
   });
@@ -90,17 +88,17 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         WHERE id = ?
       `);
       const result = stmt.run(
-        settings.name || null,
-        settings.address || null,
-        settings.city || null,
-        settings.country || null,
-        settings.phone || null,
-        settings.email || null,
-        settings.website || null,
-        settings.taxId || null,
-        settings.taxStatus || null,
+        settings.name || "",
+        settings.address || "",
+        settings.city || "",
+        settings.country || "",
+        settings.phone || "",
+        settings.email || "",
+        settings.website || "",
+        settings.taxId || "",
+        settings.taxStatus || "",
         settings.tvaNumber,
-        settings.logo || null,
+        settings.logo || "",
         id
       );
 

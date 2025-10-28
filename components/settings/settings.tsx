@@ -214,8 +214,6 @@ export default function SettingsPage() {
       result = await db.settings.create(updateData);
     }
     
-    console.log("Save result:", result);
-
     if (result.success) {
       // Update local state with the new/updated company data
       if (result.data) {
@@ -251,12 +249,8 @@ export default function SettingsPage() {
         description: result.error || "Erreur lors de l'enregistrement des paramètres",
         variant: "destructive",
       });
-      // Log the error for debugging
-      console.error("Error saving settings:", result.error);
     }
 
-    console.log("Company Settings:", companyFields);
-    console.log("Tax Settings:", taxFields);
     setIsSubmitting(false);
   };
 
