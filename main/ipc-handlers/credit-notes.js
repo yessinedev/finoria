@@ -132,7 +132,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       // Update the credit note status
       const stmt = db.prepare("UPDATE credit_notes SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?");
-      stmt.run(status, id);
+      const result = stmt.run(status, id);
+      
+      // Check if any rows were affected
+      if (result.changes === 0) {
+        throw new Error("Facture d'avoir non trouvée ou statut déjà mis à jour");
+      }
       
       // If the status is being changed to "Confirmée" and wasn't already "Confirmée", return the stock
       if (status === "Confirmée" && currentCreditNote.status !== "Confirmée") {
@@ -171,11 +176,17 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         }
       }
       
-      notifyDataChange("credit-notes", "update", { id, status });
-      return { id, status };
+      const updatedCreditNote = {
+        id,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      notifyDataChange("credit-notes", "update", updatedCreditNote);
+      return updatedCreditNote;
     } catch (error) {
       console.error("Error updating credit note status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut de la facture d'avoir");
+      throw new Error("Erreur lors de la mise à jour du statut de la facture d'avoir: " + error.message);
     }
   });
   

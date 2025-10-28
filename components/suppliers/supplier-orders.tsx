@@ -272,13 +272,12 @@ export default function SupplierOrders() {
       // Calculate subtotal and tax amount based on individual product TVA rates
       for (const item of orderItems) {
         subtotal += item.totalPrice;
-        // Note: We'll calculate tax per item when we have product TVA data
-        // For now, we'll use a default rate or need to fetch product TVA rates
+        // Calculate tax per item using actual product TVA rate
+        const product = products.find(p => p.id === item.productId);
+        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
+        taxAmount += (item.totalPrice * itemTvaRate / 100);
       }
       
-      // For now, using a default rate until we implement product TVA fetching
-      const defaultVatRate = 19;
-      taxAmount = subtotal * (defaultVatRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       const orderData = {
@@ -358,13 +357,12 @@ export default function SupplierOrders() {
       // Calculate subtotal and tax amount based on individual product TVA rates
       for (const item of orderItems) {
         subtotal += item.totalPrice;
-        // Note: We'll calculate tax per item when we have product TVA data
-        // For now, we'll use a default rate or need to fetch product TVA rates
+        // Calculate tax per item using actual product TVA rate
+        const product = products.find(p => p.id === item.productId);
+        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
+        taxAmount += (item.totalPrice * itemTvaRate / 100);
       }
       
-      // For now, using a default rate until we implement product TVA fetching
-      const defaultVatRate = 19;
-      taxAmount = subtotal * (defaultVatRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       const orderData = {
@@ -897,9 +895,9 @@ export default function SupplierOrders() {
                 <div className="flex justify-between text-sm">
                   <span>TVA (par article):</span>
                   <span>{(orderItems.reduce((sum, item) => {
-                    // Get product TVA rate (this would need to be fetched from product data)
-                    // For now, using a default rate until we implement product TVA fetching
-                    const itemTvaRate = 19; // Default rate
+                    // Get product TVA rate from product data
+                    const product = products.find(p => p.id === item.productId);
+                    const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
                     return sum + (item.totalPrice * itemTvaRate / 100);
                   }, 0)).toFixed(3)} DNT</span>
                 </div>
@@ -907,9 +905,9 @@ export default function SupplierOrders() {
                   <div className="flex justify-between font-semibold">
                     <span>Total TTC:</span>
                     <span>{(orderItems.reduce((sum, item) => sum + item.totalPrice, 0) + orderItems.reduce((sum, item) => {
-                      // Get product TVA rate (this would need to be fetched from product data)
-                      // For now, using a default rate until we implement product TVA fetching
-                      const itemTvaRate = 19; // Default rate
+                      // Get product TVA rate from product data
+                      const product = products.find(p => p.id === item.productId);
+                      const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
                       return sum + (item.totalPrice * itemTvaRate / 100);
                     }, 0)).toFixed(3)} DNT</span>
                   </div>

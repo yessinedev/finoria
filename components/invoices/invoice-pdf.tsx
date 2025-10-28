@@ -137,6 +137,11 @@ const styles = StyleSheet.create({
 })
 
 export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invoice; companySettings?: any }) {
+  // Calculate HT (before tax) correctly
+  const htAmount = invoice.amount; // This is the correct HT amount from the database
+  const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
+  const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
+
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -227,21 +232,19 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
         <View style={styles.totalsBox}>
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-            <Text style={styles.totalsValue}>
-              {formatCurrency(
-                Array.isArray(invoice.items) 
-                  ? invoice.items.reduce((sum, item) => sum + item.totalPrice, 0)
-                  : 0
-              )}
-            </Text>
+            <Text style={styles.totalsValue}>{formatCurrency(htAmount)}</Text>
           </View>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>TVA (19%):</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(invoice.taxAmount || 0)}</Text>
+            <Text style={styles.totalsLabel}>
+              {tvaAmount > 0 && htAmount > 0
+                ? `TVA ${Math.round((tvaAmount / htAmount) * 100) || 0}%:`
+                : 'TVA (0%):'}
+            </Text>
+            <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
           </View>
           <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
             <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
-            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(invoice.totalAmount || 0)}</Text>
+            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(ttcAmount)}</Text>
           </View>
         </View>
 

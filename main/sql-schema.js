@@ -215,9 +215,21 @@ function createTables(db) {
       issueDate DATETIME DEFAULT CURRENT_TIMESTAMP,
       dueDate DATETIME,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (clientId) REFERENCES clients(id)
     )
   `);
+  
+  // Add updatedAt column to existing quotes table if it doesn't exist
+  try {
+    // Try to add the column - this will fail if it already exists
+    db.exec(`ALTER TABLE quotes ADD COLUMN updatedAt DATETIME`);
+    // Update existing rows to have a default value
+    db.exec(`UPDATE quotes SET updatedAt = datetime('now') WHERE updatedAt IS NULL`);
+  } catch (e) {
+    // Column already exists or other error, ignore
+    // console.log('Quotes table already has updatedAt column or error occurred:', e.message);
+  }
 
   // Quote items table
   db.exec(`

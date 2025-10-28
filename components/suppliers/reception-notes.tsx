@@ -20,7 +20,7 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
-import type { SupplierOrder } from "@/types/types";
+import type { SupplierOrder, ReceptionNote } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -30,9 +30,21 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { ReceptionNotePDFDocument } from "@/components/suppliers/reception-note-pdf";
 import ReceptionNoteForm from "@/components/suppliers/ReceptionNoteForm";
+import ReceptionNoteEditForm from "@/components/suppliers/ReceptionNoteEditForm";
+import { ReceptionNoteViewModal } from "@/components/suppliers/ReceptionNoteViewModal";
 import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function ReceptionNotes() {
@@ -40,10 +52,13 @@ export default function ReceptionNotes() {
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [receptionNoteToDelete, setReceptionNoteToDelete] = useState<any | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedReceptionNote, setSelectedReceptionNote] = useState<ReceptionNote | null>(null);
   const { toast } = useToast();
 
   // Data table configuration
@@ -143,23 +158,61 @@ export default function ReceptionNotes() {
     }
   };
 
-  const handleViewReceptionNote = (receptionNote: any) => {
-    // In a real app, this would open a reception note details modal
-    alert(`Voir les détails du bon de réception ${receptionNote.receptionNumber}`);
+  const handleViewReceptionNote = async (receptionNote: any) => {
+    // Get the full reception note details
+    try {
+      const result = await db.receptionNotes.getOne(receptionNote.id);
+      if (result.success && result.data) {
+        setSelectedReceptionNote(result.data);
+        setIsViewModalOpen(true);
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Erreur lors du chargement des détails du bon de réception",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load reception note details:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des détails du bon de réception",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCreateReceptionNote = () => {
     setIsFormOpen(true);
   };
 
-  const handleEditReceptionNote = (receptionNote: any) => {
-    // In a real app, this would open a reception note edit form
-    alert(`Modifier le bon de réception ${receptionNote.receptionNumber}`);
+  const handleEditReceptionNote = async (receptionNote: any) => {
+    // Get the full reception note details
+    try {
+      const result = await db.receptionNotes.getOne(receptionNote.id);
+      if (result.success && result.data) {
+        setSelectedReceptionNote(result.data);
+        setIsEditFormOpen(true);
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Erreur lors du chargement des détails du bon de réception",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load reception note details:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des détails du bon de réception",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteReceptionNote = (receptionNote: any) => {
     setReceptionNoteToDelete(receptionNote);
-    setIsDeleteDialogOpen(true);
+    setShowDeleteDialog(true);
   };
 
   const confirmDeleteReceptionNote = async () => {
@@ -185,9 +238,14 @@ export default function ReceptionNotes() {
         variant: "destructive",
       });
     } finally {
-      setIsDeleteDialogOpen(false);
       setReceptionNoteToDelete(null);
+      setShowDeleteDialog(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setReceptionNoteToDelete(null);
+    setShowDeleteDialog(false);
   };
 
   const handleReceptionNoteCreated = () => {
@@ -196,44 +254,54 @@ export default function ReceptionNotes() {
   };
 
   const renderActions = (receptionNote: any) => (
-    <PDFDownloadLink
-      document={
-        <ReceptionNotePDFDocument 
-          receptionNote={receptionNote} 
-          supplierOrder={receptionNote.supplierOrder}
-          companySettings={companySettings}
-        />
-      }
-      fileName={`bon-de-reception-${receptionNote.receptionNumber}.pdf`}
-    >
-      {({ loading }) => (
-        <ActionsDropdown
-          actions={[
-            {
-              label: "Télécharger PDF",
-              icon: <Download className="h-4 w-4" />,
-              onClick: () => {}, // Handled by PDFDownloadLink
-            },
-            {
-              label: "Voir",
-              icon: <Eye className="h-4 w-4" />,
-              onClick: () => handleViewReceptionNote(receptionNote),
-            },
-            {
-              label: "Modifier",
-              icon: <Edit className="h-4 w-4" />,
-              onClick: () => handleEditReceptionNote(receptionNote),
-            },
-            {
-              label: "Supprimer",
-              icon: <Trash2 className="h-4 w-4" />,
-              onClick: () => handleDeleteReceptionNote(receptionNote),
-              className: "text-red-600",
-            },
-          ]}
-        />
-      )}
-    </PDFDownloadLink>
+    <div className="flex items-center">
+      <PDFDownloadLink
+        document={
+          <ReceptionNotePDFDocument 
+            receptionNote={receptionNote} 
+            supplierOrder={receptionNote.supplierOrder}
+            companySettings={companySettings}
+          />
+        }
+        fileName={`bon-de-reception-${receptionNote.receptionNumber}.pdf`}
+      >
+        {({ loading }) => (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 mr-1"
+            disabled={loading}
+            title="Télécharger PDF"
+          >
+            {loading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+      </PDFDownloadLink>
+      <ActionsDropdown
+        actions={[
+          {
+            label: "Voir",
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => handleViewReceptionNote(receptionNote),
+          },
+          {
+            label: "Modifier",
+            icon: <Edit className="h-4 w-4" />,
+            onClick: () => handleEditReceptionNote(receptionNote),
+          },
+          {
+            label: "Supprimer",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => handleDeleteReceptionNote(receptionNote),
+            className: "text-red-600",
+          },
+        ]}
+      />
+    </div>
   );
 
   if (loading) {
@@ -302,35 +370,53 @@ export default function ReceptionNotes() {
         onNoteCreated={handleReceptionNoteCreated}
       />
 
+      {/* Reception Note Edit Form */}
+      <ReceptionNoteEditForm
+        receptionNote={selectedReceptionNote}
+        open={isEditFormOpen}
+        onClose={() => {
+          setIsEditFormOpen(false);
+          setSelectedReceptionNote(null);
+        }}
+        onNoteSaved={() => {
+          setIsEditFormOpen(false);
+          setSelectedReceptionNote(null);
+          loadData(); // Refresh the reception notes list
+        }}
+      />
+
+      {/* Reception Note View Modal */}
+      <ReceptionNoteViewModal
+        open={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        receptionNote={selectedReceptionNote}
+      />
+
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Confirmer la suppression
-            </DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer le bon de réception "{receptionNoteToDelete?.receptionNumber}" ? 
-              Cette action est irréversible.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Annuler
-            </Button>
-            <Button
-              variant="destructive"
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {receptionNoteToDelete && (
+                <>
+                  Cette action est irréversible. Êtes-vous sûr de vouloir supprimer le bon de réception{" "}
+                  <span className="font-semibold">"{receptionNoteToDelete.receptionNumber}"</span> ?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
               onClick={confirmDeleteReceptionNote}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Supprimer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

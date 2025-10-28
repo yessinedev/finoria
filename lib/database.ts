@@ -431,7 +431,7 @@ class DatabaseService {
       ),
     updateStatus: (id: number, status: string) =>
       this.handle(
-        () => window.electronAPI?.updateSaleStatus(id, status) || Promise.resolve(null),
+        () => window.electronAPI?.updateSaleStatus(id, status),
         "updateSaleStatus"
       ),
     delete: (id: number) =>
@@ -467,7 +467,7 @@ class DatabaseService {
       ),
     updateStatus: (id: number, status: string) =>
       this.handle(
-        () => window.electronAPI?.updateInvoiceStatus(id, status) || Promise.resolve(null),
+        () => window.electronAPI?.updateInvoiceStatus(id, status),
         "updateInvoiceStatus"
       ),
     generateFromSale: (saleId: number) =>
@@ -509,9 +509,10 @@ class DatabaseService {
           window.electronAPI?.updateQuote(id, quote) || Promise.resolve(null),
         "updateQuote"
       ),
+    // Update quote status with improved error handling
     updateStatus: (id: number, status: string) =>
       this.handle(
-        () => window.electronAPI?.updateQuoteStatus(id, status) || Promise.resolve(null),
+        () => window.electronAPI?.updateQuoteStatus(id, status),
         "updateQuoteStatus"
       ),
     delete: (id: number) =>
@@ -674,6 +675,11 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getReceptionNoteByOrder(supplierOrderId) || Promise.resolve(null),
         "getReceptionNoteByOrder"
+      ),
+    update: (id: number, receptionNote: any) =>
+      this.handle(
+        () => window.electronAPI?.updateReceptionNote(id, receptionNote) || Promise.resolve(null),
+        "updateReceptionNote"
       ),
     delete: (id: number) =>
       this.handle(

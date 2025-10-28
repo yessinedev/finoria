@@ -95,9 +95,9 @@ export default function InvoiceGenerator({
         number: formData.customNumber.trim() !== "" ? formData.customNumber.trim() : generatePreviewInvoiceNumber(),
         saleId: selectedSale.id,
         clientId: selectedSale.clientId,
-        amount: selectedSale.totalAmount,
-        taxAmount: selectedSale.taxAmount,
-        totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+        amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+        taxAmount: selectedSale.taxAmount, // TVA amount
+        totalAmount: selectedSale.totalAmount, // TTC amount
         status: "En attente",
         issueDate: new Date().toISOString(),
         dueDate: formData.dueDate.toISOString(),
@@ -144,9 +144,9 @@ export default function InvoiceGenerator({
         number: invoiceNumber,
         saleId: selectedSale.id,
         dueDate: formData.dueDate.toISOString(),
-        amount: selectedSale.totalAmount,
-        taxAmount: selectedSale.taxAmount,
-        totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+        amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+        taxAmount: selectedSale.taxAmount, // TVA amount
+        totalAmount: selectedSale.totalAmount, // TTC amount
         clientId: selectedSale.clientId,
         status: "En attente",
         notes: formData.notes,
@@ -212,9 +212,9 @@ export default function InvoiceGenerator({
       number: invoiceNumber,
       saleId: selectedSale.id,
       dueDate: formData.dueDate.toISOString(),
-      amount: selectedSale.totalAmount,
-      taxAmount: selectedSale.taxAmount,
-      totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+      amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+      taxAmount: selectedSale.taxAmount, // TVA amount
+      totalAmount: selectedSale.totalAmount, // TTC amount
       clientId: selectedSale.clientId,
       status: "En attente",
       notes: formData.notes,
@@ -273,7 +273,7 @@ export default function InvoiceGenerator({
                           value={selectedSale?.id?.toString() || ""}
                           onChange={handleSaleSelection}
                           options={availableSales}
-                          getOptionLabel={(sale) => `${sale.clientName} (${sale.clientCompany}) - ${new Date(sale.saleDate).toLocaleDateString("fr-FR")} - ${formatCurrency(sale.totalAmount + (sale.taxAmount || 0))}`}
+                          getOptionLabel={(sale) => `${sale.clientName} (${sale.clientCompany}) - ${new Date(sale.saleDate).toLocaleDateString("fr-FR")} - ${formatCurrency(sale.totalAmount)}`}
                           getOptionValue={(sale) => sale.id.toString()}
                           required
                         />
@@ -308,7 +308,7 @@ export default function InvoiceGenerator({
                                 <div>
                                   <p className="text-muted-foreground">Montant TTC:</p>
                                   <p className="font-medium text-primary">
-                                    {formatCurrency(selectedSale.totalAmount + selectedSale.taxAmount)}
+                                    {formatCurrency(selectedSale.totalAmount)}
                                   </p>
                                 </div>
                               </div>
@@ -412,9 +412,9 @@ export default function InvoiceGenerator({
 
                     {selectedSale && (
                       <FinancialSummaryCard
-                        subtotal={selectedSale.totalAmount}
-                        tax={selectedSale.taxAmount}
-                        total={selectedSale.totalAmount + selectedSale.taxAmount}
+                        subtotal={selectedSale.totalAmount - selectedSale.taxAmount} // HT amount
+                        tax={selectedSale.taxAmount} // TVA amount
+                        total={selectedSale.totalAmount} // TTC amount
                         dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                         paymentTerms={formData.paymentTerms}
                         currency="DNT"

@@ -367,13 +367,12 @@ export default function SupplierInvoices() {
       // Calculate subtotal and tax amount based on individual product TVA rates
       for (const item of invoiceItems) {
         subtotal += item.totalPrice;
-        // Note: We'll calculate tax per item when we have product TVA data
-        // For now, we'll use a default rate or need to fetch product TVA rates
+        // Calculate tax per item using actual product TVA rate
+        const product = products.find(p => p.id === item.productId);
+        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
+        taxAmount += (item.totalPrice * itemTvaRate / 100);
       }
       
-      // For now, using a default rate until we implement product TVA fetching
-      const defaultVatRate = 19;
-      taxAmount = subtotal * (defaultVatRate / 100);
       const totalAmount = subtotal + taxAmount;
       
       const invoiceData = {
@@ -428,13 +427,12 @@ export default function SupplierInvoices() {
       // Calculate subtotal and tax amount based on individual product TVA rates
       for (const item of invoiceItems) {
         subtotal += item.totalPrice;
-        // Note: We'll calculate tax per item when we have product TVA data
-        // For now, we'll use a default rate or need to fetch product TVA rates
+        // Calculate tax per item using actual product TVA rate
+        const product = products.find(p => p.id === item.productId);
+        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
+        taxAmount += (item.totalPrice * itemTvaRate / 100);
       }
       
-      // For now, using a default rate until we implement product TVA fetching
-      const defaultVatRate = 19;
-      taxAmount = subtotal * (defaultVatRate / 100);
       const totalAmount = subtotal + taxAmount;
 
       const invoiceData = {
@@ -1153,9 +1151,9 @@ Commande #{order.id} - {order.supplierName}
               <div className="flex justify-between text-sm">
                 <span>TVA (par article):</span>
                 <span>{(invoiceItems.reduce((sum, item) => {
-                  // Get product TVA rate (this would need to be fetched from product data)
-                  // For now, using a default rate until we implement product TVA fetching
-                  const itemTvaRate = 19; // Default rate
+                  // Get product TVA rate from product data
+                  const product = products.find(p => p.id === item.productId);
+                  const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
                   return sum + (item.totalPrice * itemTvaRate / 100);
                 }, 0)).toFixed(3)} DNT</span>
               </div>
@@ -1163,9 +1161,9 @@ Commande #{order.id} - {order.supplierName}
                 <div className="flex justify-between font-semibold">
                   <span>Total TTC:</span>
                   <span>{(invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0) + invoiceItems.reduce((sum, item) => {
-                    // Get product TVA rate (this would need to be fetched from product data)
-                    // For now, using a default rate until we implement product TVA fetching
-                    const itemTvaRate = 19; // Default rate
+                    // Get product TVA rate from product data
+                    const product = products.find(p => p.id === item.productId);
+                    const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
                     return sum + (item.totalPrice * itemTvaRate / 100);
                   }, 0)).toFixed(3)} DNT</span>
                 </div>
@@ -1188,64 +1186,7 @@ Commande #{order.id} - {order.supplierName}
         </DialogContent>
       </Dialog>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-600 font-medium">Total facturé</p>
-              <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalAmount)}</p>
-              <div className="flex items-center text-xs text-blue-600 mt-1">
-                <ArrowUpDown className="h-3 w-3 mr-1" />
-                +12% ce mois
-              </div>
-            </div>
-            <FileText className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
 
-        <div className="border rounded-lg p-4 bg-green-50 border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-green-600 font-medium">Montant payé</p>
-              <p className="text-2xl font-bold text-green-900">{formatCurrency(paidAmount)}</p>
-              <div className="flex items-center text-xs text-green-600 mt-1">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                {((paidAmount / totalAmount) * 100 || 0).toFixed(1)}% du total
-              </div>
-            </div>
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-
-        <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-orange-600 font-medium">En attente</p>
-              <p className="text-2xl font-bold text-orange-900">{formatCurrency(pendingAmount)}</p>
-              <div className="flex items-center text-xs text-orange-600 mt-1">
-                <Clock className="h-3 w-3 mr-1" />
-                0 facture(s)
-              </div>
-            </div>
-            <Clock className="h-8 w-8 text-orange-600" />
-          </div>
-        </div>
-
-        <div className="border rounded-lg p-4 bg-red-50 border-red-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-red-600 font-medium">En retard</p>
-              <p className="text-2xl font-bold text-red-900">{formatCurrency(overdueAmount)}</p>
-              <div className="flex items-center text-xs text-red-600 mt-1">
-                <ArrowUpDown className="h-3 w-3 mr-1" />
-                0 facture(s)
-              </div>
-            </div>
-            <AlertTriangle className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-      </div>
 
       <div className="mb-6">
         <div className="relative w-full max-w-sm">

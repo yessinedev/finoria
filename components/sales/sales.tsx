@@ -236,7 +236,7 @@ export default function Sales() {
     );
   };
 
-  // Calculate totals
+  // Calculate totals with correct FODEC, TVA, and discount calculations
   const subtotal = lineItems.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity,
     0
@@ -249,20 +249,23 @@ export default function Sales() {
   
   const discountedSubtotal = subtotal - totalDiscount;
   
-  // Calculate tax amount based on individual item TVA rates
-  const taxAmount = lineItems.reduce((sum, item) => {
-    // Get product to determine TVA rate
-    const product = products.find(p => p.id === item.productId);
-    const tvaRate = product?.tvaId ? 19 : 0; // Default to 19% if product has TVA, 0 otherwise
-    const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount) / 100;
-    return sum + (itemTotal * tvaRate) / 100;
-  }, 0);
-  
-  // Calculate FODEC amount
+  // Calculate FODEC on discounted subtotal
   const fodecAmount = (discountedSubtotal * fodecTax) / 100;
   
+  // Calculate tax (TVA) on (discounted subtotal + FODEC)
+  const taxAmount = lineItems.reduce((sum, item) => {
+    // Get product TVA rate
+    const product = products.find(p => p.id === item.productId);
+    const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0; // Use actual TVA rate or 0 if not found
+    // TVA is calculated on (discounted item total + FODEC portion for this item)
+    const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount / 100);
+    // Calculate FODEC portion for this item
+    const itemFodec = discountedSubtotal > 0 ? (itemTotal / discountedSubtotal) * fodecAmount : 0;
+    return sum + ((itemTotal + itemFodec) * itemTvaRate / 100);
+  }, 0);
+  
   // Final total including tax and FODEC
-  const finalTotal = discountedSubtotal + taxAmount + fodecAmount;
+  const finalTotal = discountedSubtotal + fodecAmount + taxAmount;
 
   const handleSubmit = async (errors: Record<string, string>) => {
     if (Object.keys(errors).length > 0) {
@@ -314,11 +317,11 @@ export default function Sales() {
           discount: item.discount,
           totalPrice: item.total,
         })),
-        totalAmount: discountedSubtotal,
+        totalAmount: finalTotal, // TTC amount
         taxAmount: taxAmount,
         fodecAmount: fodecAmount, // Include FODEC amount
         discountAmount: 0, // No global discount
-        finalAmount: finalTotal,
+        // Removed finalAmount field as it's not in the database schema
         // Removed status field
         saleDate: new Date().toISOString(),
       };

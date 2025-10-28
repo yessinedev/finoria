@@ -124,8 +124,8 @@ export function ReceptionNotePDFDocument({
   supplierOrder,
   companySettings 
 }: { 
-  receptionNote: ReceptionNote; 
-  supplierOrder: SupplierOrder;
+  receptionNote: ReceptionNote & { supplierName?: string; supplierOrderNumber?: string; supplierCompany?: string; supplierAddress?: string; supplierPhone?: string; supplierEmail?: string }; 
+  supplierOrder?: SupplierOrder;
   companySettings?: any 
 }) {
   return (
@@ -164,12 +164,11 @@ export function ReceptionNotePDFDocument({
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Supplier */}
             <Text style={styles.cardTitle}>Fournisseur</Text>
-            <Text style={styles.cardContent}>{supplierOrder.supplierName}</Text>
-            {supplierOrder.supplierCompany && <Text style={styles.cardContent}>{supplierOrder.supplierCompany}</Text>}
-            {supplierOrder.supplierAddress && <Text style={styles.cardContent}>{supplierOrder.supplierAddress}</Text>
-            }
-            {supplierOrder.supplierPhone && <Text style={styles.cardContent}>{supplierOrder.supplierPhone}</Text>}
-            {supplierOrder.supplierEmail && <Text style={styles.cardContent}>{supplierOrder.supplierEmail}</Text>}
+            <Text style={styles.cardContent}>{receptionNote.supplierName || supplierOrder?.supplierName || 'N/A'}</Text>
+            {(receptionNote.supplierCompany || supplierOrder?.supplierCompany) && <Text style={styles.cardContent}>{receptionNote.supplierCompany || supplierOrder?.supplierCompany}</Text>}
+            {(receptionNote.supplierAddress || supplierOrder?.supplierAddress) && <Text style={styles.cardContent}>{receptionNote.supplierAddress || supplierOrder?.supplierAddress}</Text>}
+            {(receptionNote.supplierPhone || supplierOrder?.supplierPhone) && <Text style={styles.cardContent}>{receptionNote.supplierPhone || supplierOrder?.supplierPhone}</Text>}
+            {(receptionNote.supplierEmail || supplierOrder?.supplierEmail) && <Text style={styles.cardContent}>{receptionNote.supplierEmail || supplierOrder?.supplierEmail}</Text>}
           </View>
         </View>
 
@@ -198,11 +197,11 @@ export function ReceptionNotePDFDocument({
           <View style={{ flexDirection: 'row', gap: 16 }}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Numéro de commande</Text>
-              <Text style={styles.cardContent}>{supplierOrder.orderNumber}</Text>
+              <Text style={styles.cardContent}>{receptionNote.supplierOrderNumber || supplierOrder?.orderNumber || 'N/A'}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Date de commande</Text>
-              <Text style={styles.cardContent}>{formatDate(supplierOrder.orderDate)}</Text>
+              <Text style={styles.cardContent}>{formatDate(supplierOrder?.orderDate || receptionNote.receptionDate)}</Text>
             </View>
           </View>
         </View>

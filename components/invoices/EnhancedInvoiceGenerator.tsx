@@ -277,18 +277,27 @@ export default function EnhancedInvoiceGenerator({
     );
   };
 
-  // Calculate totals for new sale (add FODEC calculations) with per-item TVA
-  const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  const discountedSubtotal = subtotal; // No global discount in this form
-  // Calculate tax per item based on product TVA rates
+  // Calculate totals for new sale with correct FODEC, TVA, and discount calculations
+  // HT (subtotal) should be the sum of (quantity × unit price) for all items
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  // Apply discount to get discounted subtotal
+  const totalDiscount = lineItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity * item.discount / 100), 0);
+  const discountedSubtotal = subtotal - totalDiscount;
+  // Calculate FODEC on discounted subtotal
+  const fodecAmount = (discountedSubtotal * fodecTax) / 100;
+  // Calculate tax (TVA) on (discounted subtotal + FODEC)
   const taxAmount = lineItems.reduce((sum, item) => {
-    // Get product TVA rate (this would need to be fetched from product data)
-    // For now, using a default rate until we implement product TVA fetching
-    const itemTvaRate = 20; // Default rate
-    return sum + (item.totalPrice * itemTvaRate) / 100;
+    // Get product TVA rate
+    const product = products.find(p => p.id === item.productId);
+    const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0; // Use actual TVA rate or 0 if not found
+    // TVA is calculated on (discounted item total + FODEC portion for this item)
+    const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount / 100);
+    // Calculate FODEC portion for this item
+    const itemFodec = discountedSubtotal > 0 ? (itemTotal / discountedSubtotal) * fodecAmount : 0;
+    return sum + ((itemTotal + itemFodec) * itemTvaRate / 100);
   }, 0);
-  const fodecAmount = (discountedSubtotal * fodecTax) / 100; // Calculate FODEC amount
-  const finalTotal = discountedSubtotal + taxAmount + fodecAmount; // Include FODEC in final total
+  // TTC (final total) is HT + FODEC + TVA
+  const finalTotal = discountedSubtotal + fodecAmount + taxAmount;
 
   const handleGenerateInvoice = async () => {
     if (!validateForm()) {
@@ -304,11 +313,10 @@ export default function EnhancedInvoiceGenerator({
         const saleData = {
           clientId: selectedClient!.id,
           items: lineItems,
-          totalAmount: discountedSubtotal,
+          totalAmount: finalTotal, // TTC amount
           taxAmount: taxAmount,
           discountAmount: 0,
           fodecAmount: fodecAmount, // Include FODEC amount
-          finalAmount: finalTotal,
           status: "Confirmée",
           saleDate: new Date().toISOString(),
         };

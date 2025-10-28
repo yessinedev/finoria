@@ -193,6 +193,72 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Update reception note
+  ipcMain.handle("update-reception-note", async (event, id, receptionNote) => {
+    try {
+      // Start transaction
+      const updateNote = db.prepare(`
+        UPDATE reception_notes 
+        SET supplierOrderId = ?, receptionNumber = ?, driverName = ?, vehicleRegistration = ?, 
+            receptionDate = ?, notes = ?
+        WHERE id = ?
+      `);
+      
+      const deleteItems = db.prepare("DELETE FROM reception_note_items WHERE receptionNoteId = ?");
+      const insertItem = db.prepare(`
+        INSERT INTO reception_note_items (
+          receptionNoteId, productId, productName, orderedQuantity, receivedQuantity, unitPrice
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      // Update note
+      const updateResult = updateNote.run(
+        receptionNote.supplierOrderId,
+        receptionNote.receptionNumber,
+        receptionNote.driverName || null,
+        receptionNote.vehicleRegistration || null,
+        receptionNote.receptionDate,
+        receptionNote.notes || null,
+        id
+      );
+      
+      // Check if the update was successful
+      if (updateResult.changes === 0) {
+        throw new Error("Aucun bon de réception trouvé avec cet ID");
+      }
+      
+      // Only process items if they exist
+      if (receptionNote.items && Array.isArray(receptionNote.items)) {
+        // Delete existing items
+        deleteItems.run(id);
+        
+        // Insert new items
+        for (const item of receptionNote.items) {
+          insertItem.run(
+            id,
+            item.productId,
+            item.productName,
+            item.orderedQuantity,
+            item.receivedQuantity,
+            item.unitPrice
+          );
+        }
+      }
+      
+      const updatedNote = {
+        id,
+        ...receptionNote,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      notifyDataChange("reception-notes", "update", updatedNote);
+      return updatedNote;
+    } catch (error) {
+      console.error("Error updating reception note:", error);
+      throw new Error(`Erreur lors de la mise à jour du bon de réception: ${error.message}`);
+    }
+  });
+
   // Delete reception note
   ipcMain.handle("delete-reception-note", async (event, id) => {
     try {
