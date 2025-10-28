@@ -23,7 +23,10 @@
     "prepare:resources": "node scripts/prepare-build.js",
     "dist": "npm run build:next && npm run build:electron",
     "deploy": "echo 'Use GitHub Actions for deployment'",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "generate-mock-data": "node scripts/generate-mock-data.js",
+    "clear-data": "node scripts/clear-data.js",
+    "check-data": "node scripts/check-data.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -94,6 +97,7 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
     "@eslint/eslintrc": "^3",
+    "@faker-js/faker": "^10.1.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
