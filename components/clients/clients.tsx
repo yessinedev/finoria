@@ -4,7 +4,7 @@ import type { Client } from "@/types/types";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Users, AlertCircle, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Users, AlertCircle, AlertTriangle, MoreVertical } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -27,6 +27,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -223,18 +224,21 @@ export default function Clients() {
   };
 
   const renderActions = (client: Client) => (
-    <div className="flex justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => handleEdit(client)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleDelete(client)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: "Modifier",
+          icon: <Edit className="h-4 w-4" />,
+          onClick: () => handleEdit(client),
+        },
+        {
+          label: "Supprimer",
+          icon: <Trash2 className="h-4 w-4" />,
+          onClick: () => handleDelete(client),
+          className: "text-red-600",
+        },
+      ]}
+    />
   );
 
   if (loading && !isDialogOpen) {

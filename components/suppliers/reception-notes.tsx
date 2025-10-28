@@ -14,7 +14,8 @@ import {
   Trash2,
   AlertCircle,
   AlertTriangle,
-  Download
+  Download,
+  MoreVertical
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -32,6 +33,7 @@ import {
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { ReceptionNotePDFDocument } from "@/components/suppliers/reception-note-pdf";
 import ReceptionNoteForm from "@/components/suppliers/ReceptionNoteForm";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function ReceptionNotes() {
   const [receptionNotes, setReceptionNotes] = useState<any[]>([]);
@@ -194,33 +196,44 @@ export default function ReceptionNotes() {
   };
 
   const renderActions = (receptionNote: any) => (
-    <div className="flex justify-end gap-2">
-      <PDFDownloadLink
-        document={
-          <ReceptionNotePDFDocument 
-            receptionNote={receptionNote} 
-            supplierOrder={receptionNote.supplierOrder}
-            companySettings={companySettings}
-          />
-        }
-        fileName={`bon-de-reception-${receptionNote.receptionNumber}.pdf`}
-      >
-        {({ loading }) => (
-          <Button variant="outline" size="sm" disabled={loading}>
-            <Download className="h-4 w-4" />
-          </Button>
-        )}
-      </PDFDownloadLink>
-      <Button variant="outline" size="sm" onClick={() => handleViewReceptionNote(receptionNote)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleEditReceptionNote(receptionNote)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDeleteReceptionNote(receptionNote)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+    <PDFDownloadLink
+      document={
+        <ReceptionNotePDFDocument 
+          receptionNote={receptionNote} 
+          supplierOrder={receptionNote.supplierOrder}
+          companySettings={companySettings}
+        />
+      }
+      fileName={`bon-de-reception-${receptionNote.receptionNumber}.pdf`}
+    >
+      {({ loading }) => (
+        <ActionsDropdown
+          actions={[
+            {
+              label: "Télécharger PDF",
+              icon: <Download className="h-4 w-4" />,
+              onClick: () => {}, // Handled by PDFDownloadLink
+            },
+            {
+              label: "Voir",
+              icon: <Eye className="h-4 w-4" />,
+              onClick: () => handleViewReceptionNote(receptionNote),
+            },
+            {
+              label: "Modifier",
+              icon: <Edit className="h-4 w-4" />,
+              onClick: () => handleEditReceptionNote(receptionNote),
+            },
+            {
+              label: "Supprimer",
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => handleDeleteReceptionNote(receptionNote),
+              className: "text-red-600",
+            },
+          ]}
+        />
+      )}
+    </PDFDownloadLink>
   );
 
   if (loading) {

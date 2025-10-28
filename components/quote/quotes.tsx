@@ -18,7 +18,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Trash2
+  Trash2,
+  MoreVertical
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -31,6 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusDropdown } from "@/components/common/StatusDropdown";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 // TODO: Move to types.ts and backend
 export type QuoteStatus = "Brouillon" | "Envoyé" | "Accepté" | "Refusé";
@@ -476,48 +478,32 @@ export default function Quotes() {
                   ]}
                   onStatusChange={(newStatus) => handleStatusChange(quote.id, newStatus)}
                 />
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleViewQuote(quote)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleDownloadQuote(quote)}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleConvertToInvoice(quote)}
-                        disabled={isConverting || quote.status === "Accepté"}
-                      >
-                        {isConverting ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        ) : (
-                          <FileText className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Convertir en facture</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleDeleteQuote(quote)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <ActionsDropdown
+                  actions={[
+                    {
+                      label: "Voir",
+                      icon: <Eye className="h-4 w-4" />,
+                      onClick: () => handleViewQuote(quote),
+                    },
+                    {
+                      label: "Télécharger PDF",
+                      icon: <Download className="h-4 w-4" />,
+                      onClick: () => handleDownloadQuote(quote),
+                    },
+                    {
+                      label: "Convertir en facture",
+                      icon: <FileText className="h-4 w-4" />,
+                      onClick: () => handleConvertToInvoice(quote),
+                      disabled: isConverting || quote.status === "Accepté",
+                    },
+                    {
+                      label: "Supprimer",
+                      icon: <Trash2 className="h-4 w-4" />,
+                      onClick: () => handleDeleteQuote(quote),
+                      className: "text-red-600",
+                    },
+                  ]}
+                />
               </div>
             )}
           />

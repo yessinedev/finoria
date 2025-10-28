@@ -22,7 +22,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Building2, AlertTriangle } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Building2, AlertTriangle, MoreVertical } from "lucide-react";
 import { db } from "@/lib/database";
 import { Supplier } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -431,22 +432,21 @@ export default function Suppliers() {
                   <TableCell>{supplier.email || "-"}</TableCell>
                   <TableCell>{supplier.phone || "-"}</TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(supplier)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteDialog(supplier)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <ActionsDropdown
+                      actions={[
+                        {
+                          label: "Modifier",
+                          icon: <Edit className="h-4 w-4" />,
+                          onClick: () => openEditDialog(supplier),
+                        },
+                        {
+                          label: "Supprimer",
+                          icon: <Trash2 className="h-4 w-4" />,
+                          onClick: () => openDeleteDialog(supplier),
+                          className: "text-red-600",
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))

@@ -17,7 +17,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Download
+  Download,
+  MoreVertical
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -36,6 +37,8 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import { DeliveryReceiptPDFDocument } from "@/components/sales/delivery-receipt-pdf";
 import DeliveryReceiptForm from "@/components/sales/DeliveryReceiptForm";
 import DeliveryReceiptPreview from "@/components/sales/DeliveryReceiptPreview";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
+
 
 export default function Delivery() {
   const [deliveries, setDeliveries] = useState<any[]>([]);
@@ -324,33 +327,44 @@ export default function Delivery() {
   };
 
   const renderActions = (delivery: any) => (
-    <div className="flex justify-end gap-2">
-      <PDFDownloadLink
-        document={
-          <DeliveryReceiptPDFDocument 
-            deliveryReceipt={delivery} 
-            sale={delivery.sale}
-            companySettings={companySettings}
-          />
-        }
-        fileName={`bon-de-livraison-${delivery.deliveryNumber}.pdf`}
-      >
-        {({ loading }) => (
-          <Button variant="outline" size="sm" disabled={loading}>
-            <Download className="h-4 w-4" />
-          </Button>
-        )}
-      </PDFDownloadLink>
-      <Button variant="outline" size="sm" onClick={() => handleViewDelivery(delivery)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleEditDelivery(delivery)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDeleteDelivery(delivery)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+    <PDFDownloadLink
+      document={
+        <DeliveryReceiptPDFDocument 
+          deliveryReceipt={delivery} 
+          sale={delivery.sale}
+          companySettings={companySettings}
+        />
+      }
+      fileName={`bon-de-livraison-${delivery.deliveryNumber}.pdf`}
+    >
+      {({ loading }) => (
+        <ActionsDropdown
+          actions={[
+            {
+              label: "Télécharger PDF",
+              icon: <Download className="h-4 w-4" />,
+              onClick: () => {}, // Handled by PDFDownloadLink
+            },
+            {
+              label: "Voir",
+              icon: <Eye className="h-4 w-4" />,
+              onClick: () => handleViewDelivery(delivery),
+            },
+            {
+              label: "Modifier",
+              icon: <Edit className="h-4 w-4" />,
+              onClick: () => handleEditDelivery(delivery),
+            },
+            {
+              label: "Supprimer",
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => handleDeleteDelivery(delivery),
+              className: "text-red-600",
+            },
+          ]}
+        />
+      )}
+    </PDFDownloadLink>
   );
 
   if (loading) {

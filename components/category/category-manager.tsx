@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Edit, Tag, AlertCircle } from "lucide-react";
+import { Plus, Edit, Tag, AlertCircle, MoreVertical } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import type { Category } from "@/types/types";
 import CategoryFormModal from "@/components/category/CategoryFormModal";
 import CategoryDeleteDialog from "@/components/category/CategoryDeleteDialog";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function CategoryManager({
   categories,
@@ -225,20 +226,24 @@ export default function CategoryManager({
   };
 
   const renderActions = (category: Category) => (
-    <div className="flex justify-end gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => toggleCategoryStatus(category.id)}
-        className="text-xs"
-      >
-        {category.isActive ? "Désactiver" : "Activer"}
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleEdit(category)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <CategoryDeleteDialog category={category} onDelete={handleDelete} />
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: category.isActive ? "Désactiver" : "Activer",
+          onClick: () => toggleCategoryStatus(category.id),
+        },
+        {
+          label: "Modifier",
+          icon: <Edit className="h-4 w-4" />,
+          onClick: () => handleEdit(category),
+        },
+        {
+          label: "Supprimer",
+          onClick: () => handleDelete(category.id),
+          className: "text-red-600",
+        },
+      ]}
+    />
   );
 
   return (

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { EntitySelect } from "@/components/common/EntitySelect"
 import { StatusDropdown } from "@/components/common/StatusDropdown";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 import {
   FileText,
   Download,
@@ -25,6 +26,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Wand2,
+  MoreVertical,
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
@@ -423,16 +425,20 @@ export default function Invoices() {
         onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
       />
       
-      <Button variant="outline" size="sm" onClick={() => handleViewInvoice(invoice)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(invoice)} disabled={generatingPDF === invoice.id}>
-        {generatingPDF === invoice.id ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        ) : (
-          <Download className="h-4 w-4" />
-        )}
-      </Button>
+      <ActionsDropdown
+        actions={[
+          {
+            label: "Voir",
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => handleViewInvoice(invoice),
+          },
+          {
+            label: "Télécharger PDF",
+            icon: <Download className="h-4 w-4" />,
+            onClick: () => handleDownloadPDF(invoice),
+          },
+        ]}
+      />
     </div>
   );
 

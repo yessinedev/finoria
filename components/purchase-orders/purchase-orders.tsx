@@ -13,6 +13,7 @@ import {
   Filter,
   Eye,
   Download,
+  MoreVertical,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -24,6 +25,7 @@ import { formatCurrency } from "@/lib/utils";
 import { pdf } from "@react-pdf/renderer";
 import { PurchaseOrderPDFDocument } from "./purchase-order-pdf";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function PurchaseOrders() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
@@ -255,24 +257,21 @@ export default function PurchaseOrders() {
   };
 
   const renderActions = (purchaseOrder: PurchaseOrder) => (
-    <div className="flex justify-end gap-2 items-center">
-      <Button variant="outline" size="sm" onClick={() => handleViewPurchaseOrder(purchaseOrder)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleDownloadPurchaseOrder(purchaseOrder)}
-        disabled={generatingPDF === purchaseOrder.id}
-      >
-        {generatingPDF === purchaseOrder.id ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        ) : (
-          <Download className="h-4 w-4" />
-        )}
-      </Button>
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: "Voir",
+          icon: <Eye className="h-4 w-4" />,
+          onClick: () => handleViewPurchaseOrder(purchaseOrder),
+        },
+        {
+          label: "Télécharger PDF",
+          icon: <Download className="h-4 w-4" />,
+          onClick: () => handleDownloadPurchaseOrder(purchaseOrder),
+          disabled: generatingPDF === purchaseOrder.id,
+        },
+      ]}
+    />
   );
 
   // Calculate statistics

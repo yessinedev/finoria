@@ -24,6 +24,7 @@ import {
   Search,
   Calendar,
   DollarSign,
+  MoreVertical,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -42,6 +43,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function CreditNotes() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
@@ -370,19 +372,20 @@ export default function CreditNotes() {
   const pendingAmount = 0;
 
   const renderActions = (creditNote: CreditNote) => (
-    <div className="flex justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => handleViewCreditNote(creditNote)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleDownloadCreditNote(creditNote)}
-      >
-        <Download className="h-4 w-4" />
-      </Button>
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: "Voir",
+          icon: <Eye className="h-4 w-4" />,
+          onClick: () => handleViewCreditNote(creditNote),
+        },
+        {
+          label: "Télécharger PDF",
+          icon: <Download className="h-4 w-4" />,
+          onClick: () => handleDownloadCreditNote(creditNote),
+        },
+      ]}
+    />
   );
 
   if (loading) {

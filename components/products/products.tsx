@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag, Percent } from "lucide-react"
+import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag, Percent, MoreVertical } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import ProductFormModal from "@/components/products/ProductFormModal"
@@ -31,6 +31,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { ActionsDropdown } from "@/components/common/actions-dropdown"
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -323,17 +324,25 @@ export default function Products() {
   }
 
   const renderActions = (product: Product) => (
-    <div className="flex justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => toggleProductStatus(product.id)} className="text-xs">
-        {product.isActive ? "Désactiver" : "Activer"}
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDelete(product)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: product.isActive ? "Désactiver" : "Activer",
+          onClick: () => toggleProductStatus(product.id),
+        },
+        {
+          label: "Modifier",
+          icon: <Edit className="h-4 w-4" />,
+          onClick: () => handleEdit(product),
+        },
+        {
+          label: "Supprimer",
+          icon: <Trash2 className="h-4 w-4" />,
+          onClick: () => handleDelete(product),
+          className: "text-red-600",
+        },
+      ]}
+    />
   )
 
   if (loading) {
