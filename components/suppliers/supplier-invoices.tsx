@@ -70,6 +70,7 @@ import { supplierInvoiceSchema, SupplierInvoiceFormData } from "@/lib/validation
 import { z } from "zod";
 import { StatusDropdown } from "@/components/common/StatusDropdown";
 import { EntitySelect } from "@/components/common/EntitySelect";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function SupplierInvoices() {
   const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
@@ -123,6 +124,12 @@ export default function SupplierInvoices() {
   const [itemQuantity, setItemQuantity] = useState(1);
   const [itemUnitPrice, setItemUnitPrice] = useState(0);
   const [itemDiscount, setItemDiscount] = useState(0); // Add discount state
+  
+  // Reception notes state
+  const [receptionNotes, setReceptionNotes] = useState<any[]>([]);
+  const [selectedReceptionNotes, setSelectedReceptionNotes] = useState<number[]>([]);
+  const [loadingReceptionNotes, setLoadingReceptionNotes] = useState(false);
+  const [activeTab, setActiveTab] = useState("order");
 
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -170,7 +177,7 @@ export default function SupplierInvoices() {
 
   // Update form data when order is selected
   useEffect(() => {
-    if (formData.orderId && formData.orderId !== 0) {
+    if (activeTab === "order" && formData.orderId && formData.orderId !== 0) {
       const selectedOrder = orders.find(order => order.id === formData.orderId);
       console.log('Selected order:', selectedOrder); // Debug log
       if (selectedOrder && selectedOrder.items) {
@@ -188,11 +195,11 @@ export default function SupplierInvoices() {
         console.log('Invoice items from order:', invoiceItemsFromOrder); // Debug log
         setInvoiceItems(invoiceItemsFromOrder);
       }
-    } else {
-      // Clear items when no order is selected
+    } else if (activeTab !== "order") {
+      // Clear items when not on order tab
       setInvoiceItems([]);
     }
-  }, [formData.orderId, orders]);
+  }, [formData.orderId, orders, activeTab]);
 
   const loadInvoices = async () => {
     try {
@@ -270,6 +277,26 @@ export default function SupplierInvoices() {
     }
   };
 
+  const loadReceptionNotes = async () => {
+    setLoadingReceptionNotes(true);
+    try {
+      const response = await db.receptionNotes.getAll();
+      if (response.success && response.data) {
+        setReceptionNotes(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to load reception notes:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des bons de réception",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingReceptionNotes(false);
+    }
+  };
+
+
   const validateForm = () => {
     try {
       // Validate main form data
@@ -281,11 +308,13 @@ export default function SupplierInvoices() {
       
       supplierInvoiceSchema.parse(mainData);
       
-      // Additional validation: if no order is selected, we need at least one item
-      if ((!formData.orderId || formData.orderId === 0) && (!invoiceItems || invoiceItems.length === 0)) {
+      // Additional validation: if no order is selected and no reception notes, we need at least one item
+      if ((!formData.orderId || formData.orderId === 0) && 
+          selectedReceptionNotes.length === 0 && 
+          (!invoiceItems || invoiceItems.length === 0)) {
         toast({
           title: "Erreur de validation",
-          description: "Veuillez ajouter au moins un article",
+          description: "Veuillez ajouter au moins un article ou sélectionner un bon de réception",
           variant: "destructive",
         });
         return false;
@@ -480,6 +509,8 @@ export default function SupplierInvoices() {
     setItemQuantity(1);
     setItemUnitPrice(0);
     setItemDiscount(0);
+    setSelectedReceptionNotes([]);
+    setActiveTab("order");
     setCurrentInvoice(null);
     setErrors({});
     setItemErrors({});
@@ -502,6 +533,8 @@ export default function SupplierInvoices() {
       ...prev,
       invoiceNumber: generateInvoiceNumber()
     }));
+    // Load reception notes
+    loadReceptionNotes();
     setIsDialogOpen(true);
   };
 
@@ -522,6 +555,8 @@ export default function SupplierInvoices() {
     setErrors({});
     setItemErrors({});
     setItemDiscount(0);
+    setSelectedReceptionNotes([]);
+    setActiveTab("order");
     setIsDialogOpen(true);
   };
 
@@ -650,6 +685,75 @@ export default function SupplierInvoices() {
   const removeInvoiceItem = (id: number) => {
     setInvoiceItems(invoiceItems.filter(item => item.id !== id));
   };
+
+  const handleReceptionNoteSelection = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedReceptionNotes(prev => [...prev, id]);
+      
+      // Add items from the selected reception note to the invoice
+      const selectedNote = receptionNotes.find(note => note.id === id);
+      if (selectedNote) {
+        const newItems = selectedNote.items.map((item: any) => ({
+          id: Date.now() + Math.random(), // Temporary ID
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.receivedQuantity,
+          unitPrice: item.unitPrice,
+          discount: 0,
+          totalPrice: item.receivedQuantity * item.unitPrice,
+        }));
+        
+        setInvoiceItems(prev => [...prev, ...newItems]);
+        
+        // Set supplier if not already set
+        if (!formData.supplierId && selectedNote.supplierId) {
+          setFormData(prev => ({
+            ...prev,
+            supplierId: selectedNote.supplierId
+          }));
+        }
+      }
+    } else {
+      setSelectedReceptionNotes(prev => prev.filter(noteId => noteId !== id));
+      
+      // Remove items from the deselected reception note
+      const selectedNote = receptionNotes.find(note => note.id === id);
+      if (selectedNote) {
+        const noteItemProductIds = selectedNote.items.map((item: any) => item.productId);
+        setInvoiceItems(prev => 
+          prev.filter(item => !noteItemProductIds.includes(item.productId))
+        );
+      }
+    }
+  };
+
+  const isReceptionNoteSelected = (id: number) => {
+    return selectedReceptionNotes.includes(id);
+  };
+
+  const isItemFromReceptionNote = (item: any) => {
+    // Items from reception notes would have been added with receivedQuantity
+    // We can check if the item's productId matches any item in selected reception notes
+    for (const noteId of selectedReceptionNotes) {
+      const note = receptionNotes.find(n => n.id === noteId);
+      if (note) {
+        for (const noteItem of note.items) {
+          if (noteItem.productId === item.productId) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  const canDeleteItem = (item: any) => {
+    // Can delete if no order is selected, no reception notes are selected, 
+    // or the item is not from a selected reception note
+    return (!formData.orderId || formData.orderId === 0) && 
+           (selectedReceptionNotes.length === 0 || !isItemFromReceptionNote(item));
+  };
+
 
   // Sorting functions
   const requestSort = (key: keyof SupplierInvoice) => {
@@ -795,118 +899,205 @@ Commande #{order.id} - {order.supplierName}
 
             {/* Status functionality removed */}
 
-            <div className="space-y-2">
-              <Label>Articles</Label>
-              {/* Only show product selection when no order is selected */}
-              {!formData.orderId || formData.orderId === 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                  <div className="md:col-span-5">
-                    <Label>Produit</Label>
-                    <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
-                      <PopoverTrigger asChild>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="order">Commande fournisseur</TabsTrigger>
+                <TabsTrigger value="manual">Sélection manuelle</TabsTrigger>
+                <TabsTrigger value="reception">Bons de réception</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="order" className="mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="orderId">Commande associée</Label>
+                    <Select
+                      value={formData.orderId.toString()}
+                      onValueChange={(value) => setFormData({ ...formData, orderId: Number(value) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une commande fournisseur" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Aucune</SelectItem>
+                        {orders.map((order) => (
+                          <SelectItem key={order.id} value={order.id.toString()}>
+                            Commande #{order.id} - {order.supplierName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {formData.orderId && formData.orderId !== 0 ? (
+                    <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
+                      Les articles sont automatiquement remplis à partir de la commande sélectionnée.
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
+                      Veuillez sélectionner une commande fournisseur pour remplir automatiquement les articles.
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="manual" className="mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Articles</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                      <div className="md:col-span-5">
+                        <Label>Produit</Label>
+                        <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={productSearchOpen}
+                              className="w-full justify-between"
+                            >
+                              {selectedProduct
+                                ? products.find((product) => product.id === selectedProduct)?.name
+                                : "Sélectionner un produit..."}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Rechercher un produit..." />
+                              <CommandList>
+                                <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
+                                <CommandGroup>
+                                  {products.map((product) => (
+                                    <CommandItem
+                                      key={product.id}
+                                      value={product.name}
+                                      onSelect={() => {
+                                        setSelectedProduct(product.id);
+                                        setItemUnitPrice(product.purchasePriceHT || 0);
+                                        setProductSearchOpen(false);
+                                      }}
+                                    >
+                                      <div className="flex flex-col flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium">
+                                            {product.name}
+                                          </span>
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">
+                                          Achat: {product.purchasePriceHT ? product.purchasePriceHT.toFixed(3) : 'N/A'} DNT • Stock: {product.stock}
+                                        </span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="itemQuantity">Quantité</Label>
+                        <Input
+                          id="itemQuantity"
+                          type="number"
+                          min="1"
+                          value={itemQuantity}
+                          onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
+                        <Input
+                          id="itemUnitPrice"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={itemUnitPrice}
+                          onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="md:col-span-1">
+                        <Label htmlFor="itemDiscount">Remise %</Label>
+                        <Input
+                          id="itemDiscount"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={itemDiscount}
+                          onChange={(e) => setItemDiscount(Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label>Total</Label>
+                        <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                          {((itemQuantity * itemUnitPrice) - ((itemQuantity * itemUnitPrice * itemDiscount) / 100)).toFixed(3)} DNT
+                        </div>
+                      </div>
+                      <div className="md:col-span-1">
                         <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={productSearchOpen}
-                          className="w-full justify-between"
+                          type="button"
+                          onClick={addInvoiceItem}
+                          className="w-full"
+                          disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
                         >
-                          {selectedProduct
-                            ? products.find((product) => product.id === selectedProduct)?.name
-                            : "Sélectionner un produit..."}
+                          <Plus className="h-4 w-4" />
                         </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput placeholder="Rechercher un produit..." />
-                          <CommandList>
-                            <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
-                            <CommandGroup>
-                              {products.map((product) => (
-                                <CommandItem
-                                  key={product.id}
-                                  value={product.name}
-                                  onSelect={() => {
-                                    setSelectedProduct(product.id);
-                                    setItemUnitPrice(product.purchasePriceHT || 0);
-                                    setProductSearchOpen(false);
-                                  }}
-                                >
-                                  <div className="flex flex-col flex-1">
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-medium">
-                                        {product.name}
-                                      </span>
-                                    </div>
-                                    <span className="text-sm text-muted-foreground">
-                                      Achat: {product.purchasePriceHT ? product.purchasePriceHT.toFixed(3) : 'N/A'} DNT • Stock: {product.stock}
-                                    </span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="itemQuantity">Quantité</Label>
-                    <Input
-                      id="itemQuantity"
-                      type="number"
-                      min="1"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
-                    <Input
-                      id="itemUnitPrice"
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={itemUnitPrice}
-                      onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-1">
-                    <Label htmlFor="itemDiscount">Remise %</Label>
-                    <Input
-                      id="itemDiscount"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={itemDiscount}
-                      onChange={(e) => setItemDiscount(Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label>Total</Label>
-                    <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {((itemQuantity * itemUnitPrice) - ((itemQuantity * itemUnitPrice * itemDiscount) / 100)).toFixed(3)} DNT
+                      </div>
                     </div>
                   </div>
-                  <div className="md:col-span-1">
-                    <Button
-                      type="button"
-                      onClick={addInvoiceItem}
-                      className="w-full"
-                      disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="reception" className="mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Bons de réception</Label>
+                    {loadingReceptionNotes ? (
+                      <div className="text-center py-2 text-muted-foreground">Chargement des bons de réception...</div>
+                    ) : receptionNotes.length === 0 ? (
+                      <div className="text-center py-2 text-muted-foreground">Aucun bon de réception disponible</div>
+                    ) : (
+                      <div className="border rounded-md max-h-40 overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-10"></TableHead>
+                              <TableHead>N° Bon de réception</TableHead>
+                              <TableHead>Fournisseur</TableHead>
+                              <TableHead className="w-24">Date</TableHead>
+                              <TableHead className="w-20">Articles</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {receptionNotes.map((note) => (
+                              <TableRow key={note.id}>
+                                <TableCell>
+                                  <input
+                                    type="checkbox"
+                                    checked={isReceptionNoteSelected(note.id)}
+                                    onChange={(e) => handleReceptionNoteSelection(note.id, e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                </TableCell>
+                                <TableCell className="font-medium">{note.receptionNumber}</TableCell>
+                                <TableCell>{note.supplierName}</TableCell>
+                                <TableCell>{new Date(note.receptionDate).toLocaleDateString('fr-FR')}</TableCell>
+                                <TableCell>{note.items.length}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                    {selectedReceptionNotes.length > 0 && (
+                      <div className="text-sm text-muted-foreground">
+                        {selectedReceptionNotes.length} bon(s) de réception sélectionné(s)
+                      </div>
+                    )}
                   </div>
                 </div>
-              ) : (
-                // When an order is selected, show a message
-                <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
-                  Les articles sont automatiquement remplis à partir de la commande sélectionnée.
-                  Pour modifier les articles, veuillez sélectionner "Aucune" commande.
-                </div>
-              )}
-            </div>
+              </TabsContent>
+            </Tabs>
 
             {/* Invoice Items Table */}
             <div className="border rounded-md overflow-x-auto">
@@ -918,8 +1109,8 @@ Commande #{order.id} - {order.supplierName}
                     <TableHead className="w-24">Prix unit.</TableHead>
                     <TableHead className="w-20">Remise %</TableHead>
                     <TableHead className="w-24">Total</TableHead>
-                    {/* Only show delete button when no order is selected */}
-                    {(!formData.orderId || formData.orderId === 0) && (
+                    {/* Only show delete button column when there are items that can be deleted */}
+                    {invoiceItems.some(item => canDeleteItem(item)) && (
                       <TableHead className="w-16"></TableHead>
                     )}
                   </TableRow>
@@ -932,8 +1123,8 @@ Commande #{order.id} - {order.supplierName}
                       <TableCell>{item.unitPrice.toFixed(3)} DNT</TableCell>
                       <TableCell>{item.discount.toFixed(2)}%</TableCell>
                       <TableCell>{item.totalPrice.toFixed(3)} DNT</TableCell>
-                      {/* Only show delete button when no order is selected */}
-                      {(!formData.orderId || formData.orderId === 0) && (
+                      {/* Only show delete button for items that can be deleted */}
+                      {canDeleteItem(item) && (
                         <TableCell>
                           <Button
                             variant="outline"
