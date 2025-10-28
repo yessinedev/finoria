@@ -1,0 +1,254 @@
+// Sales IPC handlers
+module.exports = (ipcMain, db, notifyDataChange) => {
+  ipcMain.handle("create-sale", async (event, sale) => {
+    const transaction = db.transaction((saleData) => {
+      try {
+        // Insert sale
+        const saleStmt = db.prepare(`
+          INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, fodecAmount, saleDate) 
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        const saleResult = saleStmt.run(
+          saleData.clientId,
+          saleData.totalAmount,
+          saleData.taxAmount,
+          saleData.discountAmount || 0,
+          saleData.fodecAmount || 0, // New FODEC amount
+          saleData.saleDate || new Date().toISOString()
+        );
+        const saleId = saleResult.lastInsertRowid;
+        
+        // Insert sale items
+        const itemStmt = db.prepare(`
+          INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, discount, totalPrice) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        // Prepare statement to get product TVA rate
+        const getProductTva = db.prepare(`
+          SELECT t.rate as tvaRate 
+          FROM products p 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE p.id = ?
+        `);
+        
+        // Update product stock for non-service products
+        const updateStockStmt = db.prepare(`
+          UPDATE products 
+          SET stock = stock - ? 
+          WHERE id = ? AND category != 'Service'
+        `);
+        
+        // Calculate total tax amount for the sale based on individual product TVA rates
+        let totalTaxAmount = 0;
+        
+        saleData.items.forEach((item) => {
+          itemStmt.run(
+            saleId,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.discount || 0,
+            item.totalPrice
+          );
+          
+          // Get product TVA rate and calculate tax for this item
+          const productTva = getProductTva.get(item.productId);
+          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+          
+          // Only reduce stock for non-service products
+          // Fix: Make sure we're reducing the correct quantity for each product
+          updateStockStmt.run(item.quantity, item.productId);
+        });
+        
+        // Update the sale with the calculated tax amount
+        const updateTaxStmt = db.prepare(`
+          UPDATE sales 
+          SET taxAmount = ? 
+          WHERE id = ?
+        `);
+        updateTaxStmt.run(totalTaxAmount, saleId);
+        return saleId;
+      } catch (error) {
+        console.error("Error in sale transaction:", error);
+        throw error;
+      }
+    });
+    try {
+      const saleId = transaction(sale);
+      // Get the updated sale with correct tax amount
+      const getUpdatedSale = db.prepare(`
+        SELECT s.*, c.name as clientName, c.company as clientCompany
+        FROM sales s
+        JOIN clients c ON s.clientId = c.id
+        WHERE s.id = ?
+      `).get(saleId);
+      
+      const newSale = {
+        id: saleId,
+        ...sale,
+        taxAmount: getUpdatedSale.taxAmount,
+        saleDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      notifyDataChange("sales", "create", newSale);
+      return newSale;
+    } catch (error) {
+      console.error("Error creating sale:", error);
+      throw new Error("Erreur lors de la création de la vente");
+    }
+  });
+
+  ipcMain.handle("get-sales", async () => {
+    try {
+      const sales = db
+        .prepare(
+          `
+        SELECT s.*, c.name as clientName, c.company as clientCompany
+        FROM sales s
+        JOIN clients c ON s.clientId = c.id
+        ORDER BY s.saleDate DESC
+      `
+        )
+        .all();
+      return sales;
+    } catch (error) {
+      console.error("Error getting sales:", error);
+      throw new Error("Erreur lors de la récupération des ventes");
+    }
+  });
+
+  ipcMain.handle("get-sales-with-items", async () => {
+    try {
+      const sales = db
+        .prepare(
+          `
+        SELECT s.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress, c.taxId as clientTaxId
+        FROM sales s
+        JOIN clients c ON s.clientId = c.id
+        ORDER BY s.saleDate DESC
+      `
+        )
+        .all();
+      
+      // Add items to each sale
+      const getItems = db.prepare(`
+        SELECT * FROM sale_items WHERE saleId = ?
+      `);
+      
+      const salesWithItems = sales.map(sale => ({
+        ...sale,
+        items: getItems.all(sale.id)
+      }));
+      
+      return salesWithItems;
+    } catch (error) {
+      console.error("Error getting sales with items:", error);
+      throw new Error("Erreur lors de la récupération des ventes avec articles");
+    }
+  });
+
+  // Get a single sale by ID with items
+  ipcMain.handle("get-sale", async (event, id) => {
+    try {
+      const sale = db.prepare(`
+        SELECT s.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress, c.taxId as clientTaxId
+        FROM sales s
+        JOIN clients c ON s.clientId = c.id
+        WHERE s.id = ?
+      `).get(id);
+      
+      if (!sale) {
+        throw new Error("Vente non trouvée");
+      }
+      
+      // Get items
+      const items = db.prepare(`
+        SELECT * FROM sale_items WHERE saleId = ?
+      `).all(id);
+      
+      return {
+        ...sale,
+        items
+      };
+    } catch (error) {
+      console.error("Error getting sale:", error);
+      throw new Error("Erreur lors de la récupération de la vente");
+    }
+  });
+
+  ipcMain.handle("get-sale-items", async (event, saleId) => {
+    try {
+      const items = db
+        .prepare("SELECT * FROM sale_items WHERE saleId = ?")
+        .all(saleId);
+      return items;
+    } catch (error) {
+      console.error("Error getting sale items:", error);
+      throw new Error("Erreur lors de la récupération des articles de vente");
+    }
+  });
+
+  // Removed update-sale-status handler
+
+  ipcMain.handle("delete-sale", async (event, id) => {
+    try {
+      // First check if sale exists
+      const sale = db.prepare("SELECT * FROM sales WHERE id = ?").get(id);
+      if (!sale) {
+        throw new Error("Vente non trouvée");
+      }
+
+      // Get sale items
+      const items = db.prepare("SELECT * FROM sale_items WHERE saleId = ?").all(id);
+      
+      // Return stock for each item (add back the quantity that was deducted)
+      const updateStockStmt = db.prepare(`
+        UPDATE products 
+        SET stock = stock + ? 
+        WHERE id = ? AND category != 'Service'
+      `);
+      
+      // Create stock movement records for the return
+      const insertMovementStmt = db.prepare(`
+        INSERT INTO stock_movements (
+          productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const item of items) {
+        // Only return stock for non-service products
+        updateStockStmt.run(item.quantity, item.productId);
+        
+        // Create stock movement record for the return
+        insertMovementStmt.run(
+          item.productId,
+          item.productName,
+          item.quantity,
+          'IN',
+          'sale_cancellation',
+          id,
+          `SALE-${id}`, 
+          'Vente annulée'
+        );
+      }
+
+      // Delete sale items first (due to foreign key constraint)
+      const deleteItems = db.prepare("DELETE FROM sale_items WHERE saleId = ?");
+      deleteItems.run(id);
+      
+      // Delete the sale
+      const deleteSale = db.prepare("DELETE FROM sales WHERE id = ?");
+      deleteSale.run(id);
+      
+      notifyDataChange("sales", "delete", { id });
+      return true;
+    } catch (error) {
+      console.error("Error deleting sale:", error);
+      throw new Error("Erreur lors de la suppression de la vente");
+    }
+  });
+};

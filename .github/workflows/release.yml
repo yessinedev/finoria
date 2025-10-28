@@ -1,0 +1,33 @@
+name: Build & Publish Finoria App
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest # ✅ Windows runner is best for building .exe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Windows app
+        run: |
+          npm run build:next
+          npx electron-builder --win --publish never
+      # 🚀 Deploy build artifacts to VPS
+      - name: Deploy to VPS
+        shell: bash
+        run: |
+          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no dist/*.exe dist/*.yml \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/finoria-updates/
