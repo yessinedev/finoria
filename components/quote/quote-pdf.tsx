@@ -5,6 +5,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer";
 import type { Quote, LineItem } from "@/types/types";
 import { formatCurrency, formatQuantity } from "@/lib/utils";
@@ -24,6 +25,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#e0e7ff',
     paddingBottom: 8,
+  },
+  logoBox: {
+    backgroundColor: '#eef2ff',
+    borderRadius: 8,
+    padding: 8,
+    marginRight: 8,
+    width: 80,
+    height: 80,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
   },
   title: {
     fontSize: 24,
@@ -133,9 +147,17 @@ export function QuotePDFDocument({ quote, companySettings }: { quote: Quote; com
       <Page size="A4" style={styles.page} wrap>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Finoria</Text>
-            <Text style={styles.subtitle}>Gestion & Facturation</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {companySettings?.logo ? (
+              <View style={styles.logoBox}>
+                <Image style={styles.logoImage} src={companySettings.logo} />
+              </View>
+            ) : (
+              <View style={styles.logoBox}>
+                <Text style={styles.title}>Finoria</Text>
+                <Text style={styles.subtitle}>Gestion & Facturation</Text>
+              </View>
+            )}
           </View>
           <View>
             <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{quote.number}</Text>

@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle, Percent } from "lucide-react";
+import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle, Percent, Image as ImageIcon } from "lucide-react";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +48,7 @@ export default function SettingsPage() {
     website: "",
     city: "",
     country: "",
+    logo: "",
   });
   const [taxFields, setTaxFields] = useState({
     taxId: "",
@@ -74,6 +75,7 @@ export default function SettingsPage() {
           website: c.website || "",
           city: c.city || "",
           country: c.country || "",
+          logo: c.logo || "",
         });
         setTaxFields({
           taxId: c.taxId || "",
@@ -96,6 +98,7 @@ export default function SettingsPage() {
           website: "",
           city: "",
           country: "",
+          logo: "",
         });
         setTaxFields({
           taxId: "",
@@ -226,6 +229,7 @@ export default function SettingsPage() {
           website: result.data.website || "",
           city: result.data.city || "",
           country: result.data.country || "",
+          logo: result.data.logo || "",
         });
         setTaxFields({
           taxId: result.data.taxId || "",
@@ -333,6 +337,42 @@ export default function SettingsPage() {
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier image valide",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Erreur",
+        description: "La taille de l'image ne doit pas dépasser 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageData = e.target?.result as string;
+      setCompanyFields(prev => ({ ...prev, logo: imageData }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setCompanyFields(prev => ({ ...prev, logo: "" }));
   };
 
   useEffect(() => {
@@ -521,6 +561,56 @@ export default function SettingsPage() {
                   }
                   placeholder="https://votreentreprise.com"
                 />
+              </div>
+              
+              {/* Logo Upload Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-foreground">
+                    Logo de l'entreprise
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      id="logo-upload"
+                    />
+                    <label
+                      htmlFor="logo-upload"
+                      className="cursor-pointer inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                    >
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      Choisir un logo
+                    </label>
+                    {companyFields.logo && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={removeLogo}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Supprimer
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Formats acceptés: JPG, PNG, GIF. Taille maximale: 2MB
+                  </p>
+                </div>
+                
+                {companyFields.logo && (
+                  <div className="flex items-center justify-center">
+                    <div className="border rounded-lg p-2 bg-muted">
+                      <img 
+                        src={companyFields.logo} 
+                        alt="Company Logo" 
+                        className="max-h-24 max-w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

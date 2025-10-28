@@ -35,6 +35,15 @@ import type { Invoice, Sale } from "@/types/types"
 import { pdf } from "@react-pdf/renderer"
 import { InvoicePDFDocument } from "./invoice-pdf"
 import { toast } from "@/components/ui/use-toast";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -48,11 +57,21 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
   const [companySettings, setCompanySettings] = useState<any>(null)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Data table configuration
   const filteredInvoicesByStatus = invoices.filter((invoice) => {
     if (statusFilter === "all") return true
-    return invoice.status === statusFilter
+    // Since status field doesn't exist, we'll filter by due date for now
+    const dueDate = new Date(invoice.dueDate)
+    const today = new Date()
+    if (statusFilter === "En retard") {
+      return dueDate < today
+    }
+    return true
   })
 
   const filteredInvoicesByDate = filteredInvoicesByStatus.filter((invoice) => {
@@ -433,6 +452,14 @@ export default function Invoices() {
     )
   }
 
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentInvoices = filteredInvoices.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage)
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+
   return (
     <div className="p-6 flex flex-col gap-2">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -597,7 +624,7 @@ export default function Invoices() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={filteredInvoices}
+            data={currentInvoices}
             columns={invoicesColumns}
             sortConfig={sortConfig}
             searchTerm={searchTerm}
@@ -610,6 +637,36 @@ export default function Invoices() {
             emptyMessage="Aucune facture trouvée"
             actions={renderActions}
           />
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredInvoices.length)} sur {filteredInvoices.length} factures
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-sm font-medium">
+                  Page {currentPage} sur {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

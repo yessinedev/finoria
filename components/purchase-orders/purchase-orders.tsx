@@ -33,46 +33,51 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function PurchaseOrders() {
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrder | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [companySettings, setCompanySettings] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState<string>("all");
-  const [generatingPDF, setGeneratingPDF] = useState<number | null>(null);
-  const { toast } = useToast();
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
+  const [sales, setSales] = useState<Sale[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrder | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [companySettings, setCompanySettings] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [dateFilter, setDateFilter] = useState<string>("all")
+  const [generatingPDF, setGeneratingPDF] = useState<number | null>(null)
+  const { toast } = useToast()
 
   // Form state for creating purchase orders
-  const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
-  const [deliveryDate, setDeliveryDate] = useState<string>("");
-  const [creating, setCreating] = useState(false);
+  const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null)
+  const [deliveryDate, setDeliveryDate] = useState<string>("")
+  const [creating, setCreating] = useState(false)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // DataTable logic
   const filteredPurchaseOrdersByDate = purchaseOrders.filter((purchaseOrder) => {
-    if (dateFilter === "all") return true;
-    const purchaseOrderDate = new Date(purchaseOrder.orderDate);
-    const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - purchaseOrderDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (dateFilter === "all") return true
+    const purchaseOrderDate = new Date(purchaseOrder.orderDate)
+    const now = new Date()
+    const daysDiff = Math.floor((now.getTime() - purchaseOrderDate.getTime()) / (1000 * 60 * 60 * 24))
 
     switch (dateFilter) {
       case "today":
-        return daysDiff === 0;
+        return daysDiff === 0
       case "week":
-        return daysDiff <= 7;
+        return daysDiff <= 7
       case "month":
-        return daysDiff <= 30;
+        return daysDiff <= 30
       case "quarter":
-        return daysDiff <= 90;
+        return daysDiff <= 90
       default:
-        return true;
+        return true
     }
-  });
+  })
 
   const {
     data: filteredPurchaseOrders,
@@ -83,8 +88,16 @@ export default function PurchaseOrders() {
     clearFilters,
     sortConfig,
     filters,
-  } = useDataTable(filteredPurchaseOrdersByDate, { key: "orderDate", direction: "desc" });
+  } = useDataTable(filteredPurchaseOrdersByDate, { key: "orderDate", direction: "desc" })
 
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentPurchaseOrders = filteredPurchaseOrders.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(filteredPurchaseOrders.length / itemsPerPage)
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+  
   const columns = [
     {
       key: "number" as keyof PurchaseOrder,
@@ -375,7 +388,7 @@ export default function PurchaseOrders() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={filteredPurchaseOrders}
+            data={currentPurchaseOrders}
             columns={columns}
             sortConfig={sortConfig}
             searchTerm={tableSearchTerm}
@@ -388,6 +401,36 @@ export default function PurchaseOrders() {
             emptyMessage="Aucun bon de commande trouvé"
             actions={(purchaseOrder) => renderActions(purchaseOrder)}
           />
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredPurchaseOrders.length)} sur {filteredPurchaseOrders.length} bons de commande
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-sm font-medium">
+                  Page {currentPage} sur {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

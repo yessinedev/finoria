@@ -19,10 +19,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       // If still no settings, create a default empty company record
       if (!settings) {
         const stmt = db.prepare(`
-          INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, logo) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
-        const result = stmt.run("", "", "", "", "", "", "", "", "", null);
+        const result = stmt.run("", "", "", "", "", "", "", "", "", null, "");
         settings = { 
           id: result.lastInsertRowid, 
           name: "", 
@@ -34,7 +34,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           website: "", 
           taxId: "", 
           taxStatus: "", 
-          tvaNumber: null 
+          tvaNumber: null,
+          logo: ""
         };
       }
 
@@ -50,8 +51,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-enterprise-settings", async (event, settings) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, logo) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         settings.name || "",
@@ -63,7 +64,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.website || "",
         settings.taxId || "",
         settings.taxStatus || "",
-        settings.tvaNumber
+        settings.tvaNumber,
+        settings.logo || ""
       );
 
       const newSettings = { id: result.lastInsertRowid, ...settings };
@@ -82,7 +84,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE companies 
-        SET name = ?, address = ?, city = ?, country = ?, phone = ?, email = ?, website = ?, taxId = ?, taxStatus = ?, tvaNumber = ?
+        SET name = ?, address = ?, city = ?, country = ?, phone = ?, email = ?, website = ?, taxId = ?, taxStatus = ?, tvaNumber = ?, logo = ?
         WHERE id = ?
       `);
       const result = stmt.run(
@@ -96,6 +98,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.taxId || "",
         settings.taxStatus || "",
         settings.tvaNumber,
+        settings.logo || "",
         id
       );
 

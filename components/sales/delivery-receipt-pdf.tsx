@@ -5,6 +5,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer"
 import type { Sale, SaleItem, DeliveryReceipt } from "@/types/types";
 import { formatCurrency, formatQuantity } from "@/lib/utils";
@@ -30,6 +31,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     marginRight: 8,
+    width: 80,
+    height: 80,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
   },
   title: {
     fontSize: 24,
@@ -126,10 +134,16 @@ export function DeliveryReceiptPDFDocument({
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View>
-              <Text style={styles.title}>Bon de Livraison</Text>
-              <Text style={styles.subtitle}>Document de livraison</Text>
-            </View>
+            {companySettings?.logo ? (
+              <View style={styles.logoBox}>
+                <Image style={styles.logoImage} src={companySettings.logo} />
+              </View>
+            ) : (
+              <View style={styles.logoBox}>
+                <Text style={styles.title}>Finoria</Text>
+                <Text style={styles.subtitle}>Gestion & Facturation</Text>
+              </View>
+            )}
           </View>
           <View>
             <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{deliveryReceipt.deliveryNumber}</Text>

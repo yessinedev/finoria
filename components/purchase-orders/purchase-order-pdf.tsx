@@ -5,8 +5,9 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer";
-import type { PurchaseOrder, PurchaseOrderItem } from "@/types/types";
+import type { SupplierOrder, SupplierOrderItem } from "@/types/types";
 import { formatCurrency, formatQuantity } from "@/lib/utils";
 
 const styles = StyleSheet.create({
@@ -24,6 +25,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#e0e7ff',
     paddingBottom: 8,
+  },
+  logoBox: {
+    backgroundColor: '#eef2ff',
+    borderRadius: 8,
+    padding: 8,
+    marginRight: 8,
+    width: 80,
+    height: 80,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
   },
   title: {
     fontSize: 24,
@@ -125,18 +139,26 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString("fr-FR");
 }
 
-export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { purchaseOrder: PurchaseOrder; companySettings?: any }) {
+export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { purchaseOrder: SupplierOrder; companySettings?: any }) {
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Finoria</Text>
-            <Text style={styles.subtitle}>Gestion & Facturation</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {companySettings?.logo ? (
+              <View style={styles.logoBox}>
+                <Image style={styles.logoImage} src={companySettings.logo} />
+              </View>
+            ) : (
+              <View style={styles.logoBox}>
+                <Text style={styles.title}>Finoria</Text>
+                <Text style={styles.subtitle}>Gestion & Facturation</Text>
+              </View>
+            )}
           </View>
           <View>
-            <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{purchaseOrder.number}</Text>
+            <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{purchaseOrder.orderNumber}</Text>
             <Text style={styles.subtitle}>Date: {formatDate(purchaseOrder.orderDate)}</Text>
             {purchaseOrder.deliveryDate && (
               <Text style={styles.subtitle}>Livraison prévue: {formatDate(purchaseOrder.deliveryDate)}</Text>
@@ -157,12 +179,12 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Client */}
             <Text style={styles.cardTitle}>Destinataire</Text>
-            <Text style={styles.cardContent}>{purchaseOrder.clientName}</Text>
-            {purchaseOrder.clientCompany && <Text style={styles.cardContent}>{purchaseOrder.clientCompany}</Text>}
-            {purchaseOrder.clientAddress && <Text style={styles.cardContent}>{purchaseOrder.clientAddress}</Text>
+            <Text style={styles.cardContent}>{purchaseOrder.supplierName}</Text>
+            {purchaseOrder.supplierCompany && <Text style={styles.cardContent}>{purchaseOrder.supplierCompany}</Text>}
+            {purchaseOrder.supplierAddress && <Text style={styles.cardContent}>{purchaseOrder.supplierAddress}</Text>
 }
-            {purchaseOrder.clientPhone && <Text style={styles.cardContent}>{purchaseOrder.clientPhone}</Text>}
-            {purchaseOrder.clientEmail && <Text style={styles.cardContent}>{purchaseOrder.clientEmail}</Text>}
+            {purchaseOrder.supplierPhone && <Text style={styles.cardContent}>{purchaseOrder.supplierPhone}</Text>}
+            {purchaseOrder.supplierEmail && <Text style={styles.cardContent}>{purchaseOrder.supplierEmail}</Text>}
           </View>
         </View>
 
@@ -175,7 +197,7 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
             <Text style={styles.tableCell}>Remise</Text>
             <Text style={styles.tableCell}>Total HT</Text>
           </View>
-          {Array.isArray(purchaseOrder.items) && purchaseOrder.items.map((item: PurchaseOrderItem, idx: number) => (
+          {Array.isArray(purchaseOrder.items) && purchaseOrder.items.map((item: SupplierOrderItem, idx: number) => (
             <View style={styles.tableRow} key={item.id || idx}>
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
               <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
@@ -207,11 +229,6 @@ export function PurchaseOrderPDFDocument({ purchaseOrder, companySettings }: { p
             <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(purchaseOrder.totalAmount || 0)}</Text>
           </View>
         </View>
-
-        {/* Notes */}
-        {purchaseOrder.notes && purchaseOrder.notes.trim() !== '' && (
-          <Text style={styles.notes}>{purchaseOrder.notes}</Text>
-        )}
 
         {/* Footer */}
         {/* Removed: Gestion & Facturation - GestVente SARL - 123 Rue de l'Entreprise, 75001 Paris - Tél: 01 23 45 67 89 - contact@gestvente.fr */}

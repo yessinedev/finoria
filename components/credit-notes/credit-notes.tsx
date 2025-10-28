@@ -34,6 +34,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { StatusDropdown } from "@/components/common/StatusDropdown";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function CreditNotes() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
@@ -47,6 +55,10 @@ export default function CreditNotes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const { toast } = useToast();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Form state for creating credit notes
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
@@ -90,6 +102,14 @@ export default function CreditNotes() {
     sortConfig,
     filters,
   } = useDataTable(filteredCreditNotesByDate, { key: "issueDate", direction: "desc" });
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentCreditNotes = filteredCreditNotes.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredCreditNotes.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const columns = [
     {
@@ -556,7 +576,7 @@ export default function CreditNotes() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={filteredCreditNotes}
+            data={currentCreditNotes}
             columns={columns}
             sortConfig={sortConfig}
             searchTerm={searchTerm}
@@ -569,6 +589,44 @@ export default function CreditNotes() {
             emptyMessage="Aucune facture d'avoir trouvée"
             actions={renderActions}
           />
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredCreditNotes.length)} sur {filteredCreditNotes.length} factures d'avoir
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => paginate(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => paginate(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => paginate(currentPage + 1)}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -791,7 +849,7 @@ export default function CreditNotes() {
                   <div>
                     <h3 className="font-semibold mb-2">Client</h3>
                     <p>{selectedCreditNote.clientName}</p>
-                    {selectedCreditNote.clientCompany && <p>{selectedCreditNote.clientCompany}</p>}
+                    {selectedCreditNote.clientCompany && <p>{selectedCreditNote.clientCompany}</p>
                     {selectedCreditNote.clientAddress && <p>{selectedCreditNote.clientAddress}</p>}
                   </div>
                   

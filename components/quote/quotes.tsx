@@ -286,7 +286,17 @@ export default function Quotes() {
       }
     }
     
-    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={companySettings} />).toBlob();
+    // Make sure company settings are loaded
+    let currentCompanySettings = companySettings;
+    if (!currentCompanySettings) {
+      const settingsResult = await db.settings.get();
+      if (settingsResult.success && settingsResult.data) {
+        currentCompanySettings = settingsResult.data;
+        setCompanySettings(settingsResult.data);
+      }
+    }
+    
+    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={currentCompanySettings} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
