@@ -352,6 +352,34 @@ function createTables(db) {
     )
   `);
 
+  // Delivery receipts table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS delivery_receipts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      saleId INTEGER NOT NULL,
+      deliveryNumber TEXT NOT NULL UNIQUE,
+      driverName TEXT,
+      vehicleRegistration TEXT,
+      deliveryDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Delivery receipt items table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS delivery_receipt_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deliveryReceiptId INTEGER NOT NULL,
+      productId INTEGER NOT NULL,
+      productName TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      unitPrice REAL NOT NULL,
+      FOREIGN KEY (deliveryReceiptId) REFERENCES delivery_receipts(id) ON DELETE CASCADE,
+      FOREIGN KEY (productId) REFERENCES products(id)
+    )
+  `);
+
   // Reception notes table
   db.exec(`
     CREATE TABLE IF NOT EXISTS reception_notes (
@@ -378,40 +406,6 @@ function createTables(db) {
       receivedQuantity INTEGER NOT NULL,
       unitPrice REAL NOT NULL,
       FOREIGN KEY (receptionNoteId) REFERENCES reception_notes(id) ON DELETE CASCADE,
-      FOREIGN KEY (productId) REFERENCES products(id)
-    )
-  `);
-
-  // Purchase orders table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS purchase_orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      number TEXT NOT NULL UNIQUE,
-      saleId INTEGER NOT NULL,
-      clientId INTEGER NOT NULL,
-      amount REAL NOT NULL,
-      taxAmount REAL NOT NULL,
-      totalAmount REAL NOT NULL,
-      orderDate DATETIME DEFAULT CURRENT_TIMESTAMP,
-      deliveryDate DATETIME,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (saleId) REFERENCES sales(id),
-      FOREIGN KEY (clientId) REFERENCES clients(id)
-    )
-  `);
-
-  // Purchase order items table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS purchase_order_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      purchaseOrderId INTEGER NOT NULL,
-      productId INTEGER NOT NULL,
-      productName TEXT NOT NULL,
-      quantity INTEGER NOT NULL,
-      unitPrice REAL NOT NULL,
-      discount REAL DEFAULT 0,
-      totalPrice REAL NOT NULL,
-      FOREIGN KEY (purchaseOrderId) REFERENCES purchase_orders(id) ON DELETE CASCADE,
       FOREIGN KEY (productId) REFERENCES products(id)
     )
   `);
@@ -456,6 +450,12 @@ function createIndexes(db) {
       CREATE INDEX IF NOT EXISTS idx_purchase_orders_client ON purchase_orders(clientId);
       CREATE INDEX IF NOT EXISTS idx_purchase_orders_date ON purchase_orders(orderDate);
       CREATE INDEX IF NOT EXISTS idx_purchase_order_items_purchase_order ON purchase_order_items(purchaseOrderId);
+      CREATE INDEX IF NOT EXISTS idx_delivery_receipts_sale ON delivery_receipts(saleId);
+      CREATE INDEX IF NOT EXISTS idx_delivery_receipts_date ON delivery_receipts(deliveryDate);
+      CREATE INDEX IF NOT EXISTS idx_delivery_receipt_items_receipt ON delivery_receipt_items(deliveryReceiptId);
+      CREATE INDEX IF NOT EXISTS idx_reception_notes_order ON reception_notes(supplierOrderId);
+      CREATE INDEX IF NOT EXISTS idx_reception_notes_date ON reception_notes(receptionDate);
+      CREATE INDEX IF NOT EXISTS idx_reception_note_items_note ON reception_note_items(receptionNoteId);
     `);
   } catch (error) {
     console.error("Error creating indexes:", error);
