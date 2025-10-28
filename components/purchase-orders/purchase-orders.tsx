@@ -23,16 +23,6 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { pdf } from "@react-pdf/renderer";
 import { PurchaseOrderPDFDocument } from "./purchase-order-pdf";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function PurchaseOrders() {

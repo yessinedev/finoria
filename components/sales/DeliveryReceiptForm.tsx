@@ -23,6 +23,7 @@ import { Truck, User, Car } from "lucide-react";
 
 interface DeliveryReceiptFormProps {
   sale?: Sale; // Optional sale prop for pre-selection
+  deliveryReceipt?: DeliveryReceipt; // Optional existing delivery receipt for editing
   open: boolean;
   onClose: () => void;
   onReceiptCreated: (receipt: DeliveryReceipt) => void;
@@ -30,15 +31,16 @@ interface DeliveryReceiptFormProps {
 
 export default function DeliveryReceiptForm({ 
   sale, 
+  deliveryReceipt,
   open, 
   onClose, 
   onReceiptCreated 
 }: DeliveryReceiptFormProps) {
   const { toast } = useToast();
   const [sales, setSales] = useState<Sale[]>([]);
-  const [selectedSaleId, setSelectedSaleId] = useState<number | null>(sale?.id || null);
-  const [driverName, setDriverName] = useState("");
-  const [vehicleRegistration, setVehicleRegistration] = useState("");
+  const [selectedSaleId, setSelectedSaleId] = useState<number | null>(sale?.id || deliveryReceipt?.saleId || null);
+  const [driverName, setDriverName] = useState(deliveryReceipt?.driverName || "");
+  const [vehicleRegistration, setVehicleRegistration] = useState(deliveryReceipt?.vehicleRegistration || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingSales, setLoadingSales] = useState(false);
 
@@ -48,17 +50,42 @@ export default function DeliveryReceiptForm({
       if (sale) {
         setSelectedSaleId(sale.id);
         setSales([sale]);
+      } else if (deliveryReceipt) {
+        // If editing an existing delivery receipt, use the provided sale data if available
+        if (sale) {
+          setSelectedSaleId(sale.id);
+          setSales([sale]);
+        } else {
+          // Otherwise, load the associated sale
+          loadSaleForReceipt(deliveryReceipt.saleId);
+        }
       } else {
         // Otherwise, load all sales for selection
         loadSales();
       }
+      
+      // If editing an existing delivery receipt, populate the form fields
+      if (deliveryReceipt) {
+        setDriverName(deliveryReceipt.driverName || "");
+        setVehicleRegistration(deliveryReceipt.vehicleRegistration || "");
+      }
     } else {
       // Reset form when closing
-      setSelectedSaleId(sale?.id || null);
-      setDriverName("");
-      setVehicleRegistration("");
+      setSelectedSaleId(sale?.id || deliveryReceipt?.saleId || null);
+      setDriverName(deliveryReceipt?.driverName || "");
+      setVehicleRegistration(deliveryReceipt?.vehicleRegistration || "");
     }
-  }, [open, sale]);
+  }, [open, sale, deliveryReceipt]);
+
+  const loadSaleForReceipt = async (saleId: number) => {
+    try {
+      // In a real implementation, you might want to fetch the specific sale
+      // For now, we'll just set the sale ID
+      setSelectedSaleId(saleId);
+    } catch (error) {
+      console.error("Failed to load sale for receipt:", error);
+    }
+  };
 
   const loadSales = async () => {
     setLoadingSales(true);
@@ -108,43 +135,72 @@ export default function DeliveryReceiptForm({
     setIsSubmitting(true);
     
     try {
-      // Generate delivery number (you might want to implement a proper numbering system)
-      const deliveryNumber = `BL-${new Date().getFullYear()}-${saleId.toString().padStart(4, '0')}-${Date.now().toString().slice(-4)}`;
-      
-      const deliveryReceiptData = {
-        saleId: saleId,
-        deliveryNumber,
-        driverName: driverName || null,
-        vehicleRegistration: vehicleRegistration || null,
-        deliveryDate: new Date().toISOString(),
-        items: (selectedSale.items || []).map(item => ({
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice
-        }))
-      };
-      
-      const result = await db.deliveryReceipts.create(deliveryReceiptData);
-      if (result.success && result.data) {
-        onReceiptCreated(result.data);
-        toast({
-          title: "Succès",
-          description: "Bon de livraison créé avec succès!",
-        });
-        // Reset form
-        setSelectedSaleId(sale?.id || null);
-        setDriverName("");
-        setVehicleRegistration("");
-        onClose();
+      // If editing an existing delivery receipt, update it
+      if (deliveryReceipt) {
+        const deliveryReceiptData = {
+          saleId: saleId,
+          deliveryNumber: deliveryReceipt.deliveryNumber, // Keep the same number
+          driverName: driverName || null,
+          vehicleRegistration: vehicleRegistration || null,
+          deliveryDate: deliveryReceipt.deliveryDate || new Date().toISOString(),
+          items: (selectedSale.items || []).map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice
+          }))
+        };
+        
+        const result = await db.deliveryReceipts.update(deliveryReceipt.id, deliveryReceiptData);
+        if (result.success && result.data) {
+          onReceiptCreated(result.data);
+          toast({
+            title: "Succès",
+            description: "Bon de livraison mis à jour avec succès!",
+          });
+          onClose();
+        } else {
+          throw new Error(result.error || "Failed to update delivery receipt");
+        }
       } else {
-        throw new Error(result.error || "Failed to create delivery receipt");
+        // Generate delivery number (you might want to implement a proper numbering system)
+        const deliveryNumber = `BL-${new Date().getFullYear()}-${saleId.toString().padStart(4, '0')}-${Date.now().toString().slice(-4)}`;
+        
+        const deliveryReceiptData = {
+          saleId: saleId,
+          deliveryNumber,
+          driverName: driverName || null,
+          vehicleRegistration: vehicleRegistration || null,
+          deliveryDate: new Date().toISOString(),
+          items: (selectedSale.items || []).map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice
+          }))
+        };
+        
+        const result = await db.deliveryReceipts.create(deliveryReceiptData);
+        if (result.success && result.data) {
+          onReceiptCreated(result.data);
+          toast({
+            title: "Succès",
+            description: "Bon de livraison créé avec succès!",
+          });
+          // Reset form
+          setSelectedSaleId(sale?.id || null);
+          setDriverName("");
+          setVehicleRegistration("");
+          onClose();
+        } else {
+          throw new Error(result.error || "Failed to create delivery receipt");
+        }
       }
     } catch (error) {
-      console.error("Failed to create delivery receipt:", error);
+      console.error("Failed to save delivery receipt:", error);
       toast({
         title: "Erreur",
-        description: "Erreur lors de la création du bon de livraison",
+        description: `Erreur lors de ${deliveryReceipt ? 'la mise à jour' : 'la création'} du bon de livraison`,
         variant: "destructive",
       });
     } finally {
@@ -158,13 +214,13 @@ export default function DeliveryReceiptForm({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5" />
-            Créer un bon de livraison
+            {deliveryReceipt ? "Modifier le bon de livraison" : "Créer un bon de livraison"}
           </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Only show sale selection if no sale was pre-provided */}
-          {!sale && (
+          {/* Only show sale selection if no sale was pre-provided and not editing */}
+          {!sale && !deliveryReceipt && (
             <div className="space-y-2">
               <Label htmlFor="saleId" className="flex items-center gap-2">
                 Commande client
@@ -215,7 +271,7 @@ export default function DeliveryReceiptForm({
           </div>
           
           {/* Show sale details when a sale is selected or provided */}
-          {(sale || selectedSaleId) && (
+          {(sale || selectedSaleId || deliveryReceipt) && (
             <div className="rounded-lg border p-3 bg-muted/50">
               <h4 className="font-medium mb-2">Détails de la commande</h4>
               <div className="text-sm space-y-1">
@@ -241,7 +297,7 @@ export default function DeliveryReceiptForm({
               type="submit" 
               disabled={isSubmitting || !(sale || selectedSaleId)}
             >
-              {isSubmitting ? "Création..." : "Créer le bon de livraison"}
+              {isSubmitting ? "Enregistrement..." : (deliveryReceipt ? "Mettre à jour" : "Créer le bon de livraison")}
             </Button>
           </DialogFooter>
         </form>

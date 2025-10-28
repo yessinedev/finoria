@@ -803,6 +803,7 @@ export default function SupplierOrders() {
                       min="1"
                       value={itemQuantity}
                       onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
+                      className="min-w-[100px]"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -814,6 +815,7 @@ export default function SupplierOrders() {
                       min="0"
                       value={itemUnitPrice}
                       onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
+                      className="min-w-[120px]"
                     />
                   </div>
                   <div className="md:col-span-1">
@@ -826,6 +828,7 @@ export default function SupplierOrders() {
                       step="0.01"
                       value={itemDiscount}
                       onChange={(e) => setItemDiscount(Number(e.target.value) || 0)}
+                      className="min-w-[80px]"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -854,10 +857,10 @@ export default function SupplierOrders() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Produit</TableHead>
-                        <TableHead className="w-20">Quantité</TableHead>
-                        <TableHead className="w-24">Prix unit.</TableHead>
-                        <TableHead className="w-20">Remise %</TableHead>
-                        <TableHead className="w-24">Total</TableHead>
+                        <TableHead className="w-24 md:w-32">Quantité</TableHead>
+                        <TableHead className="w-28 md:w-36">Prix unit.</TableHead>
+                        <TableHead className="w-24 md:w-32">Remise %</TableHead>
+                        <TableHead className="w-28 md:w-36">Total</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>

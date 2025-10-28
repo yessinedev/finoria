@@ -869,7 +869,7 @@ export default function EnhancedInvoiceGenerator({
                                             Number.parseInt(e.target.value) || 1
                                           )
                                         }
-                                        className="w-16 text-right border rounded px-1"
+                                        className="w-20 md:w-24 text-right border rounded px-2 py-1 min-w-[80px]"
                                       />
                                     </td>
                                     <td className="p-2 text-right">
@@ -886,7 +886,7 @@ export default function EnhancedInvoiceGenerator({
                                               0
                                           )
                                         }
-                                        className="w-20 text-right border rounded px-1"
+                                        className="w-24 md:w-28 text-right border rounded px-2 py-1 min-w-[100px]"
                                       />
                                     </td>
                                     <td className="p-2 text-right">
@@ -903,7 +903,7 @@ export default function EnhancedInvoiceGenerator({
                                               0
                                           )
                                         }
-                                        className="w-16 text-right border rounded px-1"
+                                        className="w-20 md:w-24 text-right border rounded px-2 py-1 min-w-[80px]"
                                       />
                                     </td>
                                     <td className="p-2 text-right font-medium">

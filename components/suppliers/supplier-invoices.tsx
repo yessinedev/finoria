@@ -1002,6 +1002,7 @@ Commande #{order.id} - {order.supplierName}
                           min="1"
                           value={itemQuantity}
                           onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
+                          className="min-w-[100px]"
                         />
                       </div>
                       <div className="md:col-span-2">
@@ -1013,6 +1014,7 @@ Commande #{order.id} - {order.supplierName}
                           min="0"
                           value={itemUnitPrice}
                           onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
+                          className="min-w-[120px]"
                         />
                       </div>
                       <div className="md:col-span-1">
@@ -1025,6 +1027,7 @@ Commande #{order.id} - {order.supplierName}
                           step="0.01"
                           value={itemDiscount}
                           onChange={(e) => setItemDiscount(Number(e.target.value) || 0)}
+                          className="min-w-[80px]"
                         />
                       </div>
                       <div className="md:col-span-2">

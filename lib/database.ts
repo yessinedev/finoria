@@ -47,8 +47,9 @@ interface ElectronAPI {
   createSale: (sale: any) => Promise<any>;
   getSales: () => Promise<any[]>;
   getSalesWithItems: () => Promise<any[]>;
+  getSale: (id: number) => Promise<any>;
   getSaleItems: (saleId: number) => Promise<any[]>;
-  // Removed updateSaleStatus function
+  updateSaleStatus: (id: number, status: string) => Promise<any>;
   deleteSale: (id: number) => Promise<boolean>;
 
   // Dashboard
@@ -93,6 +94,7 @@ interface ElectronAPI {
 
   // Delivery Receipts
   createDeliveryReceipt: (deliveryReceipt: any) => Promise<any>;
+  updateDeliveryReceipt: (id: number, deliveryReceipt: any) => Promise<any>;
   getDeliveryReceipts: () => Promise<any[]>;
   getDeliveryReceipt: (id: number) => Promise<any>;
   getDeliveryReceiptBySale: (saleId: number) => Promise<any>;
@@ -417,12 +419,21 @@ class DatabaseService {
         () => window.electronAPI?.getSalesWithItems() || Promise.resolve([]),
         "getSalesWithItems"
       ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getSale(id) || Promise.resolve(null),
+        "getSale"
+      ),
     getItems: (saleId: number) =>
       this.handle(
         () => window.electronAPI?.getSaleItems(saleId) || Promise.resolve([]),
         "getSaleItems"
       ),
-    // Removed updateStatus function
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () => window.electronAPI?.updateSaleStatus(id, status) || Promise.resolve(null),
+        "updateSaleStatus"
+      ),
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteSale(id) || Promise.resolve(false),
@@ -611,6 +622,11 @@ class DatabaseService {
         () => window.electronAPI?.createDeliveryReceipt(deliveryReceipt) || Promise.resolve(null),
         "createDeliveryReceipt"
       ),
+    update: (id: number, deliveryReceipt: any) =>
+      this.handle(
+        () => window.electronAPI?.updateDeliveryReceipt(id, deliveryReceipt) || Promise.resolve(null),
+        "updateDeliveryReceipt"
+      ),
     getAll: () =>
       this.handle(
         () => window.electronAPI?.getDeliveryReceipts() || Promise.resolve([]),
@@ -623,7 +639,11 @@ class DatabaseService {
       ),
     getBySale: (saleId: number) =>
       this.handle(
-        () => window.electronAPI?.getDeliveryReceiptBySale(saleId) || Promise.resolve(null),
+        async () => {
+          const result = await window.electronAPI?.getDeliveryReceiptBySale(saleId) || Promise.resolve(null);
+          console.log("Database service getBySale result:", result); // Debug log
+          return result;
+        },
         "getDeliveryReceiptBySale"
       ),
     delete: (id: number) =>

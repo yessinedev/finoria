@@ -22,7 +22,7 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
-import type { Sale } from "@/types/types";
+import type { Sale, DeliveryReceipt } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -35,16 +35,18 @@ import {
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { DeliveryReceiptPDFDocument } from "@/components/sales/delivery-receipt-pdf";
 import DeliveryReceiptForm from "@/components/sales/DeliveryReceiptForm";
+import DeliveryReceiptPreview from "@/components/sales/DeliveryReceiptPreview";
 
 export default function Delivery() {
   const [deliveries, setDeliveries] = useState<any[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deliveryToDelete, setDeliveryToDelete] = useState<any | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [selectedDelivery, setSelectedDelivery] = useState<{receipt: DeliveryReceipt, sale: Sale} | null>(null);
   const { toast } = useToast();
 
   // Data table configuration
@@ -156,23 +158,131 @@ export default function Delivery() {
     }
   };
 
-  const handleViewDelivery = (delivery: any) => {
-    // In a real app, this would open a delivery details modal
-    alert(`Voir les détails du bon de livraison ${delivery.deliveryNumber}`);
+  const handleViewDelivery = async (delivery: any) => {
+    try {
+      // Get the full delivery receipt with sale data
+      const result: any = await db.deliveryReceipts.getBySale(delivery.saleId);
+      if (result && result.receipt && result.sale) {
+        setSelectedDelivery(result);
+        setIsPreviewOpen(true);
+      } else if (result && result.receipt) {
+        // Handle case where we have receipt but no sale data
+        const saleResult = await db.sales.getOne(result.receipt.saleId || delivery.saleId);
+        if (saleResult.success && saleResult.data) {
+          setSelectedDelivery({
+            receipt: result.receipt,
+            sale: saleResult.data
+          });
+          setIsPreviewOpen(true);
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les détails du bon de livraison - données de vente manquantes",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Try to get the delivery receipt and sale separately
+        const receiptResult = await db.deliveryReceipts.getOne(delivery.id);
+        if (receiptResult.success && receiptResult.data) {
+          const saleResult = await db.sales.getOne(delivery.saleId);
+          if (saleResult.success && saleResult.data) {
+            setSelectedDelivery({
+              receipt: receiptResult.data,
+              sale: saleResult.data
+            });
+            setIsPreviewOpen(true);
+          } else {
+            toast({
+              title: "Erreur",
+              description: "Impossible de charger les détails du bon de livraison - données de vente manquantes",
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les détails du bon de livraison - données incomplètes",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to load delivery receipt:", error);
+      toast({
+        title: "Erreur",
+        description: `Erreur lors du chargement du bon de livraison: ${error.message || 'Erreur inconnue'}`,
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleCreateDelivery = () => {
-    setIsFormOpen(true);
-  };
-
-  const handleEditDelivery = (delivery: any) => {
-    // In a real app, this would open a delivery edit form
-    alert(`Modifier le bon de livraison ${delivery.deliveryNumber}`);
+  const handleEditDelivery = async (delivery: any) => {
+    try {
+      // Get the full delivery receipt with sale data for editing
+      const result: any = await db.deliveryReceipts.getBySale(delivery.saleId);
+      if (result && result.receipt && result.sale) {
+        setSelectedDelivery(result);
+        setIsFormOpen(true);
+      } else if (result && result.receipt) {
+        // Handle case where we have receipt but no sale data
+        const saleResult = await db.sales.getOne(result.receipt.saleId || delivery.saleId);
+        if (saleResult.success && saleResult.data) {
+          setSelectedDelivery({
+            receipt: result.receipt,
+            sale: saleResult.data
+          });
+          setIsFormOpen(true);
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les détails du bon de livraison - données de vente manquantes",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Try to get the delivery receipt and sale separately
+        const receiptResult = await db.deliveryReceipts.getOne(delivery.id);
+        if (receiptResult.success && receiptResult.data) {
+          const saleResult = await db.sales.getOne(delivery.saleId);
+          if (saleResult.success && saleResult.data) {
+            setSelectedDelivery({
+              receipt: receiptResult.data,
+              sale: saleResult.data
+            });
+            setIsFormOpen(true);
+          } else {
+            toast({
+              title: "Erreur",
+              description: "Impossible de charger les détails du bon de livraison - données de vente manquantes",
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les détails du bon de livraison - données incomplètes",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to load delivery receipt:", error);
+      toast({
+        title: "Erreur",
+        description: `Erreur lors du chargement du bon de livraison: ${error.message || 'Erreur inconnue'}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteDelivery = (delivery: any) => {
     setDeliveryToDelete(delivery);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleCreateDelivery = () => {
+    setIsFormOpen(true);
   };
 
   const confirmDeleteDelivery = async () => {
@@ -204,6 +314,11 @@ export default function Delivery() {
   };
 
   const handleReceiptCreated = () => {
+    setIsFormOpen(false);
+    loadData(); // Refresh the delivery receipts list
+  };
+
+  const handleReceiptUpdated = () => {
     setIsFormOpen(false);
     loadData(); // Refresh the delivery receipts list
   };
@@ -299,10 +414,29 @@ export default function Delivery() {
 
       {/* Delivery Receipt Form */}
       <DeliveryReceiptForm
+        sale={selectedDelivery?.sale}
         open={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onReceiptCreated={handleReceiptCreated}
+        onClose={() => {
+          setIsFormOpen(false);
+          setSelectedDelivery(null);
+        }}
+        onReceiptCreated={selectedDelivery ? handleReceiptUpdated : handleReceiptCreated}
       />
+
+      {/* Delivery Receipt Preview */}
+      {selectedDelivery && (
+        <DeliveryReceiptPreview
+          deliveryReceipt={selectedDelivery.receipt}
+          sale={selectedDelivery.sale}
+          companySettings={companySettings}
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          onEdit={() => {
+            setIsPreviewOpen(false);
+            setIsFormOpen(true);
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

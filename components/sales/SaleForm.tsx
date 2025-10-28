@@ -302,10 +302,10 @@ export default function SaleForm(props: SaleFormProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Article</TableHead>
-                    <TableHead className="w-20">Qté</TableHead>
-                    <TableHead className="w-24">Prix unit.</TableHead>
-                    <TableHead className="w-20">Remise %</TableHead>
-                    <TableHead className="w-24">Total</TableHead>
+                    <TableHead className="w-24 md:w-32">Qté</TableHead>
+                    <TableHead className="w-28 md:w-36">Prix unit.</TableHead>
+                    <TableHead className="w-24 md:w-32">Remise %</TableHead>
+                    <TableHead className="w-28 md:w-36">Total</TableHead>
                     <TableHead className="w-16"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -332,6 +332,7 @@ export default function SaleForm(props: SaleFormProps) {
                               Number.parseInt(e.target.value) || 1
                             )
                           }
+                          className="w-full min-w-[80px]"
                         />
                       </TableCell>
                       <TableCell>
@@ -347,6 +348,7 @@ export default function SaleForm(props: SaleFormProps) {
                               Number.parseFloat(e.target.value) || 0
                             )
                           }
+                          className="w-full min-w-[100px]"
                         />
                       </TableCell>
                       <TableCell>
@@ -362,6 +364,7 @@ export default function SaleForm(props: SaleFormProps) {
                               Number.parseFloat(e.target.value) || 0
                             )
                           }
+                          className="w-full min-w-[80px]"
                         />
                       </TableCell>
                       <TableCell className="font-medium">

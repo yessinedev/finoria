@@ -10,14 +10,16 @@ import {
   Truck,
   FileText,
   Download,
-  Edit
+  Edit,
+  Eye
 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { DeliveryReceiptPDFDocument } from "@/components/sales/delivery-receipt-pdf";
 import { db } from "@/lib/database";
-import type { Sale } from "@/types/types";
+import type { Sale, DeliveryReceipt } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
 import DeliveryReceiptForm from "@/components/sales/DeliveryReceiptForm";
+import DeliveryReceiptPreview from "@/components/sales/DeliveryReceiptPreview";
 
 interface SaleDetailsModalProps {
   sale: Sale | null;
@@ -27,10 +29,11 @@ interface SaleDetailsModalProps {
 
 export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsModalProps) {
   const { toast } = useToast();
-  const [deliveryReceipt, setDeliveryReceipt] = useState<any>(null);
+  const [deliveryData, setDeliveryData] = useState<{receipt: DeliveryReceipt, sale: Sale} | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (sale && open) {
@@ -43,10 +46,29 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
     if (!sale) return;
     
     try {
-      const result = await db.deliveryReceipts.getBySale(sale.id);
-      setDeliveryReceipt(result);
-    } catch (error) {
+      const result: any = await db.deliveryReceipts.getBySale(sale.id);
+      if (result && result.receipt && result.sale) {
+        setDeliveryData(result);
+      } else if (result && result.receipt) {
+        // Handle case where we have receipt but no sale data
+        setDeliveryData({
+          receipt: result.receipt,
+          sale: sale
+        });
+      } else if (result) {
+        // Handle old format for backward compatibility
+        setDeliveryData({
+          receipt: result,
+          sale: sale
+        });
+      }
+    } catch (error: any) {
       console.error("Failed to load delivery receipt:", error);
+      toast({
+        title: "Erreur",
+        description: `Erreur lors du chargement du bon de livraison: ${error.message || 'Erreur inconnue'}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -60,13 +82,32 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
   };
 
   const handleReceiptCreated = (receipt: any) => {
-    setDeliveryReceipt(receipt);
+    // Update the delivery data with the new receipt
+    if (sale) {
+      setDeliveryData({
+        receipt: receipt,
+        sale: sale
+      });
+    }
     setIsFormOpen(false);
   };
 
   const handleEditReceipt = () => {
     setIsEditing(true);
     setIsFormOpen(true);
+  };
+
+  const handleViewReceipt = () => {
+    console.log("Delivery data for preview:", deliveryData); // Debug log
+    if (deliveryData) {
+      setIsPreviewOpen(true);
+    }
+  };
+
+  const handleReceiptUpdated = () => {
+    setIsFormOpen(false);
+    setIsEditing(false);
+    loadDeliveryReceipt(); // Refresh the delivery receipt data
   };
 
   if (!sale) return null;
@@ -95,8 +136,12 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
                   Bon de livraison
                 </h3>
                 
-                {deliveryReceipt ? (
+                {deliveryData ? (
                   <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleViewReceipt}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Aperçu
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleEditReceipt}>
                       <Edit className="h-4 w-4 mr-2" />
                       Modifier
@@ -104,12 +149,12 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
                     <PDFDownloadLink
                       document={
                         <DeliveryReceiptPDFDocument 
-                          deliveryReceipt={deliveryReceipt} 
-                          sale={sale}
+                          deliveryReceipt={deliveryData.receipt} 
+                          sale={deliveryData.sale}
                           companySettings={companySettings}
                         />
                       }
-                      fileName={`bon-de-livraison-${deliveryReceipt.deliveryNumber}.pdf`}
+                      fileName={`bon-de-livraison-${deliveryData.receipt.deliveryNumber}.pdf`}
                     >
                       {({ loading }) => (
                         <Button variant="outline" size="sm" disabled={loading}>
@@ -130,16 +175,16 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
                 )}
               </div>
               
-              {deliveryReceipt ? (
+              {deliveryData ? (
                 <div className="text-sm">
                   <div className="grid grid-cols-2 gap-2">
-                    <div><strong>Numéro:</strong> {deliveryReceipt.deliveryNumber}</div>
-                    <div><strong>Date:</strong> {new Date(deliveryReceipt.deliveryDate).toLocaleDateString("fr-FR")}</div>
-                    {deliveryReceipt.driverName && (
-                      <div><strong>Chauffeur:</strong> {deliveryReceipt.driverName}</div>
+                    <div><strong>Numéro:</strong> {deliveryData.receipt.deliveryNumber}</div>
+                    <div><strong>Date:</strong> {new Date(deliveryData.receipt.deliveryDate).toLocaleDateString("fr-FR")}</div>
+                    {deliveryData.receipt.driverName && (
+                      <div><strong>Chauffeur:</strong> {deliveryData.receipt.driverName}</div>
                     )}
-                    {deliveryReceipt.vehicleRegistration && (
-                      <div><strong>Immatriculation:</strong> {deliveryReceipt.vehicleRegistration}</div>
+                    {deliveryData.receipt.vehicleRegistration && (
+                      <div><strong>Immatriculation:</strong> {deliveryData.receipt.vehicleRegistration}</div>
                     )}
                   </div>
                   
@@ -154,7 +199,7 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
                           </tr>
                         </thead>
                         <tbody>
-                          {deliveryReceipt.items?.map((item: any) => (
+                          {deliveryData.receipt.items?.map((item: any) => (
                             <tr key={item.id} className="border-t">
                               <td className="p-2">{item.productName}</td>
                               <td className="p-2 text-right">{item.quantity}</td>
@@ -201,15 +246,28 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
         </DialogContent>
       </Dialog>
       
-      {/* Updated to remove the sale prop since DeliveryReceiptForm no longer requires it */}
+      {/* Pass the sale prop to DeliveryReceiptForm */}
       <DeliveryReceiptForm
+        sale={sale}
         open={isFormOpen}
         onClose={() => {
           setIsFormOpen(false);
           setIsEditing(false);
         }}
-        onReceiptCreated={handleReceiptCreated}
+        onReceiptCreated={isEditing ? handleReceiptUpdated : handleReceiptCreated}
       />
+      
+      {/* Delivery Receipt Preview */}
+      {deliveryData && (
+        <DeliveryReceiptPreview
+          deliveryReceipt={deliveryData.receipt}
+          sale={deliveryData.sale}
+          companySettings={companySettings}
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          onEdit={handleEditReceipt}
+        />
+      )}
     </>
   );
 }

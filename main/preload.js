@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createSale: (sale) => ipcRenderer.invoke("create-sale", sale),
   getSales: () => ipcRenderer.invoke("get-sales"),
   getSalesWithItems: () => ipcRenderer.invoke("get-sales-with-items"),
+  getSale: (id) => ipcRenderer.invoke("get-sale", id),
   getSaleItems: (saleId) => ipcRenderer.invoke("get-sale-items", saleId),
   updateSaleStatus: (id, status) =>
     ipcRenderer.invoke("update-sale-status", id, status),
@@ -108,6 +109,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // --- Delivery Receipts API ---
   createDeliveryReceipt: (deliveryReceipt) => ipcRenderer.invoke("create-delivery-receipt", deliveryReceipt),
+  updateDeliveryReceipt: (id, deliveryReceipt) => ipcRenderer.invoke("update-delivery-receipt", id, deliveryReceipt),
   getDeliveryReceipts: () => ipcRenderer.invoke("get-delivery-receipts"),
   getDeliveryReceipt: (id) => ipcRenderer.invoke("get-delivery-receipt", id),
   getDeliveryReceiptBySale: (saleId) => ipcRenderer.invoke("get-delivery-receipt-by-sale", saleId),

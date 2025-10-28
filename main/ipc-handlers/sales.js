@@ -151,6 +151,35 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Get a single sale by ID with items
+  ipcMain.handle("get-sale", async (event, id) => {
+    try {
+      const sale = db.prepare(`
+        SELECT s.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress, c.taxId as clientTaxId
+        FROM sales s
+        JOIN clients c ON s.clientId = c.id
+        WHERE s.id = ?
+      `).get(id);
+      
+      if (!sale) {
+        throw new Error("Vente non trouvée");
+      }
+      
+      // Get items
+      const items = db.prepare(`
+        SELECT * FROM sale_items WHERE saleId = ?
+      `).all(id);
+      
+      return {
+        ...sale,
+        items
+      };
+    } catch (error) {
+      console.error("Error getting sale:", error);
+      throw new Error("Erreur lors de la récupération de la vente");
+    }
+  });
+
   ipcMain.handle("get-sale-items", async (event, saleId) => {
     try {
       const items = db

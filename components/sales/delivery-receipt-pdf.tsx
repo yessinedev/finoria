@@ -128,6 +128,14 @@ export function DeliveryReceiptPDFDocument({
   sale: Sale;
   companySettings?: any 
 }) {
+  // Safely access client information with fallbacks
+  const clientName = sale?.clientName || '';
+  const clientCompany = sale?.clientCompany || '';
+  const clientAddress = sale?.clientAddress || '';
+  const clientPhone = sale?.clientPhone || '';
+  const clientEmail = sale?.clientEmail || '';
+  const clientTaxId = sale?.clientTaxId || '';
+
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -155,23 +163,22 @@ export function DeliveryReceiptPDFDocument({
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
           <View style={[styles.card, { flex: 1 }]}> {/* Company */}
             <Text style={styles.cardTitle}>Émetteur</Text>
-            <Text style={styles.cardContent}>{companySettings?.name}</Text>
-            <Text style={styles.cardContent}>{companySettings?.address}</Text>
-            <Text style={styles.cardContent}>Tél: {companySettings?.phone}</Text>
-            <Text style={styles.cardContent}>{companySettings?.email}</Text>
+            <Text style={styles.cardContent}>{companySettings?.name || ''}</Text>
+            <Text style={styles.cardContent}>{companySettings?.address || ''}</Text>
+            <Text style={styles.cardContent}>Tél: {companySettings?.phone || ''}</Text>
+            <Text style={styles.cardContent}>{companySettings?.email || ''}</Text>
             {companySettings?.taxId && <Text style={styles.cardContent}>Numéro Fiscal: {companySettings.taxId}</Text>}
             {companySettings?.tvaNumber && <Text style={styles.cardContent}>Numéro TVA: {companySettings.tvaNumber}</Text>}
           </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Client */}
             <Text style={styles.cardTitle}>Client</Text>
-            <Text style={styles.cardContent}>{sale.clientName}</Text>
-            {sale.clientCompany && <Text style={styles.cardContent}>{sale.clientCompany}</Text>}
-            {sale.clientAddress && <Text style={styles.cardContent}>{sale.clientAddress}</Text>
-            }
-            {sale.clientPhone && <Text style={styles.cardContent}>{sale.clientPhone}</Text>}
-            {sale.clientEmail && <Text style={styles.cardContent}>{sale.clientEmail}</Text>}
+            <Text style={styles.cardContent}>{clientName}</Text>
+            {clientCompany && <Text style={styles.cardContent}>{clientCompany}</Text>}
+            {clientAddress && <Text style={styles.cardContent}>{clientAddress}</Text>}
+            {clientPhone && <Text style={styles.cardContent}>{clientPhone}</Text>}
+            {clientEmail && <Text style={styles.cardContent}>{clientEmail}</Text>}
             {/* Display client tax ID if available */}
-            {sale.clientTaxId && <Text style={styles.cardContent}>Matricule fiscal: {sale.clientTaxId}</Text>}
+            {clientTaxId && <Text style={styles.cardContent}>Matricule fiscal: {clientTaxId}</Text>}
           </View>
         </View>
 
@@ -200,11 +207,11 @@ export function DeliveryReceiptPDFDocument({
           <View style={{ flexDirection: 'row', gap: 16 }}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Numéro de commande</Text>
-              <Text style={styles.cardContent}>CMD-{sale.id}</Text>
+              <Text style={styles.cardContent}>CMD-{sale?.id || ''}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Date de commande</Text>
-              <Text style={styles.cardContent}>{formatDate(sale.saleDate)}</Text>
+              <Text style={styles.cardContent}>{sale?.saleDate ? formatDate(sale.saleDate) : ''}</Text>
             </View>
           </View>
         </View>
