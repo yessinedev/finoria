@@ -44,8 +44,7 @@ import { EntitySelect } from "@/components/common/EntitySelect";
 import { FinancialSummaryCard } from "@/components/common/FinancialSummaryCard";
 import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal";
 import { Label } from "@/components/ui/label";
-import { invoiceSchema } from "@/lib/validation/schemas";
-import { z } from "zod";
+
 import { useToast } from "@/hooks/use-toast";
 
 interface EnhancedInvoiceGeneratorProps {
