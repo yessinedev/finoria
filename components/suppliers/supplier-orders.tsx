@@ -291,33 +291,6 @@ export default function SupplierOrders() {
 
       const response = await db.supplierOrders.create(orderData);
       if (response.success && response.data) {
-        // Update product stock when creating order
-        for (const item of orderItems) {
-            try {
-              // Get current stock
-              const stockResponse = await db.products.getStock(item.productId);
-              const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
-              
-              // Update stock (add quantity from purchase order)
-              const newStock = currentStock + item.quantity;
-              await db.products.updateStock(item.productId, newStock);
-              
-              // Create stock movement record
-              await db.stockMovements.create({
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                movementType: 'IN',
-                sourceType: 'supplier_order',
-                sourceId: response.data.id,
-                reference: `Order #${response.data.id}`,
-                reason: 'Commande d\'achat livrée'
-              });
-            } catch (stockError) {
-              console.error(`Failed to update stock for product ${item.productId}:`, stockError);
-            }
-          }
-        
         // Refresh orders to get the complete data with supplier information
         await loadOrders();
         resetForm();
@@ -377,85 +350,6 @@ export default function SupplierOrders() {
 
       const response = await db.supplierOrders.update(currentOrder.id, orderData);
       if (response.success && response.data) {
-        // Handle stock updates for order items
-        if (orderItems.length > 0) {
-          // Handle quantity changes for non-delivered orders
-          // First, we need to get the original order to understand what changed
-          const originalOrder = orders.find(o => o.id === currentOrder.id);
-          
-          // If we have the original order, we need to adjust stock based on differences
-          if (originalOrder) {
-            // Create a map of original quantities
-            const originalQuantities: Record<number, number> = {};
-            if (originalOrder.items) {
-              originalOrder.items.forEach(item => {
-                originalQuantities[item.productId] = item.quantity;
-              });
-            }
-            
-            // Process new items and quantity changes
-            for (const item of orderItems) {
-              const originalQuantity = originalQuantities[item.productId] || 0;
-              const quantityDifference = item.quantity - originalQuantity;
-              
-              if (quantityDifference !== 0) {
-                try {
-                  // Get current stock
-                  const stockResponse = await db.products.getStock(item.productId);
-                  const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
-                  
-                  // Update stock based on the difference
-                  const newStock = currentStock + quantityDifference;
-                  await db.products.updateStock(item.productId, newStock);
-                  
-                  // Create stock movement record
-                  await db.stockMovements.create({
-                    productId: item.productId,
-                    productName: item.productName,
-                    quantity: Math.abs(quantityDifference),
-                    movementType: quantityDifference > 0 ? 'IN' : 'OUT',
-                    sourceType: 'supplier_order',
-                    sourceId: response.data.id,
-                    reference: `Order #${response.data.id}`,
-                    reason: quantityDifference > 0 
-                      ? 'Quantité de commande d\'achat augmentée' 
-                      : 'Quantité de commande d\'achat réduite'
-                  });
-                } catch (stockError) {
-                  console.error(`Failed to update stock for product ${item.productId}:`, stockError);
-                }
-              }
-            }
-          } else {
-            // If we can't find the original order, just add the new stock
-            for (const item of orderItems) {
-              try {
-                // Get current stock
-                const stockResponse = await db.products.getStock(item.productId);
-                const currentStock = stockResponse.success && stockResponse.data !== undefined ? stockResponse.data : 0;
-                
-                // Update stock (add quantity from purchase order)
-                const newStock = currentStock + item.quantity;
-                await db.products.updateStock(item.productId, newStock);
-                
-                // Create stock movement record
-                await db.stockMovements.create({
-                  productId: item.productId,
-                  productName: item.productName,
-                  quantity: item.quantity,
-                  movementType: 'IN',
-                  sourceType: 'supplier_order',
-                  sourceId: response.data.id,
-                  reference: `Order #${response.data.id}`,
-                  reason: 'Commande d\'achat mise à jour'
-                });
-              } catch (stockError) {
-                console.error(`Failed to update stock for product ${item.productId}:`, stockError);
-              }
-            }
-          }
-        }
-        
         // Refresh orders to get the complete data with supplier information
         await loadOrders();
         resetForm();
