@@ -74,7 +74,7 @@ interface ElectronAPI {
   // Credit Notes
   getCreditNotes: () => Promise<any[]>;
   createCreditNote: (creditNote: any) => Promise<any>;
-  // Removed updateCreditNoteStatus function
+  updateCreditNoteStatus: (id: number, status: string) => Promise<any>;
   generateCreditNoteFromInvoice: (invoiceId: number, reason: string) => Promise<any>;
   getCreditNoteItems: (creditNoteId: number) => Promise<any[]>;
 
@@ -105,6 +105,7 @@ interface ElectronAPI {
   getReceptionNotes: () => Promise<any[]>;
   getReceptionNote: (id: number) => Promise<any>;
   getReceptionNoteByOrder: (supplierOrderId: number) => Promise<any>;
+  updateReceptionNote: (id: number, receptionNote: any) => Promise<any>;
   deleteReceptionNote: (id: number) => Promise<boolean>;
 
   // Stock Movements
@@ -541,7 +542,11 @@ class DatabaseService {
           Promise.resolve(null),
         "createCreditNote"
       ),
-    // Removed updateStatus function
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () => window.electronAPI?.updateCreditNoteStatus(id, status),
+        "updateCreditNoteStatus"
+      ),
     generateFromInvoice: (invoiceId: number, reason: string) =>
       this.handle(
         () =>

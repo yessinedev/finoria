@@ -106,6 +106,40 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         );
       }
       
+      // If the credit note is created with "Confirmée" status, track stock movements immediately
+      if (creditNote.status === "Confirmée") {
+        // Return stock for each item (add back the quantity that was credited)
+        const updateStockStmt = db.prepare(`
+          UPDATE products 
+          SET stock = stock + ? 
+          WHERE id = ? AND category != 'Service'
+        `);
+        
+        // Create stock movement records for the return
+        const insertMovementStmt = db.prepare(`
+          INSERT INTO stock_movements (
+            productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        for (const item of creditNote.items) {
+          // Only return stock for non-service products
+          updateStockStmt.run(item.quantity, item.productId);
+          
+          // Create stock movement record for the return
+          insertMovementStmt.run(
+            item.productId,
+            item.productName,
+            item.quantity,
+            'IN',
+            'credit_note',
+            creditNoteId,
+            `CREDIT-${creditNoteId}`, 
+            'Retour de marchandise'
+          );
+        }
+      }
+      
       const newCreditNote = {
         id: creditNoteId,
         ...creditNote,
@@ -172,6 +206,42 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             id,
             `CREDIT-${id}`, 
             'Retour de marchandise'
+          );
+        }
+      }
+      // If the status is being changed from "Confirmée" to another status, remove the stock
+      else if (currentCreditNote.status === "Confirmée" && status !== "Confirmée") {
+        // Get credit note items
+        const items = db.prepare("SELECT * FROM credit_note_items WHERE creditNoteId = ?").all(id);
+        
+        // Remove stock for each item (subtract the quantity that was credited)
+        const updateStockStmt = db.prepare(`
+          UPDATE products 
+          SET stock = stock - ? 
+          WHERE id = ? AND category != 'Service'
+        `);
+        
+        // Create stock movement records for the removal
+        const insertMovementStmt = db.prepare(`
+          INSERT INTO stock_movements (
+            productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        for (const item of items) {
+          // Only remove stock for non-service products
+          updateStockStmt.run(item.quantity, item.productId);
+          
+          // Create stock movement record for the removal
+          insertMovementStmt.run(
+            item.productId,
+            item.productName,
+            item.quantity,
+            'OUT',
+            'credit_note_cancellation',
+            id,
+            `CREDIT-${id}`, 
+            status === "Annulée" ? 'Annulation de facture d\'avoir' : 'Modification de statut de facture d\'avoir'
           );
         }
       }
@@ -248,7 +318,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         taxAmount: totalTaxAmount,
         totalAmount: invoice.totalAmount,
         reason: reason,
-        status: "En attente",
+        status: "Confirmée", // Set status to confirmed immediately to track stock movements
         dueDate: new Date().toISOString() // Credit notes are typically due immediately
       };
       
@@ -302,6 +372,38 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         originalInvoiceNumber: invoice.number,
         items: items
       };
+      
+      // Track stock movements since the credit note is created with "Confirmée" status
+      // Return stock for each item (add back the quantity that was credited)
+      const updateStockStmt = db.prepare(`
+        UPDATE products 
+        SET stock = stock + ? 
+        WHERE id = ? AND category != 'Service'
+      `);
+      
+      // Create stock movement records for the return
+      const insertMovementStmt = db.prepare(`
+        INSERT INTO stock_movements (
+          productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const item of items) {
+        // Only return stock for non-service products
+        updateStockStmt.run(item.quantity, item.productId);
+        
+        // Create stock movement record for the return
+        insertMovementStmt.run(
+          item.productId,
+          item.productName,
+          item.quantity,
+          'IN',
+          'credit_note',
+          creditNoteId,
+          `CREDIT-${creditNoteId}`, 
+          'Retour de marchandise'
+        );
+      }
       
       notifyDataChange("credit-notes", "create", newCreditNote);
       
