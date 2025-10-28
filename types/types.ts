@@ -141,7 +141,7 @@ export interface SupplierInvoice {
   issueDate: string;
   dueDate?: string;
   paymentDate?: string;
-  // Removed status field
+  status: InvoiceStatus;
   items?: SupplierInvoiceItem[];
 }
 
@@ -173,7 +173,7 @@ export interface Invoice {
   totalAmount: number;
   issueDate: string;
   dueDate: string;
-  // Removed status field
+  status: InvoiceStatus;
   items: InvoiceItem[];
   notes?: string;
   paymentTerms?: string;
@@ -205,7 +205,7 @@ export interface Quote {
   issueDate: string;
   dueDate: string;
   paymentTerms?: string;
-  // Removed status field
+  status: string;
   items: LineItem[];
   notes?: string;
 }

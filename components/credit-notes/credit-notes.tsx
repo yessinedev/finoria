@@ -33,7 +33,7 @@ import { PDFViewer, pdf } from "@react-pdf/renderer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { StatusDropdown } from "@/components/common/StatusDropdown";
+
 import {
   Pagination,
   PaginationContent,
@@ -200,32 +200,6 @@ export default function CreditNotes() {
     }
   };
 
-  const getStatusVariant = (status: CreditNote["status"]) => {
-    switch (status) {
-      case "Confirmée":
-        return "default";
-      case "En attente":
-        return "secondary";
-      case "Annulée":
-        return "destructive";
-      default:
-        return "secondary";
-    }
-  };
-
-  const getStatusIcon = (status: CreditNote["status"]) => {
-    switch (status) {
-      case "Confirmée":
-        return <CheckCircle className="h-3 w-3" />;
-      case "En attente":
-        return <Clock className="h-3 w-3" />;
-      case "Annulée":
-        return <XCircle className="h-3 w-3" />;
-      default:
-        return null;
-    }
-  };
-
   const handleViewCreditNote = async (creditNote: CreditNote) => {
     // If the credit note doesn't have items, fetch them
     if (!creditNote.items || !Array.isArray(creditNote.items)) {
@@ -366,12 +340,6 @@ export default function CreditNotes() {
 
       const result = await db.creditNotes.create(creditNoteData);
       if (result.success) {
-        // Automatically confirm the credit note to trigger inventory rollback
-        const confirmResult = await db.creditNotes.updateStatus(result.data.id, "Confirmée");
-        if (!confirmResult.success) {
-          throw new Error("Erreur lors de la confirmation de la facture d'avoir");
-        }
-        
         await loadData(); // Refresh the list
         setIsCreating(false);
         setSelectedInvoiceId(null);
@@ -380,7 +348,7 @@ export default function CreditNotes() {
         setReason("");
         toast({
           title: "Succès",
-          description: "Facture d'avoir créée et confirmée avec succès. Le stock a été mis à jour.",
+          description: "Facture d'avoir créée avec succès.",
         });
       } else {
         throw new Error(result.error || "Erreur lors de la création de la facture d'avoir");
@@ -396,48 +364,13 @@ export default function CreditNotes() {
     }
   };
 
-  const handleStatusChange = async (creditNoteId: number, newStatus: string) => {
-    try {
-      const result = await db.creditNotes.updateStatus(creditNoteId, newStatus);
-      if (result.success) {
-        await loadData();
-        toast({
-          title: "Succès",
-          description: "Statut mis à jour avec succès",
-        });
-      } else {
-        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du statut",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Calculate statistics
   const totalAmount = filteredCreditNotes.reduce((sum, creditNote) => sum + creditNote.totalAmount, 0);
-  const confirmedAmount = filteredCreditNotes
-    .filter((creditNote) => creditNote.status === "Confirmée")
-    .reduce((sum, creditNote) => sum + creditNote.totalAmount, 0);
-  const pendingAmount = filteredCreditNotes
-    .filter((creditNote) => creditNote.status === "En attente")
-    .reduce((sum, creditNote) => sum + creditNote.totalAmount, 0);
+  const confirmedAmount = 0;
+  const pendingAmount = 0;
 
   const renderActions = (creditNote: CreditNote) => (
-    <div className="flex justify-end gap-2 items-center">
-      <StatusDropdown
-        currentValue={creditNote.status}
-        options={[
-          { value: "En attente", label: "En attente", variant: "secondary" },
-          { value: "Confirmée", label: "Confirmée", variant: "default" },
-          { value: "Annulée", label: "Annulée", variant: "destructive" },
-        ]}
-        onStatusChange={(newStatus) => handleStatusChange(creditNote.id, newStatus)}
-      />
-      
+    <div className="flex justify-end gap-2">
       <Button variant="outline" size="sm" onClick={() => handleViewCreditNote(creditNote)}>
         <Eye className="h-4 w-4" />
       </Button>
@@ -658,9 +591,7 @@ export default function CreditNotes() {
                 disabled={creating}
               >
                 <option value="">Sélectionnez une facture</option>
-                {invoices
-                  .filter(invoice => invoice.status !== "Annulée")
-                  .map((invoice) => (
+                {invoices.map((invoice) => (
                     <option key={invoice.id} value={invoice.id}>
                       {invoice.number} - {invoice.clientName} ({formatCurrency(invoice.totalAmount)})
                     </option>
@@ -807,49 +738,13 @@ export default function CreditNotes() {
                     <h2 className="text-2xl font-bold">Facture d'avoir #{selectedCreditNote.number}</h2>
                     <p className="text-muted-foreground">Date d'émission: {new Date(selectedCreditNote.issueDate).toLocaleDateString("fr-FR")}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={getStatusVariant(selectedCreditNote.status)}>
-                      {selectedCreditNote.status}
-                    </Badge>
-                    {selectedCreditNote.status === "En attente" && (
-                      <Button 
-                        size="sm" 
-                        onClick={async () => {
-                          try {
-                            const result = await db.creditNotes.updateStatus(selectedCreditNote.id, "Confirmée");
-                            if (result.success) {
-                              await loadData();
-                              setSelectedCreditNote({
-                                ...selectedCreditNote,
-                                status: "Confirmée"
-                              });
-                              toast({
-                                title: "Succès",
-                                description: "Facture d'avoir confirmée. Le stock a été mis à jour.",
-                              });
-                            } else {
-                              throw new Error(result.error || "Erreur lors de la confirmation");
-                            }
-                          } catch (error) {
-                            toast({
-                              title: "Erreur",
-                              description: "Erreur lors de la confirmation de la facture d'avoir",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                      >
-                        Confirmer
-                      </Button>
-                    )}
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="font-semibold mb-2">Client</h3>
                     <p>{selectedCreditNote.clientName}</p>
-                    {selectedCreditNote.clientCompany && <p>{selectedCreditNote.clientCompany}</p>
+                    {selectedCreditNote.clientCompany && <p>{selectedCreditNote.clientCompany}</p>}
                     {selectedCreditNote.clientAddress && <p>{selectedCreditNote.clientAddress}</p>}
                   </div>
                   

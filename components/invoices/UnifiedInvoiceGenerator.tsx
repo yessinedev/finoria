@@ -1101,9 +1101,6 @@ export default function UnifiedInvoiceGenerator({
                                         <div className="text-sm font-medium">
                                           {po.items?.length || 0} article{po.items?.length !== 1 ? 's' : ''}
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          {po.status}
-                                        </div>
                                       </div>
                                     </div>
                                   </div>

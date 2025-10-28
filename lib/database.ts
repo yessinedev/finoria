@@ -57,7 +57,7 @@ interface ElectronAPI {
   // Invoices
   getInvoices: () => Promise<any[]>;
   createInvoice: (invoice: any) => Promise<any>;
-  // Removed updateInvoiceStatus function
+  updateInvoiceStatus: (id: number, status: string) => Promise<any>;
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
   generateInvoiceFromQuote: (quoteId: number) => Promise<any>;
   getInvoiceItems: (invoiceId: number) => Promise<any[]>;
@@ -66,7 +66,7 @@ interface ElectronAPI {
   getQuotes: () => Promise<any[]>;
   createQuote: (quote: any) => Promise<any>;
   updateQuote: (id: number, quote: any) => Promise<any>;
-  // Removed updateQuoteStatus function
+  updateQuoteStatus: (id: number, status: string) => Promise<any>;
   deleteQuote: (id: number) => Promise<boolean>;
   getQuoteItems: (quoteId: number) => Promise<any[]>;
 
@@ -454,7 +454,11 @@ class DatabaseService {
           window.electronAPI?.createInvoice(invoice) || Promise.resolve(null),
         "createInvoice"
       ),
-    // Removed updateStatus function
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () => window.electronAPI?.updateInvoiceStatus(id, status) || Promise.resolve(null),
+        "updateInvoiceStatus"
+      ),
     generateFromSale: (saleId: number) =>
       this.handle(
         () =>
@@ -494,7 +498,11 @@ class DatabaseService {
           window.electronAPI?.updateQuote(id, quote) || Promise.resolve(null),
         "updateQuote"
       ),
-    // Removed updateStatus function
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () => window.electronAPI?.updateQuoteStatus(id, status) || Promise.resolve(null),
+        "updateQuoteStatus"
+      ),
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteQuote(id) || Promise.resolve(false),

@@ -65,13 +65,7 @@ export default function Invoices() {
   // Data table configuration
   const filteredInvoicesByStatus = invoices.filter((invoice) => {
     if (statusFilter === "all") return true
-    // Since status field doesn't exist, we'll filter by due date for now
-    const dueDate = new Date(invoice.dueDate)
-    const today = new Date()
-    if (statusFilter === "En retard") {
-      return dueDate < today
-    }
-    return true
+    return invoice.status === statusFilter
   })
 
   const filteredInvoicesByDate = filteredInvoicesByStatus.filter((invoice) => {
@@ -160,7 +154,17 @@ export default function Invoices() {
         )
       },
     },
-    // Removed the separate status column since it's now integrated into actions
+    {
+      key: "status" as keyof Invoice,
+      label: "Statut",
+      sortable: true,
+      render: (value: string, invoice: Invoice) => (
+        <Badge variant={getStatusVariant(invoice.status)} className="flex items-center gap-1">
+          {getStatusIcon(invoice.status)}
+          {value}
+        </Badge>
+      ),
+    },
   ]
 
   useEffect((): (() => void) => {
@@ -403,7 +407,7 @@ export default function Invoices() {
 
   // Get sales that don't have invoices yet
   const availableSales = sales.filter(
-    (sale) => !invoices.some((invoice) => invoice.saleId === sale.id) && sale.status !== "Annulée",
+    (sale) => !invoices.some((invoice) => invoice.saleId === sale.id),
   )
 
   const renderActions = (invoice: Invoice) => (

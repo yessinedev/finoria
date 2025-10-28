@@ -10,16 +10,7 @@ import {
 import { PDFViewer, pdf } from "@react-pdf/renderer";
 
 import { InvoicePDFDocument } from "./invoice-pdf";
-import {
-  Download,
-  Printer,
-  FileText,
-  Loader2,
-  Check,
-  Clock,
-  AlertCircle,
-  X,
-} from "lucide-react";
+import { Download, Printer, FileText, Loader2, Check, X } from "lucide-react";
 import type { Invoice } from "@/types/types";
 
 interface InvoicePreviewProps {
@@ -45,7 +36,12 @@ export default function InvoicePreview({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const blob = await pdf(<InvoicePDFDocument invoice={invoice} companySettings={companySettings} />).toBlob();
+      const blob = await pdf(
+        <InvoicePDFDocument
+          invoice={invoice}
+          companySettings={companySettings}
+        />
+      ).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -94,7 +90,10 @@ export default function InvoicePreview({
             showToolbar={false}
             style={{ border: "none", backgroundColor: "transparent" }}
           >
-            <InvoicePDFDocument invoice={invoice} companySettings={companySettings} />
+            <InvoicePDFDocument
+              invoice={invoice}
+              companySettings={companySettings}
+            />
           </PDFViewer>
         </div>
 
