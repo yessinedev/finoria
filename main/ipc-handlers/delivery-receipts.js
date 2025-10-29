@@ -220,7 +220,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           WHERE dr.saleId = ?
         `).get(saleId);
       } catch (joinError) {
-        console.log("Join error for receipt:", joinError);
         // If joins fail, get basic receipt data
         receipt = db.prepare(`
           SELECT * FROM delivery_receipts WHERE saleId = ?
@@ -246,7 +245,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           WHERE s.id = ?
         `).get(saleId);
       } catch (saleJoinError) {
-        console.log("Join error for sale:", saleJoinError);
         // If joins fail, get basic sale data
         sale = db.prepare(`
           SELECT * FROM sales WHERE id = ?

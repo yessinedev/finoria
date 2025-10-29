@@ -647,7 +647,6 @@ class DatabaseService {
       this.handle(
         async () => {
           const result = await window.electronAPI?.getDeliveryReceiptBySale(saleId) || Promise.resolve(null);
-          console.log("Database service getBySale result:", result); // Debug log
           return result;
         },
         "getDeliveryReceiptBySale"

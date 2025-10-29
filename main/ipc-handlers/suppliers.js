@@ -3,7 +3,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   // Suppliers CRUD
   ipcMain.handle("get-suppliers", async () => {
     try {
-      const suppliers = db.prepare("SELECT * FROM suppliers ORDER BY name").all();
+      const suppliers = db
+        .prepare("SELECT * FROM suppliers ORDER BY name")
+        .all();
       return suppliers;
     } catch (error) {
       console.error("Error getting suppliers:", error);
@@ -72,23 +74,27 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       // Check if supplier has orders or invoices
       const ordersCount = db
-        .prepare("SELECT COUNT(*) as count FROM supplier_orders WHERE supplierId = ?")
+        .prepare(
+          "SELECT COUNT(*) as count FROM supplier_orders WHERE supplierId = ?"
+        )
         .get(id);
       if (ordersCount.count > 0) {
         throw new Error(
           "Impossible de supprimer ce fournisseur car il a des commandes associées"
         );
       }
-      
+
       const invoicesCount = db
-        .prepare("SELECT COUNT(*) as count FROM supplier_invoices WHERE supplierId = ?")
+        .prepare(
+          "SELECT COUNT(*) as count FROM supplier_invoices WHERE supplierId = ?"
+        )
         .get(id);
       if (invoicesCount.count > 0) {
         throw new Error(
           "Impossible de supprimer ce fournisseur car il a des factures associées"
         );
       }
-      
+
       const stmt = db.prepare("DELETE FROM suppliers WHERE id = ?");
       stmt.run(id);
       notifyDataChange("suppliers", "delete", { id });
@@ -102,7 +108,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   // Supplier Orders CRUD
   ipcMain.handle("get-supplier-orders", async () => {
     try {
-      const orders = db.prepare(`
+      const orders = db
+        .prepare(
+          `
         SELECT 
           so.*,
           s.name as supplierName,
@@ -113,30 +121,29 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         FROM supplier_orders so
         JOIN suppliers s ON so.supplierId = s.id
         ORDER BY so.orderDate DESC
-      `).all();
-      
-      console.log('Retrieved orders from database:', orders); // Debug log
-      
+      `
+        )
+        .all();
+
       // Add items to each order
       const getItems = db.prepare(`
         SELECT * FROM supplier_order_items WHERE orderId = ?
       `);
-      
-      const ordersWithItems = orders.map(order => {
+
+      const ordersWithItems = orders.map((order) => {
         const items = getItems.all(order.id);
-        console.log(`Items for order ${order.id}:`, items); // Debug log
         return {
           ...order,
-          items: items
+          items: items,
         };
       });
-      
-      console.log('Orders with items:', ordersWithItems); // Debug log
-      
+
       return ordersWithItems;
     } catch (error) {
       console.error("Error getting supplier orders:", error);
-      throw new Error("Erreur lors de la récupération des commandes fournisseurs");
+      throw new Error(
+        "Erreur lors de la récupération des commandes fournisseurs"
+      );
     }
   });
 
@@ -144,20 +151,20 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       // Generate order number if not provided
       const orderNumber = order.orderNumber || `PO-${Date.now()}`;
-      
+
       // Start transaction
       const insertOrder = db.prepare(`
         INSERT INTO supplier_orders (
           supplierId, orderNumber, totalAmount, taxAmount, status, orderDate, deliveryDate
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       const insertItem = db.prepare(`
         INSERT INTO supplier_order_items (
           orderId, productId, productName, quantity, unitPrice, discount, totalPrice
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       // Prepare statement to get product TVA rate
       const getProductTva = db.prepare(`
         SELECT t.rate as tvaRate 
@@ -165,11 +172,11 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         LEFT JOIN tva t ON p.tvaId = t.id 
         WHERE p.id = ?
       `);
-      
+
       const updateProductStock = db.prepare(`
         UPDATE products SET stock = stock + ? WHERE id = ?
       `);
-      
+
       const orderResult = insertOrder.run(
         order.supplierId,
         orderNumber,
@@ -179,12 +186,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         order.orderDate,
         order.deliveryDate
       );
-      
+
       const orderId = orderResult.lastInsertRowid;
-      
+
       // Calculate total tax amount for the order based on individual product TVA rates
       let totalTaxAmount = 0;
-      
+
       // Insert order items and update product stock
       for (const item of order.items) {
         insertItem.run(
@@ -196,14 +203,14 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           item.discount || 0,
           item.totalPrice
         );
-        
+
         // Get product TVA rate and calculate tax for this item
         const productTva = getProductTva.get(item.productId);
         const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
-        const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+        const itemTaxAmount = (item.totalPrice * itemTvaRate) / 100;
         totalTaxAmount += itemTaxAmount;
       }
-      
+
       // Update the order with the calculated tax amount
       const updateTaxStmt = db.prepare(`
         UPDATE supplier_orders 
@@ -211,9 +218,11 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         WHERE id = ?
       `);
       updateTaxStmt.run(totalTaxAmount, orderId);
-      
+
       // Get the updated order with correct tax amount
-      const getUpdatedOrder = db.prepare(`
+      const getUpdatedOrder = db
+        .prepare(
+          `
         SELECT 
           so.*,
           s.name as supplierName,
@@ -224,8 +233,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         FROM supplier_orders so
         JOIN suppliers s ON so.supplierId = s.id
         WHERE so.id = ?
-      `).get(orderId);
-      
+      `
+        )
+        .get(orderId);
+
       const newOrder = {
         id: orderId,
         orderNumber,
@@ -234,7 +245,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
+
       notifyDataChange("supplier_orders", "create", newOrder);
       return newOrder;
     } catch (error) {
@@ -252,7 +263,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             status = ?, orderDate = ?, deliveryDate = ?, updatedAt = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
-      
+
       // Update order
       // Calculate total tax amount for the order based on individual product TVA rates
       let totalTaxAmount = 0;
@@ -263,15 +274,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           LEFT JOIN tva t ON p.tvaId = t.id 
           WHERE p.id = ?
         `);
-        
+
         for (const item of order.items) {
           const productTva = getProductTva.get(item.productId);
           const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
-          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          const itemTaxAmount = (item.totalPrice * itemTvaRate) / 100;
           totalTaxAmount += itemTaxAmount;
         }
       }
-      
+
       const updateResult = updateOrder.run(
         order.supplierId,
         order.orderNumber,
@@ -282,24 +293,26 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         order.deliveryDate,
         id
       );
-      
+
       // Check if the update was successful
       if (updateResult.changes === 0) {
         throw new Error("Aucune commande trouvée avec cet ID");
       }
-      
+
       // Only process items if they exist
       if (order.items && Array.isArray(order.items)) {
-        const deleteItems = db.prepare("DELETE FROM supplier_order_items WHERE orderId = ?");
+        const deleteItems = db.prepare(
+          "DELETE FROM supplier_order_items WHERE orderId = ?"
+        );
         const insertItem = db.prepare(`
           INSERT INTO supplier_order_items (
             orderId, productId, productName, quantity, unitPrice, discount, totalPrice
           ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
-        
+
         // Delete existing items
         deleteItems.run(id);
-        
+
         // Insert new items
         for (const item of order.items) {
           insertItem.run(
@@ -313,18 +326,20 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           );
         }
       }
-      
+
       const updatedOrder = {
         id,
         ...order,
         updatedAt: new Date().toISOString(),
       };
-      
+
       notifyDataChange("supplier_orders", "update", updatedOrder);
       return updatedOrder;
     } catch (error) {
       console.error("Error updating supplier order:", error);
-      throw new Error(`Erreur lors de la mise à jour de la commande fournisseur: ${error.message}`);
+      throw new Error(
+        `Erreur lors de la mise à jour de la commande fournisseur: ${error.message}`
+      );
     }
   });
 
@@ -332,24 +347,30 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       // Check if order has invoices
       const invoicesCount = db
-        .prepare("SELECT COUNT(*) as count FROM supplier_invoices WHERE orderId = ?")
+        .prepare(
+          "SELECT COUNT(*) as count FROM supplier_invoices WHERE orderId = ?"
+        )
         .get(id);
       if (invoicesCount.count > 0) {
         throw new Error(
           "Impossible de supprimer cette commande car elle a des factures associées"
         );
       }
-      
+
       // Start transaction
-      const deleteItems = db.prepare("DELETE FROM supplier_order_items WHERE orderId = ?");
-      const deleteOrder = db.prepare("DELETE FROM supplier_orders WHERE id = ?");
-      
+      const deleteItems = db.prepare(
+        "DELETE FROM supplier_order_items WHERE orderId = ?"
+      );
+      const deleteOrder = db.prepare(
+        "DELETE FROM supplier_orders WHERE id = ?"
+      );
+
       // Delete items first
       deleteItems.run(id);
-      
+
       // Delete order
       deleteOrder.run(id);
-      
+
       notifyDataChange("supplier_orders", "delete", { id });
       return true;
     } catch (error) {
@@ -361,7 +382,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   // Supplier Invoices CRUD
   ipcMain.handle("get-supplier-invoices", async () => {
     try {
-      const invoices = db.prepare(`
+      const invoices = db
+        .prepare(
+          `
         SELECT 
           si.*,
           s.name as supplierName,
@@ -373,22 +396,26 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         FROM supplier_invoices si
         JOIN suppliers s ON si.supplierId = s.id
         ORDER BY si.issueDate DESC
-      `).all();
-      
+      `
+        )
+        .all();
+
       // Add items to each invoice
       const getItems = db.prepare(`
         SELECT * FROM supplier_invoice_items WHERE invoiceId = ?
       `);
-      
-      const invoicesWithItems = invoices.map(invoice => ({
+
+      const invoicesWithItems = invoices.map((invoice) => ({
         ...invoice,
-        items: getItems.all(invoice.id)
+        items: getItems.all(invoice.id),
       }));
-      
+
       return invoicesWithItems;
     } catch (error) {
       console.error("Error getting supplier invoices:", error);
-      throw new Error("Erreur lors de la récupération des factures fournisseurs");
+      throw new Error(
+        "Erreur lors de la récupération des factures fournisseurs"
+      );
     }
   });
 
@@ -401,13 +428,13 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           status, issueDate, dueDate, paymentDate
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       const insertItem = db.prepare(`
         INSERT INTO supplier_invoice_items (
           invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       // Calculate total tax amount for the invoice based on individual product TVA rates
       let totalTaxAmount = 0;
       if (invoice.items && Array.isArray(invoice.items)) {
@@ -417,15 +444,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           LEFT JOIN tva t ON p.tvaId = t.id 
           WHERE p.id = ?
         `);
-        
+
         for (const item of invoice.items) {
           const productTva = getProductTva.get(item.productId);
           const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
-          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          const itemTaxAmount = (item.totalPrice * itemTvaRate) / 100;
           totalTaxAmount += itemTaxAmount;
         }
       }
-      
+
       const invoiceResult = insertInvoice.run(
         invoice.supplierId,
         invoice.orderId,
@@ -438,9 +465,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.dueDate,
         invoice.paymentDate
       );
-      
+
       const invoiceId = invoiceResult.lastInsertRowid;
-      
+
       // Insert invoice items
       if (invoice.items && Array.isArray(invoice.items)) {
         for (const item of invoice.items) {
@@ -455,14 +482,14 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           );
         }
       }
-      
+
       const newInvoice = {
         id: invoiceId,
         ...invoice,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
+
       notifyDataChange("supplier_invoices", "create", newInvoice);
       return newInvoice;
     } catch (error) {
@@ -481,14 +508,16 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             updatedAt = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
-      
-      const deleteItems = db.prepare("DELETE FROM supplier_invoice_items WHERE invoiceId = ?");
+
+      const deleteItems = db.prepare(
+        "DELETE FROM supplier_invoice_items WHERE invoiceId = ?"
+      );
       const insertItem = db.prepare(`
         INSERT INTO supplier_invoice_items (
           invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       // Calculate total tax amount for the invoice based on individual product TVA rates
       let totalTaxAmount = 0;
       if (invoice.items && Array.isArray(invoice.items)) {
@@ -498,15 +527,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           LEFT JOIN tva t ON p.tvaId = t.id 
           WHERE p.id = ?
         `);
-        
+
         for (const item of invoice.items) {
           const productTva = getProductTva.get(item.productId);
           const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
-          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          const itemTaxAmount = (item.totalPrice * itemTvaRate) / 100;
           totalTaxAmount += itemTaxAmount;
         }
       }
-      
+
       updateInvoice.run(
         invoice.supplierId,
         invoice.orderId,
@@ -520,7 +549,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.paymentDate,
         id
       );
-      
+
       // Update invoice items
       if (invoice.items && Array.isArray(invoice.items)) {
         deleteItems.run(id);
@@ -536,18 +565,20 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           );
         }
       }
-      
+
       const updatedInvoice = {
         id,
         ...invoice,
         updatedAt: new Date().toISOString(),
       };
-      
+
       notifyDataChange("supplier_invoices", "update", updatedInvoice);
       return updatedInvoice;
     } catch (error) {
       console.error("Error updating supplier invoice:", error);
-      throw new Error("Erreur lors de la mise à jour de la facture fournisseur");
+      throw new Error(
+        "Erreur lors de la mise à jour de la facture fournisseur"
+      );
     }
   });
 
@@ -563,36 +594,50 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
-  ipcMain.handle("update-supplier-invoice-status", async (event, id, status) => {
-    try {
-      const stmt = db.prepare("UPDATE supplier_invoices SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?");
-      const result = stmt.run(status, id);
-      
-      // Check if any rows were affected
-      if (result.changes === 0) {
-        throw new Error("Facture fournisseur non trouvée ou statut déjà mis à jour");
+  ipcMain.handle(
+    "update-supplier-invoice-status",
+    async (event, id, status) => {
+      try {
+        const stmt = db.prepare(
+          "UPDATE supplier_invoices SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?"
+        );
+        const result = stmt.run(status, id);
+
+        // Check if any rows were affected
+        if (result.changes === 0) {
+          throw new Error(
+            "Facture fournisseur non trouvée ou statut déjà mis à jour"
+          );
+        }
+
+        const updatedInvoice = {
+          id,
+          status,
+          updatedAt: new Date().toISOString(),
+        };
+
+        notifyDataChange("supplier_invoices", "update", updatedInvoice);
+        return updatedInvoice;
+      } catch (error) {
+        console.error("Error updating supplier invoice status:", error);
+        throw new Error(
+          "Erreur lors de la mise à jour du statut de facture fournisseur: " +
+            error.message
+        );
       }
-      
-      const updatedInvoice = {
-        id,
-        status,
-        updatedAt: new Date().toISOString(),
-      };
-      
-      notifyDataChange("supplier_invoices", "update", updatedInvoice);
-      return updatedInvoice;
-    } catch (error) {
-      console.error("Error updating supplier invoice status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut de facture fournisseur: " + error.message);
     }
-  });
+  );
 
   // Stock Movements CRUD
   ipcMain.handle("get-stock-movements", async () => {
     try {
-      const movements = db.prepare(`
+      const movements = db
+        .prepare(
+          `
         SELECT * FROM stock_movements ORDER BY createdAt DESC
-      `).all();
+      `
+        )
+        .all();
       return movements;
     } catch (error) {
       console.error("Error getting stock movements:", error);
@@ -607,7 +652,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       const result = stmt.run(
         movement.productId,
         movement.productName,
@@ -618,13 +663,13 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         movement.reference,
         movement.reason
       );
-      
+
       const newMovement = {
         id: result.lastInsertRowid,
         ...movement,
         createdAt: new Date().toISOString(),
       };
-      
+
       // Don't notify data change for stock movements as they're not real-time updated
       return newMovement;
     } catch (error) {
@@ -635,15 +680,21 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("get-stock-movements-by-product", async (event, productId) => {
     try {
-      const movements = db.prepare(`
+      const movements = db
+        .prepare(
+          `
         SELECT * FROM stock_movements 
         WHERE productId = ? 
         ORDER BY createdAt DESC
-      `).all(productId);
+      `
+        )
+        .all(productId);
       return movements;
     } catch (error) {
       console.error("Error getting stock movements by product:", error);
-      throw new Error("Erreur lors de la récupération des mouvements de stock pour le produit");
+      throw new Error(
+        "Erreur lors de la récupération des mouvements de stock pour le produit"
+      );
     }
   });
 
@@ -654,25 +705,28 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         "UPDATE supplier_orders SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?"
       );
       const result = stmt.run(status, id);
-      
+
       // Check if any rows were affected
       if (result.changes === 0) {
-        throw new Error("Commande fournisseur non trouvée ou statut déjà mis à jour");
+        throw new Error(
+          "Commande fournisseur non trouvée ou statut déjà mis à jour"
+        );
       }
-      
+
       const updatedOrder = {
         id,
         status,
         updatedAt: new Date().toISOString(),
       };
-      
+
       notifyDataChange("supplier_orders", "update", updatedOrder);
       return updatedOrder;
     } catch (error) {
       console.error("Error updating supplier order status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut de la commande fournisseur: " + error.message);
+      throw new Error(
+        "Erreur lors de la mise à jour du statut de la commande fournisseur: " +
+          error.message
+      );
     }
   });
-
-
 };

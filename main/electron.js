@@ -39,7 +39,6 @@ async function migrateDatabaseIfNeeded() {
       
       // Move database from old location to new location
       await fs.rename(oldDbPath, newDbPath);
-      console.log("Database migrated successfully from resources to userData directory");
     } catch (error) {
       console.error("Failed to migrate database:", error);
     }
@@ -47,7 +46,6 @@ async function migrateDatabaseIfNeeded() {
     // Both exist - keep the new one and remove the old one
     try {
       await fs.unlink(oldDbPath);
-      console.log("Removed old database from resources directory");
     } catch (error) {
       console.error("Failed to remove old database:", error);
     }

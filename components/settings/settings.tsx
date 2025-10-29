@@ -59,13 +59,10 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchCompany = async () => {
       const res = await db.settings.get();
-      console.log("Raw response from db.settings.get():", res);
 
       // If your IPC returns { data: company }
       const c = res?.data;
-      console.log("company: ", res);
       if (c && c.id) {
-        console.log("Company data received:", c);
         setCompany(c);
         setCompanyFields({
           name: c.name || "",
@@ -87,7 +84,6 @@ export default function SettingsPage() {
 
         });
       } else {
-        console.log("No company data received or invalid company data");
         // Initialize with empty company data
         setCompany(null);
         setCompanyFields({
@@ -203,7 +199,6 @@ export default function SettingsPage() {
           : null,
     };
 
-    console.log("Saving company data:", updateData);
 
     let result;
     if (company && company.id) {
@@ -260,7 +255,6 @@ export default function SettingsPage() {
       const result = await db.database.export();
       if (result.success && result.data) {
         if (result.data.success) {
-          console.log(`Database exported successfully: ${result.data.filename}`);
           toast({
             title: "Succès",
             description: `Base de données exportée avec succès: ${result.data.filename}`,
@@ -300,7 +294,6 @@ export default function SettingsPage() {
       const result = await db.database.import();
       if (result.success && result.data) {
         if (result.data.success) {
-          console.log(result.data.message || "Database imported successfully");
           toast({
             title: "Succès",
             description: result.data.message || "Base de données importée avec succès",
@@ -385,13 +378,20 @@ export default function SettingsPage() {
 
     if (window.electronAPI?.onUpdateNotAvailable) {
       window.electronAPI.onUpdateNotAvailable(() => {
-        console.log("No updates available");
+        toast({
+          title: "Aucune mise à jour disponible",
+          description: "Votre application est à jour",
+        });
       });
     }
 
     if (window.electronAPI?.onUpdateError) {
       window.electronAPI.onUpdateError((error) => {
-        console.error("Update error:", error);
+        toast({
+          title: "Erreur de mise à jour",
+          description: error || "Une erreur inattendue s'est produite durant la vérification des mises à jour",
+          variant: "destructive",
+        });
         setIsCheckingUpdate(false);
         setIsDownloading(false);
       });
@@ -408,7 +408,10 @@ export default function SettingsPage() {
         setUpdateDownloaded(true);
         setIsDownloading(false);
         setDownloadProgress(0);
-        console.log(`Update downloaded: ${info.version}`);
+        toast({
+          title: "Mise à jour téléchargée",
+          description: `Mise à jour téléchargée: ${info.version}`,
+        });
       });
     }
 

@@ -33,7 +33,6 @@ export default function OnboardingPage() {
 
   const handleNext = async () => {
     if (isLastStep) {
-      console.log(data)
       const settings = await db.settings.create({...data.companyInfo, ...data.taxInfo});
       if(settings.success) {
         toast({

@@ -98,7 +98,6 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
   };
 
   const handleViewReceipt = () => {
-    console.log("Delivery data for preview:", deliveryData); // Debug log
     if (deliveryData) {
       setIsPreviewOpen(true);
     }
