@@ -287,7 +287,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         const invoice = db
           .prepare(
             `
-        SELECT i.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress, c.taxId as clientTaxId
+        SELECT i.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress, c.taxId as clientTaxId
         FROM invoices i
         JOIN clients c ON i.clientId = c.id
         WHERE i.id = ?
