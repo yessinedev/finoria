@@ -10,6 +10,43 @@ let mainWindow;
 let db;
 let nextProcess;
 const dataChangeListeners = new Map();
+let restartScheduled = false;
+
+const getDatabasePath = () =>
+  app.isPackaged
+    ? path.join(app.getPath("userData"), "database.db")
+    : path.join(__dirname, "..", "database.db");
+
+async function prepareDatabaseForImport() {
+  if (!db) return;
+
+  try {
+    db.close();
+  } catch (error) {
+    console.error("Failed to close database before import:", error);
+  } finally {
+    db = null;
+  }
+}
+
+function scheduleAppRestart() {
+  if (restartScheduled) return;
+  restartScheduled = true;
+
+  setTimeout(() => {
+    if (nextProcess) {
+      try {
+        nextProcess.kill();
+      } catch (error) {
+        console.error("Failed to stop Next.js process:", error);
+      }
+      nextProcess = null;
+    }
+
+    app.relaunch();
+    app.exit(0);
+  }, 500);
+}
 
 function notifyDataChange(table, action, data) {
   for (const listener of dataChangeListeners.values()) {
@@ -26,7 +63,7 @@ async function migrateDatabaseIfNeeded() {
   if (!app.isPackaged) return; // Only needed in packaged app
   
   const oldDbPath = path.join(process.resourcesPath, "database.db");
-  const newDbPath = path.join(app.getPath("userData"), "database.db");
+  const newDbPath = getDatabasePath();
   
   // Check if old database exists and new database doesn't
   const oldDbExists = fsSync.existsSync(oldDbPath);
@@ -53,9 +90,7 @@ async function migrateDatabaseIfNeeded() {
 }
 
 function initDatabase() {
-  const dbPath = app.isPackaged
-    ? path.join(app.getPath("userData"), "database.db")
-    : path.join(__dirname, "..", "database.db");
+  const dbPath = getDatabasePath();
 
   db = new Database(dbPath);
   db.pragma("foreign_keys = ON");
@@ -137,8 +172,7 @@ app.whenReady().then(async () => {
   initDatabase();
   createWindow();
 
-  // register IPC handlers (same as before)
-  [
+  const handlerModules = [
     "categories",
     "clients",
     "products",
@@ -149,16 +183,23 @@ app.whenReady().then(async () => {
     "suppliers",
     "enterprise-settings",
     "device",
-    "database",
     "updates",
     "credit-notes",
     "purchase-orders",
     "quote-to-invoice",
     "tva",
     "delivery-receipts",
-    "reception-notes"
-  ].forEach((name) => {
+    "reception-notes",
+  ];
+
+  handlerModules.forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
+  });
+
+  require("./ipc-handlers/database")(ipcMain, db, notifyDataChange, {
+    getDatabasePath,
+    prepareDatabaseForImport,
+    scheduleAppRestart,
   });
 
   app.on("activate", () => {
