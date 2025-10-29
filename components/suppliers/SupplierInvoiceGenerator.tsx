@@ -342,7 +342,7 @@ export default function SupplierInvoiceGenerator({
     );
   };
 
-  // Calculate totals for new invoice (add FODEC calculations) with per-item TVA
+  // Calculate totals for new invoice (add FODEC calculations) with per-item TVA and timbre fiscal
   const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const discountedSubtotal = subtotal; // No global discount in this form
   // Calculate tax per item based on product TVA rates
@@ -353,7 +353,9 @@ export default function SupplierInvoiceGenerator({
     return sum + (item.totalPrice * itemTvaRate) / 100;
   }, 0);
   const fodecAmount = (discountedSubtotal * fodecTax) / 100; // Calculate FODEC amount
-  const finalTotal = discountedSubtotal + taxAmount + fodecAmount; // Include FODEC in final total
+  const ttcAmount = discountedSubtotal + taxAmount + fodecAmount; // Include FODEC in final total
+  const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+  const finalTotal = ttcAmount + timbreFiscal; // Add timbre fiscal to final total
 
   const handleGenerateInvoice = async () => {
     if (!validateForm()) {
@@ -369,18 +371,24 @@ export default function SupplierInvoiceGenerator({
         if (!selectedOrder) return;
 
         // Always provide a valid invoice number
-        const invoiceNumber =
-          formData.customNumber.trim() !== ""
-            ? formData.customNumber.trim()
-            : generatePreviewInvoiceNumber();
-
+        const invoiceNumber = formData.customNumber.trim() !== ""
+          ? formData.customNumber.trim()
+          : generatePreviewInvoiceNumber();
+          
+        // Calculate amounts with timbre fiscal
+        const htAmount = selectedOrder.totalAmount;
+        const tvaAmount = selectedOrder.taxAmount;
+        const ttcAmount = htAmount + tvaAmount;
+        const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+        const finalAmount = ttcAmount + timbreFiscal;
+          
         const invoiceData = {
           supplierId: selectedOrder.supplierId,
           orderId: selectedOrder.id,
           invoiceNumber: invoiceNumber,
-          amount: selectedOrder.totalAmount,
-          taxAmount: selectedOrder.taxAmount,
-          totalAmount: selectedOrder.totalAmount + selectedOrder.taxAmount,
+          amount: htAmount,
+          taxAmount: tvaAmount,
+          totalAmount: finalAmount, // Include timbre fiscal
           issueDate: new Date().toISOString(),
           dueDate: formData.dueDate.toISOString(),
           status: "En attente",
@@ -418,16 +426,22 @@ export default function SupplierInvoiceGenerator({
         }
       } else if (activeTab === "new-invoice") {
         // Enhanced invoice generation - create new invoice with manual items
+        // Calculate amounts with timbre fiscal
+        const htAmount = subtotal;
+        const tvaAmount = taxAmount;
+        const ttcAmount = htAmount + tvaAmount + fodecAmount;
+        const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+        const finalAmount = ttcAmount + timbreFiscal;
+        
         const invoiceData = {
           supplierId: selectedSupplier!.id,
           orderId: null,
-          invoiceNumber:
-            formData.customNumber.trim() !== ""
-              ? formData.customNumber.trim()
-              : generatePreviewInvoiceNumber(),
-          amount: subtotal,
-          taxAmount: taxAmount,
-          totalAmount: finalTotal,
+          invoiceNumber: formData.customNumber.trim() !== "" 
+            ? formData.customNumber.trim() 
+            : generatePreviewInvoiceNumber(),
+          amount: htAmount,
+          taxAmount: tvaAmount,
+          totalAmount: finalAmount, // Include timbre fiscal
           issueDate: new Date().toISOString(),
           dueDate: formData.dueDate.toISOString(),
           status: "En attente",
@@ -476,7 +490,9 @@ export default function SupplierInvoiceGenerator({
           );
         }, 0);
         const totalWithTax = totalAmount + taxAmountRN;
-
+        const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+        const finalAmount = totalWithTax + timbreFiscal;
+        
         // Generate a unique invoice number
         const invoiceNumber =
           formData.customNumber.trim() !== ""
@@ -490,7 +506,7 @@ export default function SupplierInvoiceGenerator({
           invoiceNumber: invoiceNumber,
           amount: totalAmount,
           taxAmount: taxAmountRN,
-          totalAmount: totalWithTax,
+          totalAmount: finalAmount, // Include timbre fiscal
           issueDate: new Date().toISOString(),
           dueDate: formData.dueDate.toISOString(),
           status: "En attente",
@@ -572,21 +588,26 @@ export default function SupplierInvoiceGenerator({
 
     // Generate preview based on current workflow
     let previewData;
-    const invoiceNumber =
-      formData.customNumber.trim() !== ""
-        ? formData.customNumber.trim()
-        : generatePreviewInvoiceNumber();
-
+    const invoiceNumber = formData.customNumber.trim() !== ""
+      ? formData.customNumber.trim()
+      : generatePreviewInvoiceNumber();
+    const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+    
     if (activeTab === "from-order") {
       // Preview for classic workflow
       if (!selectedOrder) return;
+      const htAmount = selectedOrder.totalAmount;
+      const tvaAmount = selectedOrder.taxAmount;
+      const ttcAmount = htAmount + tvaAmount;
+      const finalAmount = ttcAmount + timbreFiscal;
+      
       previewData = {
         number: invoiceNumber,
         orderId: selectedOrder.id,
         supplierId: selectedOrder.supplierId,
-        amount: selectedOrder.totalAmount,
-        taxAmount: selectedOrder.taxAmount,
-        totalAmount: selectedOrder.totalAmount + selectedOrder.taxAmount,
+        amount: htAmount,
+        taxAmount: tvaAmount,
+        totalAmount: finalAmount, // Include timbre fiscal
         status: "En attente",
         notes: formData.notes,
         items: selectedOrder.items,
@@ -596,6 +617,11 @@ export default function SupplierInvoiceGenerator({
     } else if (activeTab === "new-invoice") {
       // Preview for new invoice
       if (!selectedSupplier) return;
+      const htAmount = subtotal;
+      const tvaAmount = taxAmount;
+      const ttcAmount = htAmount + tvaAmount + fodecAmount;
+      const finalAmount = ttcAmount + timbreFiscal;
+      
       previewData = {
         number: invoiceNumber,
         orderId: null,
@@ -606,9 +632,9 @@ export default function SupplierInvoiceGenerator({
         supplierPhone: selectedSupplier.phone,
         supplierAddress: selectedSupplier.address,
         supplierTaxId: selectedSupplier.taxId,
-        amount: subtotal,
-        taxAmount: taxAmount,
-        totalAmount: finalTotal,
+        amount: htAmount,
+        taxAmount: tvaAmount,
+        totalAmount: finalAmount, // Include timbre fiscal
         status: "En attente",
         issueDate: new Date().toISOString(),
         dueDate: formData.dueDate.toISOString(),
@@ -633,7 +659,8 @@ export default function SupplierInvoiceGenerator({
         );
       }, 0);
       const totalWithTax = totalAmount + taxAmountRN;
-
+      const finalAmount = totalWithTax + timbreFiscal;
+      
       previewData = {
         number: invoiceNumber,
         orderId: null,
@@ -646,7 +673,7 @@ export default function SupplierInvoiceGenerator({
         supplierTaxId: selectedSupplier.taxId,
         amount: totalAmount,
         taxAmount: taxAmountRN,
-        totalAmount: totalWithTax,
+        totalAmount: finalAmount, // Include timbre fiscal
         status: "En attente",
         issueDate: new Date().toISOString(),
         dueDate: formData.dueDate.toISOString(),
@@ -951,7 +978,7 @@ export default function SupplierInvoiceGenerator({
                       />
 
                       <div className="flex flex-col gap-2">
-                        <Label>Date d'échéance *</Label>
+                        <Label>Date d’échéance *</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -1263,6 +1290,10 @@ export default function SupplierInvoiceGenerator({
                                 <span>{fodecAmount.toFixed(3)} DNT</span>
                               </div>
                             )}
+                            <div className="flex justify-between text-sm">
+                              <span>Timbre Fiscal:</span>
+                              <span>{timbreFiscal.toFixed(3)} DNT</span>
+                            </div>
                             <div className="border-t pt-2">
                               <div className="flex justify-between font-semibold">
                                 <span>Total TTC:</span>
@@ -1412,65 +1443,51 @@ export default function SupplierInvoiceGenerator({
 
                             {/* Financial Summary */}
                             <div className="mt-4">
-                              <FinancialSummaryCard
-                                subtotal={selectedReceptionNotes.reduce(
-                                  (sum, noteId) => {
-                                    const note = receptionNotes.find(
-                                      (rn) => rn.id === noteId
-                                    );
-                                    return (
-                                      sum +
-                                      (note?.items?.reduce(
-                                        (itemSum, item) =>
-                                          itemSum +
-                                          item.receivedQuantity *
-                                            item.unitPrice,
-                                        0
-                                      ) || 0)
-                                    );
-                                  },
-                                  0
-                                )}
-                                tax={selectedReceptionNotes.reduce(
-                                  (sum, noteId) => {
-                                    const note = receptionNotes.find(
-                                      (rn) => rn.id === noteId
-                                    );
-                                    const itemsTotal =
-                                      note?.items?.reduce(
-                                        (itemSum, item) =>
-                                          itemSum +
-                                          item.receivedQuantity *
-                                            item.unitPrice,
-                                        0
-                                      ) || 0;
-                                    return sum + itemsTotal * 0.19; // 19% TVA
-                                  },
-                                  0
-                                )}
-                                total={selectedReceptionNotes.reduce(
-                                  (sum, noteId) => {
-                                    const note = receptionNotes.find(
-                                      (rn) => rn.id === noteId
-                                    );
-                                    const itemsTotal =
-                                      note?.items?.reduce(
-                                        (itemSum, item) =>
-                                          itemSum +
-                                          item.receivedQuantity *
-                                            item.unitPrice,
-                                        0
-                                      ) || 0;
-                                    return sum + itemsTotal * 1.19; // 19% TVA
-                                  },
-                                  0
-                                )}
-                                dueDate={formData.dueDate.toLocaleDateString(
-                                  "fr-FR"
-                                )}
-                                paymentTerms={formData.paymentTerms}
-                                currency="DNT"
-                              />
+                              <Card className="border-green-200 bg-green-50">
+                                <CardHeader>
+                                  <CardTitle className="flex items-center gap-2 text-green-800">
+                                    Récapitulatif financier
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Sous-total HT:</span>
+                                    <span className="font-medium">{selectedReceptionNotes.reduce((sum, noteId) => {
+                                      const note = receptionNotes.find(rn => rn.id === noteId);
+                                      return sum + (note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0);
+                                    }, 0).toFixed(3)} DNT</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">TVA:</span>
+                                    <span className="font-medium">{selectedReceptionNotes.reduce((sum, noteId) => {
+                                      const note = receptionNotes.find(rn => rn.id === noteId);
+                                      const itemsTotal = note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0;
+                                      return sum + (itemsTotal * 0.19); // 19% TVA
+                                    }, 0).toFixed(3)} DNT</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Timbre Fiscal:</span>
+                                    <span className="font-medium">{(companySettings?.timbreFiscal || 1.000).toFixed(3)} DNT</span>
+                                  </div>
+                                  <div className="border-t pt-2">
+                                    <div className="flex justify-between text-lg font-bold text-green-800">
+                                      <span>Total TTC:</span>
+                                      <span>{selectedReceptionNotes.reduce((sum, noteId) => {
+                                        const note = receptionNotes.find(rn => rn.id === noteId);
+                                        const itemsTotal = note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0;
+                                        const tvaAmount = itemsTotal * 0.19;
+                                        const ttcAmount = itemsTotal + tvaAmount;
+                                        const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+                                        return sum + (ttcAmount + timbreFiscal); // Include timbre fiscal
+                                      }, 0).toFixed(3)} DNT</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground pt-2 border-t">
+                                    <p>Échéance: {formData.dueDate.toLocaleDateString("fr-FR")}</p>
+                                    <p>Conditions: {formData.paymentTerms}</p>
+                                  </div>
+                                </CardContent>
+                              </Card>
                             </div>
                           </div>
                         )}

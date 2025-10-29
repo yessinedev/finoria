@@ -278,7 +278,8 @@ function createTables(db) {
       taxId TEXT,
       taxStatus TEXT,
       tvaNumber INTEGER,
-      logo TEXT
+      logo TEXT,
+      timbreFiscal REAL DEFAULT 1.000
     )
   `);
 

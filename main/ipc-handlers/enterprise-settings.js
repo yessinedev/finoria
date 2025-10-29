@@ -19,10 +19,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       // If still no settings, create a default empty company record
       if (!settings) {
         const stmt = db.prepare(`
-          INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, logo) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, logo, timbreFiscal) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
-        const result = stmt.run("", "", "", "", "", "", "", "", "", null, "");
+        const result = stmt.run("", "", "", "", "", "", "", "", "", null, "", 1.000);
         settings = { 
           id: result.lastInsertRowid, 
           name: "", 
@@ -35,7 +35,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           taxId: "", 
           taxStatus: "", 
           tvaNumber: null,
-          logo: ""
+          logo: "",
+          timbreFiscal: 1.000
         };
       }
 
@@ -51,8 +52,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-enterprise-settings", async (event, settings) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, logo) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO companies (name, address, city, country, phone, email, website, taxId, taxStatus, tvaNumber, logo, timbreFiscal) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         settings.name || "",
@@ -65,7 +66,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.taxId || "",
         settings.taxStatus || "",
         settings.tvaNumber,
-        settings.logo || ""
+        settings.logo || "",
+        settings.timbreFiscal !== undefined ? settings.timbreFiscal : 1.000
       );
 
       const newSettings = { id: result.lastInsertRowid, ...settings };
@@ -84,7 +86,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE companies 
-        SET name = ?, address = ?, city = ?, country = ?, phone = ?, email = ?, website = ?, taxId = ?, taxStatus = ?, tvaNumber = ?, logo = ?
+        SET name = ?, address = ?, city = ?, country = ?, phone = ?, email = ?, website = ?, taxId = ?, taxStatus = ?, tvaNumber = ?, logo = ?, timbreFiscal = ?
         WHERE id = ?
       `);
       const result = stmt.run(
@@ -99,6 +101,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         settings.taxStatus || "",
         settings.tvaNumber,
         settings.logo || "",
+        settings.timbreFiscal !== undefined ? settings.timbreFiscal : 1.000,
         id
       );
 

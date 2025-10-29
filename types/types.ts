@@ -406,6 +406,7 @@ export interface TaxInfo {
   taxId: string
   taxStatus: string
   tvaNumber?: number
+  timbreFiscal?: number
 }
 
 export interface CreateCompanyData extends CompanyInfo, TaxInfo {}

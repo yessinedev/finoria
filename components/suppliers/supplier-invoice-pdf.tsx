@@ -149,6 +149,8 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
   const htAmount = invoice.amount; // This is the correct HT amount from the database
   const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
   const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
+  const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+  const finalAmount = ttcAmount + timbreFiscal;
 
   return (
     <Document>
@@ -208,10 +210,6 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
               <Text style={styles.totalsLabel}>Date d'échéance</Text>
               <Text style={styles.cardContent}>{formatDate(invoice.dueDate || '')}</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.totalsLabel}>Conditions de paiement</Text>
-              <Text style={styles.cardContent}>30 jours net</Text>
-            </View>
           </View>
         </View>
 
@@ -224,8 +222,8 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
             <Text style={styles.tableCell}>Remise</Text>
             <Text style={styles.tableCell}>Total HT</Text>
           </View>
-          {invoice.items && invoice.items.map((item: any, idx: number) => (
-            <View style={styles.tableRow} key={item.id}>
+          {Array.isArray(invoice.items) && invoice.items.map((item: any, idx: number) => (
+            <View style={styles.tableRow} key={item.id || idx}>
               <Text style={[styles.tableCell, { flex: 2 }]}>{item.productName}</Text>
               <Text style={styles.tableCell}>{formatQuantity(item.quantity)}</Text>
               <Text style={styles.tableCell}>{formatCurrency(item.unitPrice)}</Text>
@@ -249,18 +247,18 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
             </Text>
             <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
           </View>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(timbreFiscal)}</Text>
+          </View>
           <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
             <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
-            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(ttcAmount)}</Text>
+            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(finalAmount)}</Text>
           </View>
         </View>
-
-        {/* Notes */}
 
         {/* Footer - Removed hardcoded text */}
       </Page>
     </Document>
   )
 }
-
-export default SupplierInvoicePDFDocument
