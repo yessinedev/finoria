@@ -724,8 +724,7 @@ export default function SupplierOrders() {
                     <Input
                       id="itemQuantity"
                       type="number"
-                      min="1"
-                      value={itemQuantity}
+                      value={itemQuantity.toString()}
                       onChange={(e) =>
                         setItemQuantity(Number(e.target.value) || 1)
                       }
