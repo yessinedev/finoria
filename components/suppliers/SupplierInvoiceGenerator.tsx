@@ -347,9 +347,9 @@ export default function SupplierInvoiceGenerator({
   const discountedSubtotal = subtotal; // No global discount in this form
   // Calculate tax per item based on product TVA rates
   const taxAmount = lineItems.reduce((sum, item) => {
-    // Get product TVA rate (this would need to be fetched from product data)
-    // For now, using a default rate until we implement product TVA fetching
-    const itemTvaRate = 19; // Default rate
+    // Get product TVA rate from the actual product data
+    const product = products.find(p => p.id === item.productId);
+    const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
     return sum + (item.totalPrice * itemTvaRate) / 100;
   }, 0);
   const fodecAmount = (discountedSubtotal * fodecTax) / 100; // Calculate FODEC amount
@@ -393,11 +393,14 @@ export default function SupplierInvoiceGenerator({
           dueDate: formData.dueDate.toISOString(),
           status: "En attente",
           notes: formData.notes,
+          skipStockUpdate: true, // Skip stock update - supplier order already updated stock
           items: selectedOrder.items,
         };
 
         const result = await db.supplierInvoices.create(invoiceData);
-        if (result.success) {
+        if (result.success && result.data) {
+          // No need to create stock movements here - supplier order already did that
+          
           onInvoiceGenerated();
           onClose();
           // Reset form
@@ -450,7 +453,25 @@ export default function SupplierInvoiceGenerator({
         };
 
         const result = await db.supplierInvoices.create(invoiceData);
-        if (result.success) {
+        if (result.success && result.data) {
+          // Create stock movement records for each item
+          for (const item of lineItems) {
+            try {
+              await db.stockMovements.create({
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                movementType: 'IN',
+                sourceType: 'supplier_invoice',
+                sourceId: result.data.id,
+                reference: `FINV-${result.data.id}`,
+                reason: `Réception fournisseur - Facture ${invoiceData.invoiceNumber}`
+              });
+            } catch (stockError) {
+              console.error(`Failed to create stock movement for product ${item.productId}:`, stockError);
+            }
+          }
+          
           onInvoiceGenerated();
           onClose();
           // Reset form
@@ -484,7 +505,9 @@ export default function SupplierInvoiceGenerator({
           0
         );
         const taxAmountRN = allItems.reduce((sum, item) => {
-          const itemTvaRate = 19; // Default rate
+          // Get product TVA rate from the actual product data
+          const product = products.find(p => p.id === item.productId);
+          const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
           return (
             sum + (item.receivedQuantity * item.unitPrice * itemTvaRate) / 100
           );
@@ -511,6 +534,7 @@ export default function SupplierInvoiceGenerator({
           dueDate: formData.dueDate.toISOString(),
           status: "En attente",
           notes: formData.notes,
+          skipStockUpdate: true, // Skip stock update - reception notes already updated stock
           items: allItems.map((item) => ({
             productId: item.productId,
             productName: item.productName,
@@ -522,7 +546,9 @@ export default function SupplierInvoiceGenerator({
         };
 
         const result = await db.supplierInvoices.create(invoiceData);
-        if (result.success) {
+        if (result.success && result.data) {
+          // No need to create stock movements here - reception notes already did that
+          
           onInvoiceGenerated();
           onClose();
           // Reset form
@@ -653,7 +679,9 @@ export default function SupplierInvoiceGenerator({
         0
       );
       const taxAmountRN = allItems.reduce((sum, item) => {
-        const itemTvaRate = 19; // Default rate
+        // Get product TVA rate from the actual product data
+        const product = products.find(p => p.id === item.productId);
+        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
         return (
           sum + (item.receivedQuantity * item.unitPrice * itemTvaRate) / 100
         );
@@ -778,23 +806,38 @@ export default function SupplierInvoiceGenerator({
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <EntitySelect
-                          label="Commande à facturer"
-                          id="order"
-                          value={selectedOrder?.id?.toString() || ""}
-                          onChange={(value) =>
-                            handleOrderSelection(Number(value))
+                          label="Sélectionner un fournisseur *"
+                          id="supplier-for-order"
+                          value={selectedSupplier?.id?.toString() || ""}
+                          onChange={handleSupplierSelection}
+                          options={suppliers}
+                          getOptionLabel={(supplier) =>
+                            `${supplier.name} (${supplier.company})`
                           }
-                          options={supplierOrders}
-                          getOptionLabel={(order) =>
-                            `Commande #${order.id} - ${new Date(
-                              order.orderDate
-                            ).toLocaleDateString("fr-FR")} - ${formatCurrency(
-                              order.totalAmount + (order.taxAmount || 0)
-                            )}`
-                          }
-                          getOptionValue={(order) => order.id.toString()}
+                          getOptionValue={(supplier) => supplier.id.toString()}
                           required
                         />
+                        
+                        {selectedSupplier && (
+                          <EntitySelect
+                            label="Commande à facturer"
+                            id="order"
+                            value={selectedOrder?.id?.toString() || ""}
+                            onChange={(value) =>
+                              handleOrderSelection(Number(value))
+                            }
+                            options={supplierOrders}
+                            getOptionLabel={(order) =>
+                              `Commande #${order.id} - ${new Date(
+                                order.orderDate
+                              ).toLocaleDateString("fr-FR")} - ${formatCurrency(
+                                order.totalAmount + (order.taxAmount || 0)
+                              )}`
+                            }
+                            getOptionValue={(order) => order.id.toString()}
+                            required
+                          />
+                        )}
                         {formErrors.orderId && (
                           <p className="text-sm text-red-500 mt-1">
                             {formErrors.orderId}
@@ -1461,8 +1504,11 @@ export default function SupplierInvoiceGenerator({
                                     <span className="text-muted-foreground">TVA:</span>
                                     <span className="font-medium">{selectedReceptionNotes.reduce((sum, noteId) => {
                                       const note = receptionNotes.find(rn => rn.id === noteId);
-                                      const itemsTotal = note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0;
-                                      return sum + (itemsTotal * 0.19); // 19% TVA
+                                      return sum + (note?.items?.reduce((itemSum, item) => {
+                                        const product = products.find(p => p.id === item.productId);
+                                        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
+                                        return itemSum + ((item.receivedQuantity * item.unitPrice) * itemTvaRate / 100);
+                                      }, 0) || 0);
                                     }, 0).toFixed(3)} DNT</span>
                                   </div>
                                   <div className="flex justify-between text-sm">
@@ -1475,7 +1521,11 @@ export default function SupplierInvoiceGenerator({
                                       <span>{selectedReceptionNotes.reduce((sum, noteId) => {
                                         const note = receptionNotes.find(rn => rn.id === noteId);
                                         const itemsTotal = note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0;
-                                        const tvaAmount = itemsTotal * 0.19;
+                                        const tvaAmount = note?.items?.reduce((itemSum, item) => {
+                                          const product = products.find(p => p.id === item.productId);
+                                          const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
+                                          return itemSum + ((item.receivedQuantity * item.unitPrice) * itemTvaRate / 100);
+                                        }, 0) || 0;
                                         const ttcAmount = itemsTotal + tvaAmount;
                                         const timbreFiscal = companySettings?.timbreFiscal || 1.000;
                                         return sum + (ttcAmount + timbreFiscal); // Include timbre fiscal

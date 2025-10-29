@@ -51,7 +51,7 @@ export default function Suppliers() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -455,41 +455,60 @@ export default function Suppliers() {
         </Table>
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
+      {/* Pagination - Always show if there are suppliers */}
+      {filteredSuppliers.length > 0 && (
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-muted-foreground">
-            Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredSuppliers.length)} sur {filteredSuppliers.length} fournisseurs
+            Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredSuppliers.length)} sur {filteredSuppliers.length} fournisseur{filteredSuppliers.length > 1 ? 's' : ''}
           </div>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => paginate(currentPage - 1)}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <PaginationItem key={page}>
-                  <PaginationLink
-                    onClick={() => paginate(page)}
-                    isActive={currentPage === page}
-                    className="cursor-pointer"
-                  >
-                    {page}
-                  </PaginationLink>
+          {totalPages > 1 ? (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => paginate(currentPage - 1)}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
                 </PaginationItem>
-              ))}
-              
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => paginate(currentPage + 1)}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let pageNumber;
+                  if (totalPages <= 7) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 4) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= totalPages - 3) {
+                    pageNumber = totalPages - 6 + i;
+                  } else {
+                    pageNumber = currentPage - 3 + i;
+                  }
+                  
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        onClick={() => paginate(pageNumber)}
+                        isActive={currentPage === pageNumber}
+                        className="cursor-pointer"
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => paginate(currentPage + 1)}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              Page 1 sur 1
+            </div>
+          )}
         </div>
       )}
 

@@ -125,6 +125,51 @@ const styles = StyleSheet.create({
   totalsValue: {
     fontWeight: 700,
   },
+  footerLayout: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  tvaBreakdownBox: {
+    flex: 1,
+    maxWidth: 280,
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: '#f8fafc',
+  },
+  tvaBreakdownTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#6366f1',
+    marginBottom: 6,
+  },
+  tvaBreakdownTable: {
+    width: '100%',
+  },
+  tvaBreakdownRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    paddingVertical: 3,
+  },
+  tvaBreakdownHeader: {
+    backgroundColor: '#eef2ff',
+    fontWeight: 700,
+    fontSize: 9,
+  },
+  tvaBreakdownCell: {
+    flex: 1,
+    fontSize: 10,
+    paddingHorizontal: 4,
+  },
+  tvaBreakdownCellRight: {
+    flex: 1,
+    fontSize: 10,
+    paddingHorizontal: 4,
+    textAlign: 'right',
+  },
   notes: {
     marginTop: 12,
     fontSize: 10,
@@ -144,13 +189,30 @@ const styles = StyleSheet.create({
   },
 })
 
-export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoice: SupplierInvoice; companySettings?: any }) {
+export function SupplierInvoicePDFDocument({ invoice, companySettings, products }: { invoice: SupplierInvoice; companySettings?: any; products?: any[] }) {
   // Calculate HT (before tax) correctly
   const htAmount = invoice.amount; // This is the correct HT amount from the database
   const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
   const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
   const timbreFiscal = companySettings?.timbreFiscal || 1.000;
   const finalAmount = ttcAmount + timbreFiscal;
+
+  // Calculate TVA breakdown by rate
+  const tvaBreakdown: Record<number, { baseAmount: number; tvaAmount: number }> = {};
+  
+  if (Array.isArray(invoice.items) && Array.isArray(products)) {
+    invoice.items.forEach((item: any) => {
+      const product = products.find(p => p.id === item.productId);
+      const tvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
+      
+      if (!tvaBreakdown[tvaRate]) {
+        tvaBreakdown[tvaRate] = { baseAmount: 0, tvaAmount: 0 };
+      }
+      
+      tvaBreakdown[tvaRate].baseAmount += item.totalPrice;
+      tvaBreakdown[tvaRate].tvaAmount += (item.totalPrice * tvaRate) / 100;
+    });
+  }
 
   return (
     <Document>
@@ -233,27 +295,63 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
           ))}
         </View>
 
-        {/* Totals */}
-        <View style={styles.totalsBox}>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(htAmount)}</Text>
+        {/* Footer Layout: VAT Breakdown Table + Totals */}
+        <View style={styles.footerLayout}>
+          {/* VAT Breakdown Table */}
+          <View style={styles.tvaBreakdownBox}>
+            <Text style={styles.tvaBreakdownTitle}>Détail TVA</Text>
+            <View style={styles.tvaBreakdownTable}>
+              {/* Table Header */}
+              <View style={[styles.tvaBreakdownRow, styles.tvaBreakdownHeader]}>
+                <Text style={styles.tvaBreakdownCell}>Taux TVA</Text>
+                <Text style={styles.tvaBreakdownCellRight}>Base HT</Text>
+                <Text style={styles.tvaBreakdownCellRight}>Montant TVA</Text>
+              </View>
+              {/* Table Rows */}
+              {Object.keys(tvaBreakdown).length > 0 ? (
+                Object.entries(tvaBreakdown)
+                  .sort(([a], [b]) => Number(b) - Number(a)) // Sort by rate descending
+                  .map(([rate, values]) => (
+                    <View style={styles.tvaBreakdownRow} key={rate}>
+                      <Text style={styles.tvaBreakdownCell}>{Number(rate).toFixed(0)}%</Text>
+                      <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(values.baseAmount)}</Text>
+                      <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(values.tvaAmount)}</Text>
+                    </View>
+                  ))
+              ) : (
+                <View style={styles.tvaBreakdownRow}>
+                  <Text style={styles.tvaBreakdownCell}>0%</Text>
+                  <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(htAmount)}</Text>
+                  <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(0)}</Text>
+                </View>
+              )}
+              {/* Total Row */}
+              <View style={[styles.tvaBreakdownRow, { backgroundColor: '#eef2ff', fontWeight: 700 }]}>
+                <Text style={[styles.tvaBreakdownCell, { fontWeight: 700 }]}>Total</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(htAmount)}</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(tvaAmount)}</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>
-              {tvaAmount > 0 && htAmount > 0
-                ? `TVA ${Math.round((tvaAmount / htAmount) * 100) || 0}%:`
-                : 'TVA (0%):'}
-            </Text>
-            <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
-          </View>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(timbreFiscal)}</Text>
-          </View>
-          <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
-            <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
-            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(finalAmount)}</Text>
+
+          {/* Totals Box */}
+          <View style={styles.totalsBox}>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Sous-total HT:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(htAmount)}</Text>
+            </View>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>TVA:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
+            </View>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(timbreFiscal)}</Text>
+            </View>
+            <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
+              <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
+              <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(finalAmount)}</Text>
+            </View>
           </View>
         </View>
 

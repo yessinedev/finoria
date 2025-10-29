@@ -62,7 +62,7 @@ export default function Sales() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   // State for stock alert dialog
   const [showStockAlert, setShowStockAlert] = useState(false);
@@ -252,19 +252,17 @@ export default function Sales() {
   // Calculate FODEC on discounted subtotal
   const fodecAmount = (discountedSubtotal * fodecTax) / 100;
   
-  // Calculate tax (TVA) on (discounted subtotal + FODEC)
+  // Calculate tax (TVA) on discounted subtotal only (NOT including FODEC)
   const taxAmount = lineItems.reduce((sum, item) => {
     // Get product TVA rate
     const product = products.find(p => p.id === item.productId);
     const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0; // Use actual TVA rate or 0 if not found
-    // TVA is calculated on (discounted item total + FODEC portion for this item)
+    // TVA is calculated on the discounted item total only
     const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount / 100);
-    // Calculate FODEC portion for this item
-    const itemFodec = discountedSubtotal > 0 ? (itemTotal / discountedSubtotal) * fodecAmount : 0;
-    return sum + ((itemTotal + itemFodec) * itemTvaRate / 100);
+    return sum + (itemTotal * itemTvaRate / 100);
   }, 0);
   
-  // Final total including tax and FODEC
+  // Final total: HT + FODEC + TVA
   const finalTotal = discountedSubtotal + fodecAmount + taxAmount;
 
   const handleSubmit = async (errors: Record<string, string>) => {

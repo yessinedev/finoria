@@ -21,6 +21,7 @@ interface DeliveryReceiptPreviewProps {
   deliveryReceipt: DeliveryReceipt;
   sale: Sale;
   companySettings?: any;
+  products?: any[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: () => void;
@@ -30,6 +31,7 @@ export default function DeliveryReceiptPreview({
   deliveryReceipt, 
   sale,
   companySettings,
+  products,
   open, 
   onOpenChange,
   onEdit
@@ -59,6 +61,7 @@ export default function DeliveryReceiptPreview({
                 deliveryReceipt={deliveryReceipt} 
                 sale={sale}
                 companySettings={companySettings}
+                products={products}
               />
             </PDFViewer>
           </div>
@@ -75,6 +78,7 @@ export default function DeliveryReceiptPreview({
                 deliveryReceipt={deliveryReceipt} 
                 sale={sale}
                 companySettings={companySettings}
+                products={products}
               />
             }
             fileName={`bon-de-livraison-${deliveryReceipt.deliveryNumber}.pdf`}

@@ -42,6 +42,7 @@ import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function Delivery() {
   const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -128,6 +129,12 @@ export default function Delivery() {
       const settingsResult = await db.settings.get();
       if (settingsResult.success) {
         setCompanySettings(settingsResult.data);
+      }
+      
+      // Load products
+      const productsResult = await db.products.getAll();
+      if (productsResult.success) {
+        setProducts(productsResult.data || []);
       }
       
       // Load delivery receipts
@@ -333,6 +340,7 @@ export default function Delivery() {
           deliveryReceipt={delivery} 
           sale={delivery.sale}
           companySettings={companySettings}
+          products={products}
         />
       }
       fileName={`bon-de-livraison-${delivery.deliveryNumber}.pdf`}
@@ -443,6 +451,7 @@ export default function Delivery() {
           deliveryReceipt={selectedDelivery.receipt}
           sale={selectedDelivery.sale}
           companySettings={companySettings}
+          products={products}
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
           onEdit={() => {

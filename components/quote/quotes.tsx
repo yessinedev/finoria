@@ -298,7 +298,7 @@ export default function Quotes() {
       }
     }
     
-    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={currentCompanySettings} />).toBlob();
+    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={currentCompanySettings} products={products} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -521,7 +521,7 @@ export default function Quotes() {
           <div className="flex-1 overflow-auto border rounded bg-white" style={{ height: 500, minHeight: 400 }}>
             {previewQuote && (
               <PDFViewer width="100%" height={500} showToolbar={false} style={{ border: "none", backgroundColor: "transparent" }}>
-                <QuotePDFDocument quote={previewQuote} companySettings={companySettings} />
+                <QuotePDFDocument quote={previewQuote} companySettings={companySettings} products={products} />
               </PDFViewer>
             )}
           </div>

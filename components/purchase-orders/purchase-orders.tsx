@@ -30,6 +30,7 @@ import { ActionsDropdown } from "@/components/common/actions-dropdown";
 export default function PurchaseOrders() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
   const [sales, setSales] = useState<Sale[]>([])
+  const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -48,7 +49,7 @@ export default function PurchaseOrders() {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const itemsPerPage = 5
 
   // DataTable logic
   const filteredPurchaseOrdersByDate = purchaseOrders.filter((purchaseOrder) => {
@@ -133,9 +134,10 @@ export default function PurchaseOrders() {
     setError(null);
 
     try {
-      const [purchaseOrdersResult, salesResult] = await Promise.all([
+      const [purchaseOrdersResult, salesResult, productsResult] = await Promise.all([
         db.purchaseOrders.getAll(),
-        db.sales.getAllWithItems()
+        db.sales.getAllWithItems(),
+        db.products.getAll()
       ]);
 
       if (purchaseOrdersResult.success) {
@@ -146,6 +148,10 @@ export default function PurchaseOrders() {
 
       if (salesResult.success) {
         setSales(salesResult.data || []);
+      }
+      
+      if (productsResult.success) {
+        setProducts(productsResult.data || []);
       }
     } catch (error) {
       setError("Erreur inattendue lors du chargement");
@@ -196,7 +202,7 @@ export default function PurchaseOrders() {
         items: purchaseOrder.items || [],
       };
       
-      const blob = await pdf(<PurchaseOrderPDFDocument purchaseOrder={purchaseOrderWithItems} companySettings={companySettings} />).toBlob();
+      const blob = await pdf(<PurchaseOrderPDFDocument purchaseOrder={purchaseOrderWithItems} companySettings={companySettings} products={products} />).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

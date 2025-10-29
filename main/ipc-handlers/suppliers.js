@@ -420,68 +420,118 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   });
 
   ipcMain.handle("create-supplier-invoice", async (event, invoice) => {
-    try {
-      // Start transaction
-      const insertInvoice = db.prepare(`
-        INSERT INTO supplier_invoices (
-          supplierId, orderId, invoiceNumber, amount, taxAmount, totalAmount, 
-          status, issueDate, dueDate, paymentDate
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+    // Wrap everything in a transaction
+    const transaction = db.transaction((invoiceData) => {
+      try {
+        // Calculate total tax amount for the invoice based on individual product TVA rates
+        let totalTaxAmount = 0;
+        if (invoiceData.items && Array.isArray(invoiceData.items)) {
+          const getProductTva = db.prepare(`
+            SELECT t.rate as tvaRate 
+            FROM products p 
+            LEFT JOIN tva t ON p.tvaId = t.id 
+            WHERE p.id = ?
+          `);
 
-      const insertItem = db.prepare(`
-        INSERT INTO supplier_invoice_items (
-          invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
+          for (const item of invoiceData.items) {
+            const productTva = getProductTva.get(item.productId);
+            const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+            const itemTaxAmount = (item.totalPrice * itemTvaRate) / 100;
+            totalTaxAmount += itemTaxAmount;
+          }
+        }
 
-      // Calculate total tax amount for the invoice based on individual product TVA rates
-      let totalTaxAmount = 0;
-      if (invoice.items && Array.isArray(invoice.items)) {
-        const getProductTva = db.prepare(`
-          SELECT t.rate as tvaRate 
-          FROM products p 
-          LEFT JOIN tva t ON p.tvaId = t.id 
-          WHERE p.id = ?
+        // Insert invoice
+        const insertInvoice = db.prepare(`
+          INSERT INTO supplier_invoices (
+            supplierId, orderId, invoiceNumber, amount, taxAmount, totalAmount, 
+            status, issueDate, dueDate, paymentDate
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-        for (const item of invoice.items) {
-          const productTva = getProductTva.get(item.productId);
-          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
-          const itemTaxAmount = (item.totalPrice * itemTvaRate) / 100;
-          totalTaxAmount += itemTaxAmount;
+        const invoiceResult = insertInvoice.run(
+          invoiceData.supplierId,
+          invoiceData.orderId,
+          invoiceData.invoiceNumber,
+          invoiceData.amount,
+          totalTaxAmount,
+          invoiceData.totalAmount,
+          invoiceData.status,
+          invoiceData.issueDate,
+          invoiceData.dueDate,
+          invoiceData.paymentDate
+        );
+
+        const invoiceId = invoiceResult.lastInsertRowid;
+
+        // Prepare statements for items, stock updates and movements
+        const insertItem = db.prepare(`
+          INSERT INTO supplier_invoice_items (
+            invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const updateStockStmt = db.prepare(`
+          UPDATE products 
+          SET stock = stock + ? 
+          WHERE id = ? AND category != 'Service'
+        `);
+
+        const insertMovementStmt = db.prepare(`
+          INSERT INTO stock_movements (
+            productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        // Insert invoice items and update stock (skip stock update if specified)
+        // skipStockUpdate is true when invoice is created from reception notes (stock already updated)
+        const shouldUpdateStock = !invoiceData.skipStockUpdate;
+        
+        if (invoiceData.items && Array.isArray(invoiceData.items)) {
+          for (const item of invoiceData.items) {
+            insertItem.run(
+              invoiceId,
+              item.productId,
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.discount || 0,
+              item.totalPrice
+            );
+
+            // Only update stock if not skipped (skip when from reception notes or supplier orders)
+            if (shouldUpdateStock) {
+              // Update stock (increase for received items) - only for non-service products
+              const stockUpdateResult = updateStockStmt.run(item.quantity, item.productId);
+              console.log(`Stock updated for product ${item.productId} (${item.productName}): +${item.quantity}, changes: ${stockUpdateResult.changes}`);
+
+              // Create stock movement record (IN movement)
+              insertMovementStmt.run(
+                item.productId,
+                item.productName,
+                item.quantity,
+                'IN',
+                'supplier_invoice',
+                invoiceId,
+                `FINV-${invoiceId}`,
+                `Réception fournisseur - Facture ${invoiceData.invoiceNumber}`
+              );
+              console.log(`Stock movement created for product ${item.productId}: IN +${item.quantity}`);
+            } else {
+              console.log(`Stock update skipped for product ${item.productId} (${item.productName}) - skipStockUpdate flag is set`);
+            }
+          }
         }
+
+        return invoiceId;
+      } catch (error) {
+        console.error("Error in supplier invoice transaction:", error);
+        throw error;
       }
+    });
 
-      const invoiceResult = insertInvoice.run(
-        invoice.supplierId,
-        invoice.orderId,
-        invoice.invoiceNumber,
-        invoice.amount,
-        totalTaxAmount,
-        invoice.totalAmount,
-        invoice.status,
-        invoice.issueDate,
-        invoice.dueDate,
-        invoice.paymentDate
-      );
-
-      const invoiceId = invoiceResult.lastInsertRowid;
-
-      // Insert invoice items
-      if (invoice.items && Array.isArray(invoice.items)) {
-        for (const item of invoice.items) {
-          insertItem.run(
-            invoiceId,
-            item.productId,
-            item.productName,
-            item.quantity,
-            item.unitPrice,
-            item.discount || 0,
-            item.totalPrice
-          );
-        }
-      }
+    try {
+      const invoiceId = transaction(invoice);
 
       const newInvoice = {
         id: invoiceId,
@@ -494,7 +544,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return newInvoice;
     } catch (error) {
       console.error("Error creating supplier invoice:", error);
-      throw new Error("Erreur lors de la création de la facture fournisseur");
+      throw new Error("Erreur lors de la création de la facture fournisseur: " + error.message);
     }
   });
 

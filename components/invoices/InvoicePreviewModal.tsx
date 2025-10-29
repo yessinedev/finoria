@@ -8,6 +8,7 @@ interface InvoicePreviewModalProps {
   onPrint: (invoice: Invoice) => void;
   onStatusChange?: (invoiceId: number, status: string) => void;
   companySettings?: any;
+  products?: any[];
 }
 
 export default function InvoicePreviewModal({
@@ -17,6 +18,7 @@ export default function InvoicePreviewModal({
   onPrint,
   onStatusChange,
   companySettings,
+  products,
 }: InvoicePreviewModalProps) {
   if (!invoice) return null;
   return (
@@ -27,6 +29,7 @@ export default function InvoicePreviewModal({
       onPrint={onPrint}
       onStatusChange={onStatusChange}
       companySettings={companySettings}
+      products={products}
     />
   );
 }

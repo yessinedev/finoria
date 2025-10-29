@@ -25,9 +25,10 @@ interface SaleDetailsModalProps {
   sale: Sale | null;
   open: boolean;
   onClose: () => void;
+  products?: any[];
 }
 
-export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsModalProps) {
+export default function SaleDetailsModal({ sale, open, onClose, products }: SaleDetailsModalProps) {
   const { toast } = useToast();
   const [deliveryData, setDeliveryData] = useState<{receipt: DeliveryReceipt, sale: Sale} | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
@@ -151,6 +152,7 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
                           deliveryReceipt={deliveryData.receipt} 
                           sale={deliveryData.sale}
                           companySettings={companySettings}
+                          products={products}
                         />
                       }
                       fileName={`bon-de-livraison-${deliveryData.receipt.deliveryNumber}.pdf`}
@@ -262,6 +264,7 @@ export default function SaleDetailsModal({ sale, open, onClose }: SaleDetailsMod
           deliveryReceipt={deliveryData.receipt}
           sale={deliveryData.sale}
           companySettings={companySettings}
+          products={products}
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
           onEdit={handleEditReceipt}

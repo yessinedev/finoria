@@ -60,7 +60,7 @@ export default function CreditNotes() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   // Form state for creating credit notes
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);

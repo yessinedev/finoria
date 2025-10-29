@@ -20,6 +20,7 @@ interface InvoicePreviewProps {
   onPrint: (invoice: Invoice) => void;
   onStatusChange?: (invoiceId: number, status: string) => void;
   companySettings?: any;
+  products?: any[];
 }
 
 export default function InvoicePreview({
@@ -29,6 +30,7 @@ export default function InvoicePreview({
   onPrint,
   onStatusChange,
   companySettings,
+  products,
 }: InvoicePreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -40,6 +42,7 @@ export default function InvoicePreview({
         <InvoicePDFDocument
           invoice={invoice}
           companySettings={companySettings}
+          products={products}
         />
       ).toBlob();
       const url = URL.createObjectURL(blob);
@@ -93,6 +96,7 @@ export default function InvoicePreview({
             <InvoicePDFDocument
               invoice={invoice}
               companySettings={companySettings}
+              products={products}
             />
           </PDFViewer>
         </div>
