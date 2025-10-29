@@ -82,17 +82,29 @@ export function ReceptionNoteViewModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <span className="font-medium">N° Commande:</span>
-                  <span className="ml-2">{receptionNote.supplierOrder?.orderNumber || "N/A"}</span>
+                  <span className="ml-2">{receptionNote.supplierOrder?.orderNumber || receptionNote.supplierOrderNumber || "N/A"}</span>
                 </div>
                 <div>
                   <span className="font-medium">Fournisseur:</span>
-                  <span className="ml-2">{receptionNote.supplierOrder?.supplierName || "N/A"}</span>
+                  <span className="ml-2">
+                    {receptionNote.supplierOrder?.supplierName || receptionNote.supplierName || "N/A"}
+                    {(receptionNote.supplierOrder?.supplierCompany || receptionNote.supplierCompany) && 
+                      ` (${receptionNote.supplierOrder?.supplierCompany || receptionNote.supplierCompany})`}
+                  </span>
                 </div>
                 <div>
                   <span className="font-medium">Date de commande:</span>
                   <span className="ml-2">
                     {receptionNote.supplierOrder?.orderDate 
                       ? new Date(receptionNote.supplierOrder.orderDate).toLocaleDateString("fr-FR") 
+                      : "N/A"}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium">Montant total:</span>
+                  <span className="ml-2">
+                    {receptionNote.supplierOrder?.totalAmount 
+                      ? `${receptionNote.supplierOrder.totalAmount.toFixed(3)} DNT` 
                       : "N/A"}
                   </span>
                 </div>

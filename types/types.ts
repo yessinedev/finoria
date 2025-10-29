@@ -332,6 +332,10 @@ export interface ReceptionNote {
   createdAt: string;
   items: ReceptionNoteItem[];
   supplierOrder?: SupplierOrder; // Reference to the original supplier order
+  // Backward compatible flat fields
+  supplierOrderNumber?: string;
+  supplierName?: string;
+  supplierCompany?: string;
 }
 
 export interface ReceptionNoteItem {

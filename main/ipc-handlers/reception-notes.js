@@ -120,14 +120,25 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         )
         .all();
       
-      // Add items to each note
+      // Add items and supplier order details to each note
       const getItems = db.prepare(`
         SELECT * FROM reception_note_items WHERE receptionNoteId = ?
       `);
       
+      const getSupplierOrder = db.prepare(`
+        SELECT so.id, so.supplierId, so.orderNumber, so.totalAmount, so.taxAmount, 
+               so.status, so.orderDate, so.deliveryDate, so.createdAt, so.updatedAt,
+               s.name as supplierName, s.company as supplierCompany, s.email as supplierEmail, 
+               s.phone as supplierPhone, s.address as supplierAddress
+        FROM supplier_orders so
+        JOIN suppliers s ON so.supplierId = s.id
+        WHERE so.id = ?
+      `);
+      
       const notesWithItems = notes.map(note => ({
         ...note,
-        items: getItems.all(note.id)
+        items: getItems.all(note.id),
+        supplierOrder: getSupplierOrder.get(note.supplierOrderId)
       }));
       
       return notesWithItems;
@@ -157,9 +168,21 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         SELECT * FROM reception_note_items WHERE receptionNoteId = ?
       `).all(id);
       
+      // Get full supplier order details
+      const supplierOrder = db.prepare(`
+        SELECT so.id, so.supplierId, so.orderNumber, so.totalAmount, so.taxAmount, 
+               so.status, so.orderDate, so.deliveryDate, so.createdAt, so.updatedAt,
+               s.name as supplierName, s.company as supplierCompany, s.email as supplierEmail, 
+               s.phone as supplierPhone, s.address as supplierAddress
+        FROM supplier_orders so
+        JOIN suppliers s ON so.supplierId = s.id
+        WHERE so.id = ?
+      `).get(note.supplierOrderId);
+      
       return {
         ...note,
-        items
+        items,
+        supplierOrder
       };
     } catch (error) {
       console.error("Error getting reception note:", error);

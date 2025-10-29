@@ -33,7 +33,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { PDFDownloadLink } from "@react-pdf/renderer";
+import { PDFDownloadLink, pdf } from "@react-pdf/renderer";
 import { DeliveryReceiptPDFDocument } from "@/components/sales/delivery-receipt-pdf";
 import DeliveryReceiptForm from "@/components/sales/DeliveryReceiptForm";
 import DeliveryReceiptPreview from "@/components/sales/DeliveryReceiptPreview";
@@ -333,46 +333,68 @@ export default function Delivery() {
     loadData(); // Refresh the delivery receipts list
   };
 
-  const renderActions = (delivery: any) => (
-    <PDFDownloadLink
-      document={
+  const handleDownloadDelivery = async (delivery: any) => {
+    try {
+      const blob = await pdf(
         <DeliveryReceiptPDFDocument 
           deliveryReceipt={delivery} 
           sale={delivery.sale}
           companySettings={companySettings}
           products={products}
         />
-      }
-      fileName={`bon-de-livraison-${delivery.deliveryNumber}.pdf`}
-    >
-      {({ loading }) => (
-        <ActionsDropdown
-          actions={[
-            {
-              label: "Télécharger PDF",
-              icon: <Download className="h-4 w-4" />,
-              onClick: () => {}, // Handled by PDFDownloadLink
-            },
-            {
-              label: "Voir",
-              icon: <Eye className="h-4 w-4" />,
-              onClick: () => handleViewDelivery(delivery),
-            },
-            {
-              label: "Modifier",
-              icon: <Edit className="h-4 w-4" />,
-              onClick: () => handleEditDelivery(delivery),
-            },
-            {
-              label: "Supprimer",
-              icon: <Trash2 className="h-4 w-4" />,
-              onClick: () => handleDeleteDelivery(delivery),
-              className: "text-red-600",
-            },
-          ]}
-        />
-      )}
-    </PDFDownloadLink>
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bon-de-livraison-${delivery.deliveryNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast({
+        title: "Succès",
+        description: "Le bon de livraison a été téléchargé avec succès",
+      });
+    } catch (error) {
+      console.error("Error downloading delivery receipt:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du téléchargement du bon de livraison",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderActions = (delivery: any) => (
+    <ActionsDropdown
+      actions={[
+        {
+          label: "Télécharger PDF",
+          icon: <Download className="h-4 w-4" />,
+          onClick: () => handleDownloadDelivery(delivery),
+        },
+        {
+          label: "Voir",
+          icon: <Eye className="h-4 w-4" />,
+          onClick: () => handleViewDelivery(delivery),
+        },
+        {
+          label: "Modifier",
+          icon: <Edit className="h-4 w-4" />,
+          onClick: () => handleEditDelivery(delivery),
+        },
+        {
+          label: "Supprimer",
+          icon: <Trash2 className="h-4 w-4" />,
+          onClick: () => handleDeleteDelivery(delivery),
+          className: "text-red-600",
+        },
+      ]}
+    />
   );
 
   if (loading) {

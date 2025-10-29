@@ -30,10 +30,11 @@ import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
 import type { CreditNote, Invoice } from "@/types/types";
-import { PDFViewer, pdf } from "@react-pdf/renderer";
+import { PDFViewer, pdf, PDFDownloadLink } from "@react-pdf/renderer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
+import { CreditNotePDFDocument } from "@/components/credit-notes/credit-note-pdf";
 
 import {
   Pagination,
@@ -48,6 +49,7 @@ import { ActionsDropdown } from "@/components/common/actions-dropdown";
 export default function CreditNotes() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -195,9 +197,10 @@ export default function CreditNotes() {
     setError(null);
 
     try {
-      const [creditNotesResult, invoicesResult] = await Promise.all([
+      const [creditNotesResult, invoicesResult, productsResult] = await Promise.all([
         db.creditNotes.getAll(),
-        db.invoices.getAll()
+        db.invoices.getAll(),
+        db.products.getAll()
       ]);
 
       if (creditNotesResult.success) {
@@ -208,6 +211,10 @@ export default function CreditNotes() {
 
       if (invoicesResult.success) {
         setInvoices(invoicesResult.data || []);
+      }
+
+      if (productsResult.success) {
+        setProducts(productsResult.data || []);
       }
     } catch (error) {
       setError("Erreur inattendue lors du chargement");
@@ -254,11 +261,38 @@ export default function CreditNotes() {
   };
 
   const handleDownloadCreditNote = async (creditNote: CreditNote) => {
-    // For now, we'll just show a toast since we don't have a PDF implementation yet
-    toast({
-      title: "Téléchargement",
-      description: "La fonction de téléchargement sera implémentée dans une prochaine version.",
-    });
+    try {
+      const blob = await pdf(
+        <CreditNotePDFDocument 
+          creditNote={creditNote} 
+          companySettings={companySettings}
+          products={products}
+        />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `avoir-${creditNote.number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast({
+        title: "Succès",
+        description: "La facture d'avoir a été téléchargée avec succès",
+      });
+    } catch (error) {
+      console.error("Error downloading credit note:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du téléchargement de la facture d'avoir",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleUpdateCreditNoteStatus = async (creditNoteId: number, newStatus: string) => {
