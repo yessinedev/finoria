@@ -36,7 +36,7 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
     try {
       const result = await db.device.getFingerprint();
       const fingerprint = result.data;
-      const verified = verifyLicense(licenseKey, fingerprint);
+      const verified = await verifyLicense(licenseKey, fingerprint);
 
       if (verified) {
         localStorage.setItem("licenseKey", licenseKey);
