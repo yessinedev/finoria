@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getQuotes: () => ipcRenderer.invoke("get-quotes"),
   createQuote: (quote) => ipcRenderer.invoke("create-quote", quote),
   updateQuote: (id, quote) => ipcRenderer.invoke("update-quote", id, quote),
+  updateQuoteStatus: (id, status) => ipcRenderer.invoke("update-quote-status", id, status),
   deleteQuote: (id) => ipcRenderer.invoke("delete-quote", id),
   getQuoteItems: (quoteId) => ipcRenderer.invoke("get-quote-items", quoteId),
   
@@ -120,6 +121,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getReceptionNotes: () => ipcRenderer.invoke("get-reception-notes"),
   getReceptionNote: (id) => ipcRenderer.invoke("get-reception-note", id),
   getReceptionNoteByOrder: (supplierOrderId) => ipcRenderer.invoke("get-reception-note-by-order", supplierOrderId),
+  updateReceptionNote: (id, receptionNote) => ipcRenderer.invoke("update-reception-note", id, receptionNote),
   deleteReceptionNote: (id) => ipcRenderer.invoke("delete-reception-note", id),
 
   // --- Enterprise Settings API ---

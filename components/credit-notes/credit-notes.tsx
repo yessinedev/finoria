@@ -158,6 +158,31 @@ export default function CreditNotes() {
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
     },
+    {
+      key: "status" as keyof CreditNote,
+      label: "Statut",
+      sortable: true,
+      render: (value: string) => {
+        // Default to "En attente" if status is not defined
+        const status = value || "En attente";
+        let statusText = "En attente";
+        let statusColor = "bg-yellow-100 text-yellow-800";
+        
+        if (status === "Confirmée") {
+          statusText = "Confirmée";
+          statusColor = "bg-green-100 text-green-800";
+        } else if (status === "Annulée") {
+          statusText = "Annulée";
+          statusColor = "bg-red-100 text-red-800";
+        }
+        
+        return (
+          <Badge className={`${statusColor} whitespace-nowrap`}>
+            {statusText}
+          </Badge>
+        );
+      },
+    },
   ];
 
   useEffect(() => {
@@ -234,6 +259,41 @@ export default function CreditNotes() {
       title: "Téléchargement",
       description: "La fonction de téléchargement sera implémentée dans une prochaine version.",
     });
+  };
+
+  const handleUpdateCreditNoteStatus = async (creditNoteId: number, newStatus: string) => {
+    try {
+      const result = await db.creditNotes.updateStatus(creditNoteId, newStatus);
+      if (result.success) {
+        // Update the local state
+        setCreditNotes(prevCreditNotes => 
+          prevCreditNotes.map(cn => 
+            cn.id === creditNoteId ? { ...cn, status: newStatus } : cn
+          )
+        );
+        
+        // If we're viewing this credit note, update that too
+        if (selectedCreditNote && selectedCreditNote.id === creditNoteId) {
+          setSelectedCreditNote({ ...selectedCreditNote, status: newStatus });
+        }
+        
+        toast({
+          title: "Succès",
+          description: `Statut de la facture d'avoir mis à jour avec succès et stock mis à jour.`,
+        });
+        
+        // Reload data to ensure consistency
+        await loadData();
+      } else {
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleInvoiceSelect = async (invoiceId: number | null) => {
@@ -335,7 +395,7 @@ export default function CreditNotes() {
         taxAmount: taxAmount,
         totalAmount: totalAmount,
         reason: reason,
-        status: "En attente",
+        status: "Confirmée", // Set status to confirmed immediately to track stock movements
         dueDate: new Date().toISOString(),
         items: creditNoteItems
       };
@@ -350,7 +410,7 @@ export default function CreditNotes() {
         setReason("");
         toast({
           title: "Succès",
-          description: "Facture d'avoir créée avec succès.",
+          description: "Facture d'avoir créée avec succès et stock mis à jour.",
         });
       } else {
         throw new Error(result.error || "Erreur lors de la création de la facture d'avoir");
@@ -384,6 +444,20 @@ export default function CreditNotes() {
           icon: <Download className="h-4 w-4" />,
           onClick: () => handleDownloadCreditNote(creditNote),
         },
+        ...(creditNote.status !== "Confirmée" ? [
+          {
+            label: "Confirmer",
+            icon: <CheckCircle className="h-4 w-4" />,
+            onClick: () => handleUpdateCreditNoteStatus(creditNote.id, "Confirmée"),
+          }
+        ] : []),
+        ...(creditNote.status !== "Annulée" && creditNote.status !== "Confirmée" ? [
+          {
+            label: "Annuler",
+            icon: <XCircle className="h-4 w-4" />,
+            onClick: () => handleUpdateCreditNoteStatus(creditNote.id, "Annulée"),
+          }
+        ] : []),
       ]}
     />
   );

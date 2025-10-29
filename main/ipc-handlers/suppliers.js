@@ -166,6 +166,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         WHERE p.id = ?
       `);
       
+      const updateProductStock = db.prepare(`
+        UPDATE products SET stock = stock + ? WHERE id = ?
+      `);
+      
       const orderResult = insertOrder.run(
         order.supplierId,
         orderNumber,
@@ -198,6 +202,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
         const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
         totalTaxAmount += itemTaxAmount;
+        
+        // Update product stock
+        updateProductStock.run(item.quantity, item.productId);
       }
       
       // Update the order with the calculated tax amount
@@ -562,12 +569,24 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("update-supplier-invoice-status", async (event, id, status) => {
     try {
       const stmt = db.prepare("UPDATE supplier_invoices SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?");
-      stmt.run(status, id);
-      notifyDataChange("supplier_invoices", "update", { id, status });
-      return { id, status };
+      const result = stmt.run(status, id);
+      
+      // Check if any rows were affected
+      if (result.changes === 0) {
+        throw new Error("Facture fournisseur non trouvée ou statut déjà mis à jour");
+      }
+      
+      const updatedInvoice = {
+        id,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      notifyDataChange("supplier_invoices", "update", updatedInvoice);
+      return updatedInvoice;
     } catch (error) {
       console.error("Error updating supplier invoice status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut de facture fournisseur");
+      throw new Error("Erreur lors de la mise à jour du statut de facture fournisseur: " + error.message);
     }
   });
 
@@ -637,7 +656,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const stmt = db.prepare(
         "UPDATE supplier_orders SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?"
       );
-      stmt.run(status, id);
+      const result = stmt.run(status, id);
+      
+      // Check if any rows were affected
+      if (result.changes === 0) {
+        throw new Error("Commande fournisseur non trouvée ou statut déjà mis à jour");
+      }
       
       const updatedOrder = {
         id,
@@ -649,7 +673,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return updatedOrder;
     } catch (error) {
       console.error("Error updating supplier order status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut de la commande fournisseur");
+      throw new Error("Erreur lors de la mise à jour du statut de la commande fournisseur: " + error.message);
     }
   });
 

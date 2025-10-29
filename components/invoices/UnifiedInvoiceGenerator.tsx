@@ -4,9 +4,18 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   FileText,
   AlertCircle,
@@ -23,7 +32,7 @@ import {
   Plus,
   Minus,
   Check,
-  Percent
+  Percent,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -53,12 +62,18 @@ export default function UnifiedInvoiceGenerator({
   availableSales,
 }: UnifiedInvoiceGeneratorProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"from-sale" | "new-sale" | "from-purchase-orders">("from-sale");
+  const [activeTab, setActiveTab] = useState<
+    "from-sale" | "new-sale" | "from-purchase-orders"
+  >("from-sale");
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [clientPurchaseOrders, setClientPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [selectedPurchaseOrders, setSelectedPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [clientPurchaseOrders, setClientPurchaseOrders] = useState<
+    PurchaseOrder[]
+  >([]);
+  const [selectedPurchaseOrders, setSelectedPurchaseOrders] = useState<
+    PurchaseOrder[]
+  >([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [formData, setFormData] = useState({
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
@@ -90,15 +105,13 @@ export default function UnifiedInvoiceGenerator({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [clientsResult, productsResult, settingsResult] = await Promise.all([
-        db.clients.getAll(),
-        db.products.getAll(),
-        db.settings.get(),
-      ]);
+      const [clientsResult, productsResult, settingsResult] = await Promise.all(
+        [db.clients.getAll(), db.products.getAll(), db.settings.get()]
+      );
 
       if (clientsResult.success) setClients(clientsResult.data || []);
       if (productsResult.success) setProducts(productsResult.data || []);
-      
+
       // Set company settings
       if (settingsResult.success && settingsResult.data) {
         setCompanySettings(settingsResult.data);
@@ -122,7 +135,7 @@ export default function UnifiedInvoiceGenerator({
     const client = clients.find((c) => c.id.toString() === clientId);
     setSelectedClient(client || null);
     setError(null);
-    
+
     if (client) {
       // Load purchase orders for this client
       try {
@@ -139,26 +152,30 @@ export default function UnifiedInvoiceGenerator({
     } else {
       setClientPurchaseOrders([]);
     }
-    
+
     // Clear selections when client changes
     setSelectedPurchaseOrders([]);
     setLineItems([]);
   };
 
   const handleSaleSelection = (saleId: string) => {
-    const sale = availableSales.find((s) => s.id.toString() === saleId)
-    setSelectedSale(sale || null)
-    setError(null)
-  }
+    const sale = availableSales.find((s) => s.id.toString() === saleId);
+    setSelectedSale(sale || null);
+    setError(null);
+  };
 
   const handlePurchaseOrderSelection = (purchaseOrderId: number) => {
-    const purchaseOrder = clientPurchaseOrders.find(po => po.id === purchaseOrderId);
+    const purchaseOrder = clientPurchaseOrders.find(
+      (po) => po.id === purchaseOrderId
+    );
     if (!purchaseOrder) return;
 
     // Toggle selection
-    if (selectedPurchaseOrders.some(po => po.id === purchaseOrderId)) {
+    if (selectedPurchaseOrders.some((po) => po.id === purchaseOrderId)) {
       // Remove from selection
-      setSelectedPurchaseOrders(selectedPurchaseOrders.filter(po => po.id !== purchaseOrderId));
+      setSelectedPurchaseOrders(
+        selectedPurchaseOrders.filter((po) => po.id !== purchaseOrderId)
+      );
     } else {
       // Add to selection
       setSelectedPurchaseOrders([...selectedPurchaseOrders, purchaseOrder]);
@@ -170,7 +187,7 @@ export default function UnifiedInvoiceGenerator({
       style: "currency",
       currency: "DNT",
       minimumFractionDigits: 3,
-      maximumFractionDigits: 3
+      maximumFractionDigits: 3,
     }).format(amount);
   };
 
@@ -224,7 +241,8 @@ export default function UnifiedInvoiceGenerator({
     const product = products.find((p) => p.id === selectedProduct);
     if (!product) return;
 
-    const discountAmount = (product.sellingPriceHT * newItemQuantity * newItemDiscount) / 100;
+    const discountAmount =
+      (product.sellingPriceHT * newItemQuantity * newItemDiscount) / 100;
     const total = product.sellingPriceHT * newItemQuantity - discountAmount;
 
     const item = {
@@ -274,18 +292,39 @@ export default function UnifiedInvoiceGenerator({
     );
   };
 
-  // Calculate totals for new sale (add FODEC calculations) with per-item TVA
-  const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  const discountedSubtotal = subtotal; // No global discount in this form
-  // Calculate tax per item based on product TVA rates
+  // Calculate totals for new sale with correct FODEC, TVA, and discount calculations
+  // HT (subtotal) should be the sum of (quantity × unit price) for all items
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0
+  );
+  // Apply discount to get discounted subtotal
+  const totalDiscount = lineItems.reduce(
+    (sum, item) => sum + (item.unitPrice * item.quantity * item.discount) / 100,
+    0
+  );
+  const discountedSubtotal = subtotal - totalDiscount;
+  // Calculate FODEC on discounted subtotal
+  const fodecAmount = (discountedSubtotal * fodecTax) / 100;
+  // Calculate tax (TVA) on (discounted subtotal + FODEC)
   const taxAmount = lineItems.reduce((sum, item) => {
-    // Get product TVA rate (this would need to be fetched from product data)
-    // For now, using a default rate until we implement product TVA fetching
-    const itemTvaRate = 20; // Default rate
-    return sum + (item.totalPrice * itemTvaRate / 100);
+    // Get product TVA rate
+    const product = products.find((p) => p.id === item.productId);
+    const itemTvaRate =
+      product && "tvaRate" in product ? (product.tvaRate as number) : 0; // Use actual TVA rate or 0 if not found
+    // TVA is calculated on (discounted item total + FODEC portion for this item)
+    const itemTotal =
+      item.unitPrice * item.quantity -
+      (item.unitPrice * item.quantity * item.discount) / 100;
+    // Calculate FODEC portion for this item
+    const itemFodec =
+      discountedSubtotal > 0
+        ? (itemTotal / discountedSubtotal) * fodecAmount
+        : 0;
+    return sum + ((itemTotal + itemFodec) * itemTvaRate) / 100;
   }, 0);
-  const fodecAmount = (discountedSubtotal * fodecTax) / 100; // Calculate FODEC amount
-  const finalTotal = discountedSubtotal + taxAmount + fodecAmount; // Include FODEC in final total
+  // TTC (final total) is HT + FODEC + TVA
+  const finalTotal = discountedSubtotal + fodecAmount + taxAmount;
 
   const handleGenerateInvoice = async () => {
     if (!validateForm()) {
@@ -299,45 +338,49 @@ export default function UnifiedInvoiceGenerator({
       if (activeTab === "from-sale") {
         // Classic invoice generation from existing sale
         if (!selectedSale) return;
-        
+
         // Always provide a valid invoice number
-        const invoiceNumber = formData.customNumber.trim() !== ""
-          ? formData.customNumber.trim()
-          : generatePreviewInvoiceNumber();
+        const invoiceNumber =
+          formData.customNumber.trim() !== ""
+            ? formData.customNumber.trim()
+            : generatePreviewInvoiceNumber();
         const invoiceData = {
           number: invoiceNumber,
           saleId: selectedSale.id,
           dueDate: formData.dueDate.toISOString(),
-          amount: selectedSale.totalAmount,
-          taxAmount: selectedSale.taxAmount,
-          totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+          amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+          taxAmount: selectedSale.taxAmount, // TVA amount
+          totalAmount: selectedSale.totalAmount, // TTC amount
           clientId: selectedSale.clientId,
           status: "En attente",
           notes: formData.notes,
         };
 
-        const result = await db.invoices.create(invoiceData)
+        const result = await db.invoices.create(invoiceData);
         if (result.success) {
-          onInvoiceGenerated()
-          onClose()
+          onInvoiceGenerated();
+          onClose();
           // Reset form
-          setSelectedSale(null)
+          setSelectedSale(null);
           setFormData({
             dueDate: new Date(Date.now()),
             paymentTerms: "30 jours net",
             notes: "",
             customNumber: "",
-          })
+          });
           setFormErrors({});
           toast({
             title: "Succès",
             description: "Facture générée avec succès",
           });
         } else {
-          setError(result.error || "Erreur lors de la génération de la facture")
+          setError(
+            result.error || "Erreur lors de la génération de la facture"
+          );
           toast({
             title: "Erreur",
-            description: result.error || "Erreur lors de la génération de la facture",
+            description:
+              result.error || "Erreur lors de la génération de la facture",
             variant: "destructive",
           });
         }
@@ -347,18 +390,19 @@ export default function UnifiedInvoiceGenerator({
         const saleData = {
           clientId: selectedClient!.id,
           items: lineItems,
-          totalAmount: discountedSubtotal,
+          totalAmount: finalTotal, // TTC amount
           taxAmount: taxAmount,
           discountAmount: 0,
           fodecAmount: fodecAmount, // Include FODEC amount
-          finalAmount: finalTotal,
           status: "Confirmée",
           saleDate: new Date().toISOString(),
         };
 
         const saleResult = await db.sales.create(saleData);
         if (!saleResult.success) {
-          throw new Error(saleResult.error || "Erreur lors de la création de la vente");
+          throw new Error(
+            saleResult.error || "Erreur lors de la création de la vente"
+          );
         }
 
         // Create stock movement for each sold product
@@ -368,21 +412,28 @@ export default function UnifiedInvoiceGenerator({
               productId: item.productId,
               productName: item.productName,
               quantity: item.quantity,
-              movementType: 'OUT',
-              sourceType: 'sale',
+              movementType: "OUT",
+              sourceType: "sale",
               sourceId: saleResult.data.id,
               reference: `SALE-${saleResult.data.id}`,
-              reason: 'Produit vendu'
+              reason: "Produit vendu",
             });
           } catch (stockError) {
-            console.error(`Failed to create stock movement for product ${item.productId}:`, stockError);
+            console.error(
+              `Failed to create stock movement for product ${item.productId}:`,
+              stockError
+            );
           }
         }
 
         // Generate invoice from the newly created sale
-        const invoiceResult = await db.invoices.generateFromSale(saleResult.data.id);
+        const invoiceResult = await db.invoices.generateFromSale(
+          saleResult.data.id
+        );
         if (!invoiceResult.success) {
-          throw new Error(invoiceResult.error || "Erreur lors de la génération de la facture");
+          throw new Error(
+            invoiceResult.error || "Erreur lors de la génération de la facture"
+          );
         }
 
         toast({
@@ -398,15 +449,21 @@ export default function UnifiedInvoiceGenerator({
         // Generate invoice from selected purchase orders
         // For simplicity, we'll create one invoice with all items from selected purchase orders
         // In a real implementation, you might want to create separate invoices or allow grouping
-        
+
         // Combine all items from selected purchase orders
-        const allItems = selectedPurchaseOrders.flatMap(po => po.items || []);
-        
+        const allItems = selectedPurchaseOrders.flatMap((po) => po.items || []);
+
         // Calculate totals
-        const totalAmount = selectedPurchaseOrders.reduce((sum, po) => sum + po.amount, 0);
-        const taxAmount = selectedPurchaseOrders.reduce((sum, po) => sum + po.taxAmount, 0);
+        const totalAmount = selectedPurchaseOrders.reduce(
+          (sum, po) => sum + po.amount,
+          0
+        );
+        const taxAmount = selectedPurchaseOrders.reduce(
+          (sum, po) => sum + po.taxAmount,
+          0
+        );
         const totalWithTax = totalAmount + taxAmount;
-        
+
         // Generate a unique invoice number
         const year = new Date().getFullYear();
         const month = String(new Date().getMonth() + 1).padStart(2, "0");
@@ -414,7 +471,7 @@ export default function UnifiedInvoiceGenerator({
           .toString()
           .padStart(3, "0");
         const invoiceNumber = `FAC-${year}${month}-${random}`;
-        
+
         // Create invoice directly (without a sale)
         const invoiceData = {
           number: invoiceNumber,
@@ -430,12 +487,15 @@ export default function UnifiedInvoiceGenerator({
 
         const invoiceResult = await db.invoices.create(invoiceData);
         if (!invoiceResult.success) {
-          throw new Error(invoiceResult.error || "Erreur lors de la génération de la facture");
+          throw new Error(
+            invoiceResult.error || "Erreur lors de la génération de la facture"
+          );
         }
 
         toast({
           title: "Succès",
-          description: "Facture créée avec succès à partir des bons de commande",
+          description:
+            "Facture créée avec succès à partir des bons de commande",
         });
 
         // Reset form and close
@@ -472,25 +532,26 @@ export default function UnifiedInvoiceGenerator({
   };
 
   const generatePreviewInvoiceNumber = () => {
-    const year = new Date().getFullYear()
-    const month = String(new Date().getMonth() + 1).padStart(2, "0")
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, "0");
     const random = Math.floor(Math.random() * 1000)
       .toString()
-      .padStart(3, "0")
-    return `FAC-${year}${month}-${random}`
-  }
+      .padStart(3, "0");
+    return `FAC-${year}${month}-${random}`;
+  };
 
   const handleShowPreview = () => {
     if (!validateForm()) {
       return;
     }
-    
+
     // Generate preview based on current workflow
     let previewData;
-    const invoiceNumber = formData.customNumber.trim() !== ""
-      ? formData.customNumber.trim()
-      : generatePreviewInvoiceNumber();
-    
+    const invoiceNumber =
+      formData.customNumber.trim() !== ""
+        ? formData.customNumber.trim()
+        : generatePreviewInvoiceNumber();
+
     if (activeTab === "from-sale") {
       // Preview for classic workflow
       if (!selectedSale) return;
@@ -535,11 +596,17 @@ export default function UnifiedInvoiceGenerator({
     } else {
       // Preview for purchase orders
       if (!selectedClient) return;
-      const allItems = selectedPurchaseOrders.flatMap(po => po.items || []);
-      const totalAmount = selectedPurchaseOrders.reduce((sum, po) => sum + po.amount, 0);
-      const taxAmountPO = selectedPurchaseOrders.reduce((sum, po) => sum + po.taxAmount, 0);
+      const allItems = selectedPurchaseOrders.flatMap((po) => po.items || []);
+      const totalAmount = selectedPurchaseOrders.reduce(
+        (sum, po) => sum + po.amount,
+        0
+      );
+      const taxAmountPO = selectedPurchaseOrders.reduce(
+        (sum, po) => sum + po.taxAmount,
+        0
+      );
       const totalWithTax = totalAmount + taxAmountPO;
-      
+
       previewData = {
         number: invoiceNumber,
         saleId: null,
@@ -560,19 +627,22 @@ export default function UnifiedInvoiceGenerator({
         items: allItems,
       };
     }
-    
+
     setPreviewInvoice(previewData);
     setShowPreview(true);
   };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-          resetForm();
-          onClose();
-        }
-      }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetForm();
+            onClose();
+          }
+        }}
+      >
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
@@ -593,7 +663,11 @@ export default function UnifiedInvoiceGenerator({
               {/* Workflow Selection Tabs */}
               <div className="flex border-b">
                 <button
-                  className={`py-2 px-4 font-medium text-sm ${activeTab === "from-sale" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+                  className={`py-2 px-4 font-medium text-sm ${
+                    activeTab === "from-sale"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground"
+                  }`}
                   onClick={() => setActiveTab("from-sale")}
                 >
                   <div className="flex items-center gap-2">
@@ -602,7 +676,11 @@ export default function UnifiedInvoiceGenerator({
                   </div>
                 </button>
                 <button
-                  className={`py-2 px-4 font-medium text-sm ${activeTab === "new-sale" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+                  className={`py-2 px-4 font-medium text-sm ${
+                    activeTab === "new-sale"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground"
+                  }`}
                   onClick={() => setActiveTab("new-sale")}
                 >
                   <div className="flex items-center gap-2">
@@ -611,7 +689,11 @@ export default function UnifiedInvoiceGenerator({
                   </div>
                 </button>
                 <button
-                  className={`py-2 px-4 font-medium text-sm ${activeTab === "from-purchase-orders" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+                  className={`py-2 px-4 font-medium text-sm ${
+                    activeTab === "from-purchase-orders"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground"
+                  }`}
                   onClick={() => setActiveTab("from-purchase-orders")}
                 >
                   <div className="flex items-center gap-2">
@@ -640,12 +722,22 @@ export default function UnifiedInvoiceGenerator({
                           value={selectedSale?.id?.toString() || ""}
                           onChange={handleSaleSelection}
                           options={availableSales}
-                          getOptionLabel={(sale) => `${sale.clientName} (${sale.clientCompany}) - ${new Date(sale.saleDate).toLocaleDateString("fr-FR")} - ${formatCurrency(sale.totalAmount + (sale.taxAmount || 0))}`}
+                          getOptionLabel={(sale) =>
+                            `${sale.clientName} (${
+                              sale.clientCompany
+                            }) - ${new Date(sale.saleDate).toLocaleDateString(
+                              "fr-FR"
+                            )} - ${formatCurrency(
+                              sale.totalAmount + (sale.taxAmount || 0)
+                            )}`
+                          }
                           getOptionValue={(sale) => sale.id.toString()}
                           required
                         />
                         {formErrors.saleId && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.saleId}</p>
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.saleId}
+                          </p>
                         )}
 
                         {selectedSale && (
@@ -653,29 +745,48 @@ export default function UnifiedInvoiceGenerator({
                             <CardHeader className="pb-3">
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4 text-primary" />
-                                <span className="font-medium">Détails de la vente</span>
+                                <span className="font-medium">
+                                  Détails de la vente
+                                </span>
                               </div>
                             </CardHeader>
                             <CardContent className="space-y-3">
                               <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div>
-                                  <p className="text-muted-foreground">Client:</p>
-                                  <p className="font-medium">{selectedSale.clientName}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Entreprise:</p>
-                                  <p className="font-medium">{selectedSale.clientCompany}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Date de vente:</p>
+                                  <p className="text-muted-foreground">
+                                    Client:
+                                  </p>
                                   <p className="font-medium">
-                                    {new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")}
+                                    {selectedSale.clientName}
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Montant TTC:</p>
+                                  <p className="text-muted-foreground">
+                                    Entreprise:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedSale.clientCompany}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Date de vente:
+                                  </p>
+                                  <p className="font-medium">
+                                    {new Date(
+                                      selectedSale.saleDate
+                                    ).toLocaleDateString("fr-FR")}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Montant TTC:
+                                  </p>
                                   <p className="font-medium text-primary">
-                                    {formatCurrency(selectedSale.totalAmount + selectedSale.taxAmount)}
+                                    {formatCurrency(
+                                      selectedSale.totalAmount +
+                                        selectedSale.taxAmount
+                                    )}
                                   </p>
                                 </div>
                               </div>
@@ -684,17 +795,26 @@ export default function UnifiedInvoiceGenerator({
                                   Articles ({selectedSale?.items?.length}):
                                 </p>
                                 <div className="space-y-1">
-                                  {selectedSale?.items?.slice(0, 3).map((item) => (
-                                    <div key={item.id} className="text-xs bg-background/50 p-2 rounded">
-                                      <span className="font-medium">{item.productName}</span>
-                                      <span className="text-muted-foreground ml-2">
-                                        {item.quantity}x {formatCurrency(item.unitPrice)}
-                                      </span>
-                                    </div>
-                                  ))}
+                                  {selectedSale?.items
+                                    ?.slice(0, 3)
+                                    .map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className="text-xs bg-background/50 p-2 rounded"
+                                      >
+                                        <span className="font-medium">
+                                          {item.productName}
+                                        </span>
+                                        <span className="text-muted-foreground ml-2">
+                                          {item.quantity}x{" "}
+                                          {formatCurrency(item.unitPrice)}
+                                        </span>
+                                      </div>
+                                    ))}
                                   {(selectedSale?.items?.length ?? 0) > 3 && (
                                     <p className="text-xs text-muted-foreground">
-                                      +{(selectedSale?.items?.length ?? 0) - 3} autre(s) article(s)
+                                      +{(selectedSale?.items?.length ?? 0) - 3}{" "}
+                                      autre(s) article(s)
                                     </p>
                                   )}
                                 </div>
@@ -720,12 +840,16 @@ export default function UnifiedInvoiceGenerator({
                           value={selectedClient?.id?.toString() || ""}
                           onChange={handleClientSelection}
                           options={clients}
-                          getOptionLabel={(client) => `${client.name} (${client.company})`}
+                          getOptionLabel={(client) =>
+                            `${client.name} (${client.company})`
+                          }
                           getOptionValue={(client) => client.id.toString()}
                           required
                         />
                         {formErrors.clientId && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.clientId}</p>
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.clientId}
+                          </p>
                         )}
 
                         {selectedClient && (
@@ -734,19 +858,33 @@ export default function UnifiedInvoiceGenerator({
                               <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                   <p className="text-muted-foreground">Nom:</p>
-                                  <p className="font-medium">{selectedClient.name}</p>
+                                  <p className="font-medium">
+                                    {selectedClient.name}
+                                  </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Entreprise:</p>
-                                  <p className="font-medium">{selectedClient.company}</p>
+                                  <p className="text-muted-foreground">
+                                    Entreprise:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedClient.company}
+                                  </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Email:</p>
-                                  <p className="font-medium">{selectedClient.email}</p>
+                                  <p className="text-muted-foreground">
+                                    Email:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedClient.email}
+                                  </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Téléphone:</p>
-                                  <p className="font-medium">{selectedClient.phone}</p>
+                                  <p className="text-muted-foreground">
+                                    Téléphone:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedClient.phone}
+                                  </p>
                                 </div>
                               </div>
                             </CardContent>
@@ -768,20 +906,25 @@ export default function UnifiedInvoiceGenerator({
                         label="Numéro de facture (optionnel)"
                         id="customNumber"
                         value={formData.customNumber}
-                        onChange={(e) => setFormData({ ...formData, customNumber: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            customNumber: e.target.value,
+                          })
+                        }
                         placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
                         error={formErrors.number}
                       />
 
                       <div className="flex flex-col gap-2">
-                        <Label>Date d'échéance *</Label>
+                        <Label>Date d’échéance *</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               className={cn(
                                 "w-full justify-start text-left font-normal",
-                                !formData.dueDate && "text-muted-foreground",
+                                !formData.dueDate && "text-muted-foreground"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -796,12 +939,17 @@ export default function UnifiedInvoiceGenerator({
                             <Calendar
                               mode="single"
                               selected={formData.dueDate}
-                              onSelect={(date) => date && setFormData({ ...formData, dueDate: date })}
+                              onSelect={(date) =>
+                                date &&
+                                setFormData({ ...formData, dueDate: date })
+                              }
                             />
                           </PopoverContent>
                         </Popover>
                         {formErrors.dueDate && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.dueDate}</p>
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.dueDate}
+                          </p>
                         )}
                       </div>
 
@@ -809,7 +957,9 @@ export default function UnifiedInvoiceGenerator({
                         label="Conditions de paiement"
                         id="paymentTerms"
                         value={formData.paymentTerms}
-                        onChange={(value) => setFormData({ ...formData, paymentTerms: value })}
+                        onChange={(value) =>
+                          setFormData({ ...formData, paymentTerms: value })
+                        }
                         options={paymentTermsOptions}
                         getOptionLabel={(opt) => opt.label}
                         getOptionValue={(opt) => opt.value}
@@ -819,7 +969,9 @@ export default function UnifiedInvoiceGenerator({
                         label="Notes (optionnel)"
                         id="notes"
                         value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, notes: e.target.value })
+                        }
                         textarea
                       />
                     </CardContent>
@@ -834,7 +986,9 @@ export default function UnifiedInvoiceGenerator({
                       <FinancialSummaryCard
                         subtotal={selectedSale.totalAmount}
                         tax={selectedSale.taxAmount}
-                        total={selectedSale.totalAmount + selectedSale.taxAmount}
+                        total={
+                          selectedSale.totalAmount + selectedSale.taxAmount
+                        }
                         dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                         paymentTerms={formData.paymentTerms}
                         currency="DNT"
@@ -857,10 +1011,20 @@ export default function UnifiedInvoiceGenerator({
                               label="Produit"
                               id="product"
                               value={selectedProduct?.toString() || ""}
-                              onChange={(value) => setSelectedProduct(Number(value) || null)}
-                              options={products.filter(p => p.isActive)}
-                              getOptionLabel={(product) => `${product.name} (${product.sellingPriceHT ? product.sellingPriceHT.toFixed(3) : "N/A"} DNT)`}
-                              getOptionValue={(product) => product.id.toString()}
+                              onChange={(value) =>
+                                setSelectedProduct(Number(value) || null)
+                              }
+                              options={products.filter((p) => p.isActive)}
+                              getOptionLabel={(product) =>
+                                `${product.name} (${
+                                  product.sellingPriceHT
+                                    ? product.sellingPriceHT.toFixed(3)
+                                    : "N/A"
+                                } DNT)`
+                              }
+                              getOptionValue={(product) =>
+                                product.id.toString()
+                              }
                               placeholder="Sélectionner un produit"
                             />
                           </div>
@@ -872,7 +1036,9 @@ export default function UnifiedInvoiceGenerator({
                               min="1"
                               value={newItemQuantity}
                               onChange={(e) =>
-                                setNewItemQuantity(Number.parseInt(e.target.value) || 1)
+                                setNewItemQuantity(
+                                  Number.parseInt(e.target.value) || 1
+                                )
                               }
                               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             />
@@ -898,9 +1064,15 @@ export default function UnifiedInvoiceGenerator({
                             <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
                               {selectedProduct
                                 ? (() => {
-                                    const product = products.find((p) => p.id === selectedProduct);
-                                    return product 
-                                      ? `${product.sellingPriceHT ? product.sellingPriceHT.toFixed(3) : "N/A"} DNT`
+                                    const product = products.find(
+                                      (p) => p.id === selectedProduct
+                                    );
+                                    return product
+                                      ? `${
+                                          product.sellingPriceHT
+                                            ? product.sellingPriceHT.toFixed(3)
+                                            : "N/A"
+                                        } DNT`
                                       : "0.000 DNT";
                                   })()
                                 : "0.000 DNT"}
@@ -925,8 +1097,12 @@ export default function UnifiedInvoiceGenerator({
                                 <tr>
                                   <th className="text-left p-2">Article</th>
                                   <th className="text-right p-2 w-20">Qté</th>
-                                  <th className="text-right p-2 w-24">Prix unit.</th>
-                                  <th className="text-right p-2 w-20">Remise %</th>
+                                  <th className="text-right p-2 w-24">
+                                    Prix unit.
+                                  </th>
+                                  <th className="text-right p-2 w-20">
+                                    Remise %
+                                  </th>
                                   <th className="text-right p-2 w-24">Total</th>
                                   <th className="text-right p-2 w-16"></th>
                                 </tr>
@@ -936,7 +1112,9 @@ export default function UnifiedInvoiceGenerator({
                                   <tr key={item.id} className="border-t">
                                     <td className="p-2">
                                       <div>
-                                        <div className="font-medium">{item.productName}</div>
+                                        <div className="font-medium">
+                                          {item.productName}
+                                        </div>
                                         <div className="text-sm text-muted-foreground">
                                           {item.description}
                                         </div>
@@ -967,7 +1145,8 @@ export default function UnifiedInvoiceGenerator({
                                           updateLineItem(
                                             item.id,
                                             "unitPrice",
-                                            Number.parseFloat(e.target.value) || 0
+                                            Number.parseFloat(e.target.value) ||
+                                              0
                                           )
                                         }
                                         className="w-24 md:w-28 text-right border rounded px-2 py-1 min-w-[100px]"
@@ -983,7 +1162,8 @@ export default function UnifiedInvoiceGenerator({
                                           updateLineItem(
                                             item.id,
                                             "discount",
-                                            Number.parseFloat(e.target.value) || 0
+                                            Number.parseFloat(e.target.value) ||
+                                              0
                                           )
                                         }
                                         className="w-20 md:w-24 text-right border rounded px-2 py-1 min-w-[80px]"
@@ -1023,16 +1203,16 @@ export default function UnifiedInvoiceGenerator({
                                   max="100"
                                   value={fodecTax}
                                   onChange={(e) =>
-                                    setFodecTax(Number.parseFloat(e.target.value) || 0)
+                                    setFodecTax(
+                                      Number.parseFloat(e.target.value) || 0
+                                    )
                                   }
                                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                               </div>
                             </div>
-                            
-
                           </div>
-                          
+
                           {/* Totals Summary */}
                           <div className="space-y-2 pt-4">
                             <div className="flex justify-between text-sm">
@@ -1074,32 +1254,47 @@ export default function UnifiedInvoiceGenerator({
                             {clientPurchaseOrders.length > 0 ? (
                               <div className="flex-1 overflow-auto space-y-2">
                                 {clientPurchaseOrders.map((po) => (
-                                  <div 
-                                    key={po.id} 
+                                  <div
+                                    key={po.id}
                                     className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                                      selectedPurchaseOrders.some(selected => selected.id === po.id)
+                                      selectedPurchaseOrders.some(
+                                        (selected) => selected.id === po.id
+                                      )
                                         ? "border-primary bg-primary/10"
                                         : "hover:bg-muted"
                                     }`}
-                                    onClick={() => handlePurchaseOrderSelection(po.id)}
+                                    onClick={() =>
+                                      handlePurchaseOrderSelection(po.id)
+                                    }
                                   >
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-2">
-                                        {selectedPurchaseOrders.some(selected => selected.id === po.id) ? (
+                                        {selectedPurchaseOrders.some(
+                                          (selected) => selected.id === po.id
+                                        ) ? (
                                           <Check className="h-4 w-4 text-primary" />
                                         ) : (
                                           <div className="h-4 w-4 border rounded"></div>
                                         )}
                                         <div>
-                                          <div className="font-medium">{po.number}</div>
+                                          <div className="font-medium">
+                                            {po.number}
+                                          </div>
                                           <div className="text-sm text-muted-foreground">
-                                            {new Date(po.orderDate).toLocaleDateString("fr-FR")} • {formatCurrency(po.totalAmount + po.taxAmount)}
+                                            {new Date(
+                                              po.orderDate
+                                            ).toLocaleDateString("fr-FR")}{" "}
+                                            •{" "}
+                                            {formatCurrency(
+                                              po.totalAmount + po.taxAmount
+                                            )}
                                           </div>
                                         </div>
                                       </div>
                                       <div className="text-right">
                                         <div className="text-sm font-medium">
-                                          {po.items?.length || 0} article{po.items?.length !== 1 ? 's' : ''}
+                                          {po.items?.length || 0} article
+                                          {po.items?.length !== 1 ? "s" : ""}
                                         </div>
                                       </div>
                                     </div>
@@ -1114,40 +1309,66 @@ export default function UnifiedInvoiceGenerator({
                           </>
                         ) : (
                           <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                            Veuillez sélectionner un client pour voir ses bons de commande
+                            Veuillez sélectionner un client pour voir ses bons
+                            de commande
                           </div>
                         )}
 
                         {/* Selected Purchase Orders Summary */}
                         {selectedPurchaseOrders.length > 0 && (
                           <div className="mt-4 pt-4 border-t">
-                            <h3 className="font-medium mb-2">Bons de commande sélectionnés:</h3>
+                            <h3 className="font-medium mb-2">
+                              Bons de commande sélectionnés:
+                            </h3>
                             <div className="space-y-2">
                               {selectedPurchaseOrders.map((po) => (
-                                <div key={po.id} className="flex justify-between items-center bg-muted p-2 rounded">
+                                <div
+                                  key={po.id}
+                                  className="flex justify-between items-center bg-muted p-2 rounded"
+                                >
                                   <div>
-                                    <span className="font-medium">{po.number}</span>
+                                    <span className="font-medium">
+                                      {po.number}
+                                    </span>
                                     <span className="text-sm text-muted-foreground ml-2">
-                                      ({po.items?.length || 0} article{po.items?.length !== 1 ? 's' : ''})
+                                      ({po.items?.length || 0} article
+                                      {po.items?.length !== 1 ? "s" : ""})
                                     </span>
                                   </div>
                                   <div className="text-right">
-                                    <div>{formatCurrency(po.totalAmount + po.taxAmount)}</div>
+                                    <div>
+                                      {formatCurrency(
+                                        po.totalAmount + po.taxAmount
+                                      )}
+                                    </div>
                                     <div className="text-xs text-muted-foreground">
-                                      {new Date(po.orderDate).toLocaleDateString("fr-FR")}
+                                      {new Date(
+                                        po.orderDate
+                                      ).toLocaleDateString("fr-FR")}
                                     </div>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                            
+
                             {/* Financial Summary */}
                             <div className="mt-4">
                               <FinancialSummaryCard
-                                subtotal={selectedPurchaseOrders.reduce((sum, po) => sum + po.amount, 0)}
-                                tax={selectedPurchaseOrders.reduce((sum, po) => sum + po.taxAmount, 0)}
-                                total={selectedPurchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0)}
-                                dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
+                                subtotal={selectedPurchaseOrders.reduce(
+                                  (sum, po) => sum + po.amount,
+                                  0
+                                )}
+                                tax={selectedPurchaseOrders.reduce(
+                                  (sum, po) => sum + po.taxAmount,
+                                  0
+                                )}
+                                total={selectedPurchaseOrders.reduce(
+                                  (sum, po) => sum + po.totalAmount,
+                                  0
+                                )}
+                                dueDate={formData.dueDate.toLocaleDateString(
+                                  "fr-FR"
+                                )}
                                 paymentTerms={formData.paymentTerms}
                                 currency="DNT"
                               />
@@ -1165,7 +1386,11 @@ export default function UnifiedInvoiceGenerator({
           {/* Action Buttons */}
           <div className="flex-shrink-0 border-t pt-4">
             <div className="flex flex-col sm:flex-row gap-3 justify-between">
-              <Button variant="outline" onClick={onClose} disabled={isGenerating}>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isGenerating}
+              >
                 <X className="h-4 w-4 mr-2" />
                 Annuler
               </Button>
@@ -1174,15 +1399,31 @@ export default function UnifiedInvoiceGenerator({
                 <Button
                   variant="outline"
                   onClick={handleShowPreview}
-                  disabled={isGenerating || (activeTab === "from-sale" ? !selectedSale : (!selectedClient || (activeTab === "new-sale" ? lineItems.length === 0 : selectedPurchaseOrders.length === 0)))}
+                  disabled={
+                    isGenerating ||
+                    (activeTab === "from-sale"
+                      ? !selectedSale
+                      : !selectedClient ||
+                        (activeTab === "new-sale"
+                          ? lineItems.length === 0
+                          : selectedPurchaseOrders.length === 0))
+                  }
                   className="border-primary text-primary hover:bg-primary/10"
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   Aperçu
                 </Button>
-                <Button 
-                  onClick={handleGenerateInvoice} 
-                  disabled={isGenerating || (activeTab === "from-sale" ? !selectedSale : (!selectedClient || (activeTab === "new-sale" ? lineItems.length === 0 : selectedPurchaseOrders.length === 0)))}
+                <Button
+                  onClick={handleGenerateInvoice}
+                  disabled={
+                    isGenerating ||
+                    (activeTab === "from-sale"
+                      ? !selectedSale
+                      : !selectedClient ||
+                        (activeTab === "new-sale"
+                          ? lineItems.length === 0
+                          : selectedPurchaseOrders.length === 0))
+                  }
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {isGenerating ? "Génération..." : "Générer la facture"}
@@ -1192,7 +1433,7 @@ export default function UnifiedInvoiceGenerator({
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Invoice Preview Modal */}
       <InvoicePreviewModal
         invoice={previewInvoice}

@@ -77,8 +77,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         }
         
         const stmt = db.prepare(`
-          INSERT INTO quotes (number, clientId, amount, taxAmount, totalAmount, status, issueDate, dueDate, createdAt) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          INSERT INTO quotes (number, clientId, amount, taxAmount, totalAmount, status, issueDate, dueDate, createdAt, updatedAt) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `);
         const result = stmt.run(
           quoteNumber,
@@ -118,6 +118,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           number: quoteNumber,
           ...quote,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
         notifyDataChange("quotes", "create", newQuote);
         return newQuote;
@@ -161,7 +162,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         const stmt = db.prepare(`
           UPDATE quotes 
-          SET clientId = ?, amount = ?, taxAmount = ?, totalAmount = ?, status = ?, issueDate = ?, dueDate = ?, updatedAt = CURRENT_TIMESTAMP 
+          SET clientId = ?, amount = ?, taxAmount = ?, totalAmount = ?, status = ?, issueDate = ?, dueDate = ?, updatedAt = CURRENT_TIMESTAMP
           WHERE id = ?
         `);
         const result = stmt.run(
@@ -255,7 +256,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const stmt = db.prepare(
         "UPDATE quotes SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?"
       );
-      stmt.run(status, id);
+      const result = stmt.run(status, id);
+      
+      // Check if any rows were affected
+      if (result.changes === 0) {
+        throw new Error("Devis non trouvé ou statut déjà mis à jour");
+      }
       
       const updatedQuote = {
         id,
@@ -267,7 +273,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return updatedQuote;
     } catch (error) {
       console.error("Error updating quote status:", error);
-      throw new Error("Erreur lors de la mise à jour du statut du devis");
+      throw new Error("Erreur lors de la mise à jour du statut du devis: " + error.message);
     }
   });
 };

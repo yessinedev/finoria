@@ -303,7 +303,7 @@ export interface CreditNote {
   reason: string;
   issueDate: string;
   dueDate?: string;
-  // Removed status field
+  status?: string;
   items: CreditNoteItem[];
   notes?: string;
   createdAt: string;

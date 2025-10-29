@@ -214,8 +214,6 @@ export default function SettingsPage() {
       result = await db.settings.create(updateData);
     }
     
-    console.log("Save result:", result);
-
     if (result.success) {
       // Update local state with the new/updated company data
       if (result.data) {
@@ -253,8 +251,6 @@ export default function SettingsPage() {
       });
     }
 
-    console.log("Company Settings:", companyFields);
-    console.log("Tax Settings:", taxFields);
     setIsSubmitting(false);
   };
 
