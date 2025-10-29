@@ -75,6 +75,8 @@ export default function UnifiedInvoiceGenerator({
     PurchaseOrder[]
   >([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [selectedClientForSale, setSelectedClientForSale] = useState<Client | null>(null); // Client selection for from-sale tab
+  const [clientSales, setClientSales] = useState<Sale[]>([]); // Filtered sales for selected client
   const [formData, setFormData] = useState({
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     paymentTerms: "30 jours net",
@@ -158,8 +160,23 @@ export default function UnifiedInvoiceGenerator({
     setLineItems([]);
   };
 
+  const handleClientForSaleSelection = (clientId: string) => {
+    const client = clients.find((c) => c.id.toString() === clientId);
+    setSelectedClientForSale(client || null);
+    setSelectedSale(null); // Reset sale selection when client changes
+    setError(null);
+
+    if (client) {
+      // Filter sales for this client
+      const filteredSales = availableSales.filter((s) => s.clientId === client.id);
+      setClientSales(filteredSales);
+    } else {
+      setClientSales([]);
+    }
+  };
+
   const handleSaleSelection = (saleId: string) => {
-    const sale = availableSales.find((s) => s.id.toString() === saleId);
+    const sale = clientSales.find((s) => s.id.toString() === saleId);
     setSelectedSale(sale || null);
     setError(null);
   };
@@ -559,9 +576,10 @@ export default function UnifiedInvoiceGenerator({
         number: invoiceNumber,
         saleId: selectedSale.id,
         dueDate: formData.dueDate.toISOString(),
-        amount: selectedSale.totalAmount,
+        amount: selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0), // HT amount
         taxAmount: selectedSale.taxAmount,
-        totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+        fodecAmount: selectedSale.fodecAmount || 0,
+        totalAmount: selectedSale.totalAmount, // Already TTC
         clientId: selectedSale.clientId,
         status: "En attente",
         notes: formData.notes,
@@ -707,33 +725,51 @@ export default function UnifiedInvoiceGenerator({
                 {/* Left Column - Client/Sale Selection and Configuration */}
                 <div className="lg:col-span-1 flex flex-col gap-2">
                   {activeTab === "from-sale" ? (
-                    // Classic workflow - Sale selection
+                    // Client-first workflow - Select client then sale
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <FileText className="h-5 w-5" />
-                          Sélection de la vente *
+                          Sélection client & vente *
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                        {/* Step 1: Select Client */}
                         <EntitySelect
-                          label="Vente à facturer"
-                          id="sale"
-                          value={selectedSale?.id?.toString() || ""}
-                          onChange={handleSaleSelection}
-                          options={availableSales}
-                          getOptionLabel={(sale) =>
-                            `${sale.clientName} (${
-                              sale.clientCompany
-                            }) - ${new Date(sale.saleDate).toLocaleDateString(
-                              "fr-FR"
-                            )} - ${formatCurrency(
-                              sale.totalAmount + (sale.taxAmount || 0)
-                            )}`
+                          label="Sélectionner un client *"
+                          id="clientForSale"
+                          value={selectedClientForSale?.id?.toString() || ""}
+                          onChange={handleClientForSaleSelection}
+                          options={clients}
+                          getOptionLabel={(client) =>
+                            `${client.name} (${client.company})`
                           }
-                          getOptionValue={(sale) => sale.id.toString()}
+                          getOptionValue={(client) => client.id.toString()}
                           required
                         />
+                        {formErrors.clientId && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.clientId}
+                          </p>
+                        )}
+                        
+                        {/* Step 2: Select Sale (only shown after client selection) */}
+                        {selectedClientForSale && (
+                          <EntitySelect
+                            label="Vente à facturer *"
+                            id="sale"
+                            value={selectedSale?.id?.toString() || ""}
+                            onChange={handleSaleSelection}
+                            options={clientSales}
+                            getOptionLabel={(sale) =>
+                              `${new Date(sale.saleDate).toLocaleDateString(
+                                "fr-FR"
+                              )} - ${formatCurrency(sale.totalAmount)}`
+                            }
+                            getOptionValue={(sale) => sale.id.toString()}
+                            required
+                          />
+                        )}
                         {formErrors.saleId && (
                           <p className="text-sm text-red-500 mt-1">
                             {formErrors.saleId}
@@ -870,11 +906,13 @@ export default function UnifiedInvoiceGenerator({
                                     {selectedClient.company}
                                   </p>
                                 </div>
+                              </div>
+                              <div className="grid grid-cols-1 gap-2 text-sm">
                                 <div>
                                   <p className="text-muted-foreground">
                                     Email:
                                   </p>
-                                  <p className="font-medium">
+                                  <p className="font-medium break-all">
                                     {selectedClient.email}
                                   </p>
                                 </div>
@@ -984,11 +1022,9 @@ export default function UnifiedInvoiceGenerator({
                     // Classic workflow - Just show financial summary
                     selectedSale && (
                       <FinancialSummaryCard
-                        subtotal={selectedSale.totalAmount}
+                        subtotal={selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0)}
                         tax={selectedSale.taxAmount}
-                        total={
-                          selectedSale.totalAmount + selectedSale.taxAmount
-                        }
+                        total={selectedSale.totalAmount}
                         dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                         paymentTerms={formData.paymentTerms}
                         currency="DNT"
@@ -1285,9 +1321,7 @@ export default function UnifiedInvoiceGenerator({
                                               po.orderDate
                                             ).toLocaleDateString("fr-FR")}{" "}
                                             •{" "}
-                                            {formatCurrency(
-                                              po.totalAmount + po.taxAmount
-                                            )}
+                                            {formatCurrency(po.totalAmount)}
                                           </div>
                                         </div>
                                       </div>
@@ -1337,9 +1371,7 @@ export default function UnifiedInvoiceGenerator({
                                   </div>
                                   <div className="text-right">
                                     <div>
-                                      {formatCurrency(
-                                        po.totalAmount + po.taxAmount
-                                      )}
+                                      {formatCurrency(po.totalAmount)}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
                                       {new Date(

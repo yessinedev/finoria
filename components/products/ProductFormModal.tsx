@@ -52,13 +52,13 @@ export default function ProductFormModal({
 
   // Automatically calculate sellingPriceTTC based on sellingPriceHT and selected TVA rate
   useEffect(() => {
-    if (formData.sellingPriceHT !== undefined && formData.tvaId) {
+    if (formData.sellingPriceHT !== undefined && formData.sellingPriceHT !== null && formData.tvaId) {
       const selectedTva = tvaRates.find((tva) => tva.id === formData.tvaId);
       if (selectedTva) {
         const calculatedTTC = parseFloat((formData.sellingPriceHT * (1 + selectedTva.rate / 100)).toFixed(2));
         setFormData({ ...formData, sellingPriceTTC: calculatedTTC });
       }
-    } else if (formData.sellingPriceHT === undefined) {
+    } else if (formData.sellingPriceHT === undefined || formData.sellingPriceHT === null) {
       // If sellingPriceHT is cleared, also clear sellingPriceTTC
       setFormData({ ...formData, sellingPriceTTC: undefined });
     }
@@ -231,7 +231,7 @@ export default function ProductFormModal({
               <Input
                 id="sellingPriceTTC"
                 type="number"
-                value={formData.sellingPriceTTC !== undefined ? formData.sellingPriceTTC.toFixed(2) : ""}
+                value={formData.sellingPriceTTC !== undefined && formData.sellingPriceTTC !== null ? formData.sellingPriceTTC.toFixed(2) : ""}
                 readOnly
                 className="bg-gray-100 cursor-not-allowed"
               />

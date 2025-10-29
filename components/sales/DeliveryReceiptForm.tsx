@@ -328,18 +328,18 @@ export default function DeliveryReceiptForm({
                         className="w-full justify-between"
                         disabled={loadingSales}
                       >
-                        {selectedSaleId
-                          ? (() => {
-                              const selectedSale = sales.find((s) => s.id === selectedSaleId);
-                              return selectedSale
-                                ? `CMD-${selectedSale.id} - ${new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")} (${(selectedSale.totalAmount + selectedSale.taxAmount).toFixed(3)} DNT)`
-                                : "Sélectionner une commande...";
-                            })()
-                          : loadingSales
-                          ? "Chargement..."
-                          : sales.length === 0
-                          ? "Aucune commande disponible"
-                          : "Rechercher une commande..."}
+                            {selectedSaleId
+                              ? (() => {
+                                  const selectedSale = sales.find((s) => s.id === selectedSaleId);
+                                  return selectedSale
+                                    ? `CMD-${selectedSale.id} - ${new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")} (${selectedSale.totalAmount.toFixed(3)} DNT)`
+                                    : "Sélectionner une commande...";
+                                })()
+                              : loadingSales
+                              ? "Chargement..."
+                              : sales.length === 0
+                              ? "Aucune commande disponible"
+                              : "Rechercher une commande..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -365,10 +365,10 @@ export default function DeliveryReceiptForm({
                                   )}
                                 />
                                 <div className="flex flex-col">
-                                  <span className="font-medium">CMD-{saleItem.id}</span>
-                                  <span className="text-sm text-muted-foreground">
-                                    {new Date(saleItem.saleDate).toLocaleDateString("fr-FR")} - {(saleItem.totalAmount + saleItem.taxAmount).toFixed(3)} DNT
-                                  </span>
+                                          <span className="font-medium">CMD-{saleItem.id}</span>
+                                          <span className="text-sm text-muted-foreground">
+                                            {new Date(saleItem.saleDate).toLocaleDateString("fr-FR")} - {saleItem.totalAmount.toFixed(3)} DNT
+                                          </span>
                                 </div>
                               </CommandItem>
                             ))}

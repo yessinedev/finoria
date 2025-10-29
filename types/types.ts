@@ -24,6 +24,7 @@ export interface Product {
   isActive: boolean;
   reference?: string;
   tvaId?: number;
+  tvaRate?: number; // TVA rate fetched from the tva table (joined)
   sellingPriceHT?: number;
   sellingPriceTTC?: number;
   purchasePriceHT?: number;
@@ -170,6 +171,7 @@ export interface Invoice {
   clientTaxId?: string; // New client tax identification number field
   amount: number;
   taxAmount: number;
+  fodecAmount?: number; // FODEC tax amount
   totalAmount: number;
   issueDate: string;
   dueDate: string;

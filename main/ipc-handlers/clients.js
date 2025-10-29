@@ -69,7 +69,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("delete-client", async (event, id) => {
     try {
-      // Check if client has sales or invoices
+      // Check if client has sales
       const salesCount = db
         .prepare("SELECT COUNT(*) as count FROM sales WHERE clientId = ?")
         .get(id);
@@ -78,6 +78,27 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           "Impossible de supprimer ce client car il a des ventes associées"
         );
       }
+
+      // Check if client has quotes
+      const quotesCount = db
+        .prepare("SELECT COUNT(*) as count FROM quotes WHERE clientId = ?")
+        .get(id);
+      if (quotesCount.count > 0) {
+        throw new Error(
+          "Impossible de supprimer ce client car il a des devis associés"
+        );
+      }
+
+      // Check if client has invoices
+      const invoicesCount = db
+        .prepare("SELECT COUNT(*) as count FROM invoices WHERE clientId = ?")
+        .get(id);
+      if (invoicesCount.count > 0) {
+        throw new Error(
+          "Impossible de supprimer ce client car il a des factures associées"
+        );
+      }
+
       const stmt = db.prepare("DELETE FROM clients WHERE id = ?");
       stmt.run(id);
       notifyDataChange("clients", "delete", { id });

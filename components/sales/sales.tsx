@@ -50,7 +50,7 @@ export default function Sales() {
   const [newItemDiscount, setNewItemDiscount] = useState(0);
   // Removed globalDiscount state
   // Removed taxRate - using per-item TVA calculation
-  const [fodecTax, setFodecTax] = useState(0); // New FODEC tax state
+  const [fodecTax, setFodecTax] = useState(1); // FODEC tax default 1%
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,11 +85,7 @@ export default function Sales() {
 
   const enrichedSales = filteredSales.map((sale) => ({
     ...sale,
-    finalAmount:
-      sale.totalAmount +
-      sale.taxAmount +
-      (sale.fodecAmount ?? 0) - // Include FODEC amount if exists
-      (sale.discountAmount ?? 0),
+    finalAmount: sale.totalAmount, // totalAmount is already TTC (includes HT + FODEC + TVA)
   }));
 
   // Pagination calculations

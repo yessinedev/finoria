@@ -249,12 +249,17 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       }
       
       // Create the invoice object
+      // Properly calculate HT amount by subtracting both FODEC and TVA from totalAmount
+      const fodecAmount = sale.fodecAmount || 0;
+      const htAmount = sale.totalAmount - sale.taxAmount - fodecAmount;
+      
       const invoice = {
         number: invoiceNumber,
         saleId: saleId,
         clientId: sale.clientId,
-        amount: sale.totalAmount - sale.taxAmount,
+        amount: htAmount,
         taxAmount: sale.taxAmount,
+        fodecAmount: fodecAmount,
         totalAmount: sale.totalAmount,
         status: "En attente",
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
@@ -262,8 +267,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       // Insert the invoice
       const insertInvoice = db.prepare(`
-        INSERT INTO invoices (number, saleId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (number, saleId, clientId, amount, taxAmount, fodecAmount, totalAmount, status, dueDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const result = insertInvoice.run(
@@ -272,6 +277,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.clientId,
         invoice.amount,
         invoice.taxAmount,
+        invoice.fodecAmount,
         invoice.totalAmount,
         invoice.status,
         invoice.dueDate

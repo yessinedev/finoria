@@ -87,7 +87,6 @@ export default function SupplierInvoiceGenerator({
   const [newItemDiscount, setNewItemDiscount] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   // Removed taxRate - using per-item TVA calculation
-  const [fodecTax, setFodecTax] = useState(0); // New FODEC tax state
   const [loading, setLoading] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null); // Add company settings state
   const [receptionNotes, setReceptionNotes] = useState<any[]>([]);
@@ -342,7 +341,7 @@ export default function SupplierInvoiceGenerator({
     );
   };
 
-  // Calculate totals for new invoice (add FODEC calculations) with per-item TVA and timbre fiscal
+  // Calculate totals for new invoice with per-item TVA and timbre fiscal
   const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const discountedSubtotal = subtotal; // No global discount in this form
   // Calculate tax per item based on product TVA rates
@@ -352,8 +351,7 @@ export default function SupplierInvoiceGenerator({
     const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
     return sum + (item.totalPrice * itemTvaRate) / 100;
   }, 0);
-  const fodecAmount = (discountedSubtotal * fodecTax) / 100; // Calculate FODEC amount
-  const ttcAmount = discountedSubtotal + taxAmount + fodecAmount; // Include FODEC in final total
+  const ttcAmount = discountedSubtotal + taxAmount; // No FODEC for supplier invoices
   const timbreFiscal = companySettings?.timbreFiscal || 1.000;
   const finalTotal = ttcAmount + timbreFiscal; // Add timbre fiscal to final total
 
@@ -432,7 +430,7 @@ export default function SupplierInvoiceGenerator({
         // Calculate amounts with timbre fiscal
         const htAmount = subtotal;
         const tvaAmount = taxAmount;
-        const ttcAmount = htAmount + tvaAmount + fodecAmount;
+        const ttcAmount = htAmount + tvaAmount; // No FODEC for supplier invoices
         const timbreFiscal = companySettings?.timbreFiscal || 1.000;
         const finalAmount = ttcAmount + timbreFiscal;
         
@@ -645,7 +643,7 @@ export default function SupplierInvoiceGenerator({
       if (!selectedSupplier) return;
       const htAmount = subtotal;
       const tvaAmount = taxAmount;
-      const ttcAmount = htAmount + tvaAmount + fodecAmount;
+      const ttcAmount = htAmount + tvaAmount; // No FODEC for supplier invoices
       const finalAmount = ttcAmount + timbreFiscal;
       
       previewData = {
@@ -1294,29 +1292,6 @@ export default function SupplierInvoiceGenerator({
 
                         {/* Financial Summary */}
                         <div className="border-t pt-4 mt-8">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* FODEC Tax Input */}
-                            <div className="space-y-2">
-                              <Label htmlFor="fodecTax">Taxe FODEC (%)</Label>
-                              <div className="flex items-center gap-2">
-                                <Percent className="h-4 w-4 text-muted-foreground" />
-                                <input
-                                  id="fodecTax"
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={fodecTax}
-                                  onChange={(e) =>
-                                    setFodecTax(
-                                      Number.parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
                           {/* Totals Summary */}
                           <div className="space-y-2 pt-4">
                             <div className="flex justify-between text-sm">
@@ -1327,12 +1302,6 @@ export default function SupplierInvoiceGenerator({
                               <span>TVA (par article):</span>
                               <span>{taxAmount.toFixed(3)} DNT</span>
                             </div>
-                            {fodecTax > 0 && (
-                              <div className="flex justify-between text-sm">
-                                <span>FODEC ({fodecTax}%):</span>
-                                <span>{fodecAmount.toFixed(3)} DNT</span>
-                              </div>
-                            )}
                             <div className="flex justify-between text-sm">
                               <span>Timbre Fiscal:</span>
                               <span>{timbreFiscal.toFixed(3)} DNT</span>

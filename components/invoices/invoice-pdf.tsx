@@ -184,10 +184,21 @@ const styles = StyleSheet.create({
 export function InvoicePDFDocument({ invoice, companySettings, products }: { invoice: Invoice; companySettings?: any; products?: any[] }) {
   // Calculate HT (before tax) correctly
   const htAmount = invoice.amount; // This is the correct HT amount from the database
+  const fodecAmount = invoice.fodecAmount || 0; // FODEC amount
   const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
   const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
   const timbreFiscal = companySettings?.timbreFiscal || 1.000;
   const finalAmount = ttcAmount + timbreFiscal;
+
+  // Calculate total remise (discounts) from items
+  let totalRemise = 0;
+  if (Array.isArray(invoice.items)) {
+    totalRemise = invoice.items.reduce((sum, item) => {
+      const itemBeforeDiscount = item.quantity * item.unitPrice;
+      const discountAmount = (itemBeforeDiscount * (item.discount || 0)) / 100;
+      return sum + discountAmount;
+    }, 0);
+  }
 
   // Calculate TVA breakdown by rate
   const tvaBreakdown: Record<number, { baseAmount: number; tvaAmount: number }> = {};
@@ -205,6 +216,10 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
       tvaBreakdown[tvaRate].tvaAmount += (item.totalPrice * tvaRate) / 100;
     });
   }
+  
+  // Calculate total base HT from breakdown (sum of all baseAmounts)
+  const totalBaseHT = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.baseAmount, 0);
+  const totalTVA = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.tvaAmount, 0);
 
   return (
     <Document>
@@ -325,8 +340,8 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
               {/* Total Row */}
               <View style={[styles.tvaBreakdownRow, { backgroundColor: '#eef2ff', fontWeight: 700 }]}>
                 <Text style={[styles.tvaBreakdownCell, { fontWeight: 700 }]}>Total</Text>
-                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(htAmount)}</Text>
-                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(tvaAmount)}</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalBaseHT || htAmount)}</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalTVA || tvaAmount)}</Text>
               </View>
             </View>
           </View>
@@ -335,7 +350,17 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
           <View style={styles.totalsBox}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(htAmount)}</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(totalBaseHT || htAmount)}</Text>
+            </View>
+            {totalRemise > 0 && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Remise totale:</Text>
+                <Text style={styles.totalsValue}>-{formatCurrency(totalRemise)}</Text>
+              </View>
+            )}
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>FODEC:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(fodecAmount)}</Text>
             </View>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>TVA:</Text>

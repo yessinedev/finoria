@@ -175,6 +175,7 @@ function createTables(db) {
       clientId INTEGER NOT NULL,
       amount REAL NOT NULL,
       taxAmount REAL NOT NULL,
+      fodecAmount REAL DEFAULT 0,
       totalAmount REAL NOT NULL,
       status TEXT DEFAULT 'En attente',
       issueDate DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -506,6 +507,21 @@ function createIndexes(db) {
     `);
   } catch (error) {
     console.error("Error creating indexes:", error);
+  }
+  
+  // Migrations for existing databases
+  try {
+    // Check if fodecAmount column exists in invoices table
+    const invoicesTableInfo = db.prepare("PRAGMA table_info(invoices)").all();
+    const hasFodecAmount = invoicesTableInfo.some(col => col.name === 'fodecAmount');
+    
+    if (!hasFodecAmount) {
+      console.log("Adding fodecAmount column to invoices table...");
+      db.exec("ALTER TABLE invoices ADD COLUMN fodecAmount REAL DEFAULT 0");
+      console.log("fodecAmount column added successfully");
+    }
+  } catch (error) {
+    console.error("Error running migrations:", error);
   }
 }
 

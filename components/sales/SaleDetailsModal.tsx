@@ -123,9 +123,12 @@ export default function SaleDetailsModal({ sale, open, onClose, products }: Sale
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><strong>Client:</strong> {sale.clientName}</div>
               <div><strong>Date:</strong> {new Date(sale.saleDate).toLocaleDateString("fr-FR")}</div>
-              <div><strong>Montant HT:</strong> {sale.totalAmount.toFixed(3)} DNT</div>
+              <div><strong>Montant HT:</strong> {(sale.totalAmount - sale.taxAmount - (sale.fodecAmount || 0)).toFixed(3)} DNT</div>
               <div><strong>TVA:</strong> {sale.taxAmount.toFixed(3)} DNT</div>
-              <div><strong>Montant TTC:</strong> {(sale.totalAmount + sale.taxAmount).toFixed(3)} DNT</div>
+              {sale.fodecAmount && sale.fodecAmount > 0 && (
+                <div><strong>FODEC:</strong> {sale.fodecAmount.toFixed(3)} DNT</div>
+              )}
+              <div><strong>Montant TTC:</strong> {sale.totalAmount.toFixed(3)} DNT</div>
             </div>
             
             {/* Delivery Receipt Section */}

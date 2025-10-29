@@ -538,16 +538,16 @@ export default function PurchaseOrders() {
                       aria-expanded={saleSearchOpen}
                       className="w-full justify-between"
                     >
-                      {selectedSaleId
-                        ? (() => {
-                            const selectedSale = sales.find((s) => s.id === selectedSaleId);
-                            return selectedSale
-                              ? `VTE-${selectedSale.id} - ${new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")} (${formatCurrency(selectedSale.totalAmount + selectedSale.taxAmount)})`
-                              : "Sélectionner une vente...";
-                          })()
-                        : sales.length === 0
-                        ? "Aucune vente disponible"
-                        : "Rechercher une vente..."}
+                              {selectedSaleId
+                                ? (() => {
+                                    const selectedSale = sales.find((s) => s.id === selectedSaleId);
+                                    return selectedSale
+                                      ? `VTE-${selectedSale.id} - ${new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")} (${formatCurrency(selectedSale.totalAmount)})`
+                                      : "Sélectionner une vente...";
+                                  })()
+                                : sales.length === 0
+                                ? "Aucune vente disponible"
+                                : "Rechercher une vente..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -572,12 +572,12 @@ export default function PurchaseOrders() {
                                   selectedSaleId === sale.id ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              <div className="flex flex-col">
-                                <span className="font-medium">VTE-{sale.id}</span>
-                                <span className="text-sm text-muted-foreground">
-                                  {new Date(sale.saleDate).toLocaleDateString("fr-FR")} - {formatCurrency(sale.totalAmount + sale.taxAmount)}
-                                </span>
-                              </div>
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">VTE-{sale.id}</span>
+                                          <span className="text-sm text-muted-foreground">
+                                            {new Date(sale.saleDate).toLocaleDateString("fr-FR")} - {formatCurrency(sale.totalAmount)}
+                                          </span>
+                                        </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>

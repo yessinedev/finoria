@@ -170,14 +170,18 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         totalTaxAmount += itemTaxAmount;
       }
       
+      // Calculate HT amount properly by subtracting both FODEC and TVA from totalAmount
+      const fodecAmount = sale.fodecAmount || 0;
+      const htAmount = sale.totalAmount - sale.taxAmount - fodecAmount;
+      
       // Create the purchase order object
       const purchaseOrder = {
         number: purchaseOrderNumber,
         saleId: saleId,
         clientId: sale.clientId,
-        amount: sale.totalAmount - totalTaxAmount,
+        amount: htAmount, // Pure HT amount
         taxAmount: totalTaxAmount,
-        totalAmount: sale.totalAmount,
+        totalAmount: htAmount + totalTaxAmount, // HT + TVA (no FODEC in purchase orders)
         deliveryDate: deliveryDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
       };
       

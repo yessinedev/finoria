@@ -432,12 +432,10 @@ export default function SaleForm(props: SaleFormProps) {
                 <span>TVA (par article):</span>
                 <span>{taxAmount.toFixed(3)} DNT</span>
               </div>
-              {fodecTax > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>FODEC ({fodecTax}%):</span>
-                  <span>{fodecAmount.toFixed(3)} DNT</span>
-                </div>
-              )}
+              <div className="flex justify-between text-sm">
+                <span>FODEC ({fodecTax}%):</span>
+                <span>{fodecAmount.toFixed(3)} DNT</span>
+              </div>
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total TTC:</span>

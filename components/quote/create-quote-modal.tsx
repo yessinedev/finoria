@@ -37,9 +37,9 @@ export default function CreateQuoteModal({ open, onClose, clients, products, onC
   const discountedSubtotal = subtotal; // No global discount applied
   // Calculate tax per item based on product TVA rates
   const taxAmount = lineItems.reduce((sum, item) => {
-    // Get product TVA rate (this would need to be fetched from product data)
-    // For now, using a default rate until we implement product TVA fetching
-    const itemTvaRate = 20; // Default rate
+    // Get product TVA rate from the actual product data
+    const product = products.find(p => p.id === item.productId);
+    const itemTvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
     return sum + (item.total * itemTvaRate / 100);
   }, 0);
   const finalTotal = discountedSubtotal + taxAmount;

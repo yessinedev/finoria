@@ -406,10 +406,18 @@ export default function CreditNotes() {
           };
         }) || [];
 
-      // Calculate totals
-      const amount = creditNoteItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-      const totalAmount = creditNoteItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = totalAmount - amount; // Simplified tax calculation
+      // Calculate totals - amount is HT (with discount applied)
+      const amount = creditNoteItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      
+      // Calculate TVA based on product rates
+      let taxAmount = 0;
+      for (const item of creditNoteItems) {
+        const product = products.find(p => p.id === item.productId);
+        const tvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
+        taxAmount += (item.totalPrice * tvaRate) / 100;
+      }
+      
+      const totalAmount = amount + taxAmount;
 
       // Generate a unique credit note number
       // We need to get the last credit note number from the database
@@ -877,7 +885,8 @@ export default function CreditNotes() {
                           <th className="text-left p-2">Produit</th>
                           <th className="text-right p-2">Quantité</th>
                           <th className="text-right p-2">Prix unitaire</th>
-                          <th className="text-right p-2">Total</th>
+                          <th className="text-right p-2">Remise</th>
+                          <th className="text-right p-2">Total HT</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -886,6 +895,7 @@ export default function CreditNotes() {
                             <td className="p-2">{item.productName}</td>
                             <td className="p-2 text-right">{item.quantity}</td>
                             <td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td>
+                            <td className="p-2 text-right">{item.discount ? `${item.discount}%` : '-'}</td>
                             <td className="p-2 text-right">{formatCurrency(item.totalPrice)}</td>
                           </tr>
                         ))}
@@ -897,16 +907,32 @@ export default function CreditNotes() {
                 <div className="flex justify-end">
                   <div className="w-64">
                     <div className="flex justify-between py-1">
-                      <span>Sous-total:</span>
-                      <span>{formatCurrency(selectedCreditNote.amount)}</span>
+                      <span>Sous-total HT:</span>
+                      <span>{formatCurrency(
+                        selectedCreditNote.items.reduce((sum, item) => sum + item.totalPrice, 0)
+                      )}</span>
                     </div>
                     <div className="flex justify-between py-1">
                       <span>TVA:</span>
-                      <span>{formatCurrency(selectedCreditNote.taxAmount)}</span>
+                      <span>{formatCurrency(
+                        selectedCreditNote.items.reduce((sum, item) => {
+                          const product = products.find(p => p.id === item.productId);
+                          const tvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
+                          return sum + (item.totalPrice * tvaRate / 100);
+                        }, 0)
+                      )}</span>
                     </div>
-                    <div className="flex justify-between py-1 font-bold border-t">
-                      <span>Total:</span>
-                      <span>{formatCurrency(selectedCreditNote.totalAmount)}</span>
+                    <div className="flex justify-between py-1 font-bold border-t text-red-600">
+                      <span>Avoir TTC:</span>
+                      <span>-{formatCurrency(
+                        selectedCreditNote.items.reduce((sum, item) => {
+                          const product = products.find(p => p.id === item.productId);
+                          const tvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
+                          const htAmount = item.totalPrice;
+                          const tvaAmount = (htAmount * tvaRate) / 100;
+                          return sum + htAmount + tvaAmount;
+                        }, 0)
+                      )}</span>
                     </div>
                   </div>
                 </div>
