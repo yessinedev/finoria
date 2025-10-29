@@ -4,9 +4,18 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   FileText,
   AlertCircle,
@@ -22,7 +31,7 @@ import {
   Plus,
   Minus,
   Check,
-  Percent
+  Percent,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -49,13 +58,19 @@ export default function SupplierInvoiceGenerator({
   invoiceToEdit,
 }: SupplierInvoiceGeneratorProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"from-order" | "new-invoice" | "from-reception-notes">("from-order");
+  const [activeTab, setActiveTab] = useState<
+    "from-order" | "new-invoice" | "from-reception-notes"
+  >("from-order");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null
+  );
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrder[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<SupplierOrder[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<SupplierOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<SupplierOrder | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     paymentTerms: "30 jours net",
@@ -76,7 +91,9 @@ export default function SupplierInvoiceGenerator({
   const [loading, setLoading] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null); // Add company settings state
   const [receptionNotes, setReceptionNotes] = useState<any[]>([]);
-  const [selectedReceptionNotes, setSelectedReceptionNotes] = useState<number[]>([]);
+  const [selectedReceptionNotes, setSelectedReceptionNotes] = useState<
+    number[]
+  >([]);
   const [loadingReceptionNotes, setLoadingReceptionNotes] = useState(false);
 
   // Clear error when supplier is selected
@@ -89,7 +106,12 @@ export default function SupplierInvoiceGenerator({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [suppliersResult, productsResult, settingsResult, receptionNotesResult] = await Promise.all([
+      const [
+        suppliersResult,
+        productsResult,
+        settingsResult,
+        receptionNotesResult,
+      ] = await Promise.all([
         db.suppliers.getAll(),
         db.products.getAll(),
         db.settings.get(),
@@ -98,14 +120,14 @@ export default function SupplierInvoiceGenerator({
 
       if (suppliersResult.success) setSuppliers(suppliersResult.data || []);
       if (productsResult.success) setProducts(productsResult.data || []);
-      
+
       // Set company settings
       if (settingsResult.success && settingsResult.data) {
         setCompanySettings(settingsResult.data);
         // Use default tax rate instead of company TVA rate
         // taxRate is now calculated per item
       }
-      
+
       // Set reception notes
       if (receptionNotesResult.success && receptionNotesResult.data) {
         setReceptionNotes(receptionNotesResult.data || []);
@@ -130,9 +152,13 @@ export default function SupplierInvoiceGenerator({
 
   const loadInvoiceData = (invoice: any) => {
     // Load existing invoice data for editing
-    setSelectedSupplier(suppliers.find(s => s.id === invoice.supplierId) || null);
+    setSelectedSupplier(
+      suppliers.find((s) => s.id === invoice.supplierId) || null
+    );
     setFormData({
-      dueDate: invoice.dueDate ? new Date(invoice.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      dueDate: invoice.dueDate
+        ? new Date(invoice.dueDate)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       paymentTerms: "30 jours net",
       notes: invoice.notes || "",
       customNumber: invoice.invoiceNumber || "",
@@ -144,7 +170,7 @@ export default function SupplierInvoiceGenerator({
     const supplier = suppliers.find((s) => s.id.toString() === supplierId);
     setSelectedSupplier(supplier || null);
     setError(null);
-    
+
     if (supplier) {
       // Load orders for this supplier
       try {
@@ -161,7 +187,7 @@ export default function SupplierInvoiceGenerator({
     } else {
       setSupplierOrders([]);
     }
-    
+
     // Clear selections when supplier changes
     setSelectedOrders([]);
     setLineItems([]);
@@ -171,10 +197,10 @@ export default function SupplierInvoiceGenerator({
     const order = supplierOrders.find((o) => o.id === orderId);
     setSelectedOrder(order || null);
     setError(null);
-    
+
     // When an order is selected, populate line items
     if (order && order.items) {
-      const items = order.items.map(item => ({
+      const items = order.items.map((item) => ({
         id: Date.now() + Math.random(),
         productId: item.productId,
         productName: item.productName,
@@ -189,13 +215,17 @@ export default function SupplierInvoiceGenerator({
   };
 
   const handleReceptionNoteSelection = (receptionNoteId: number) => {
-    const receptionNote = receptionNotes.find(rn => rn.id === receptionNoteId);
+    const receptionNote = receptionNotes.find(
+      (rn) => rn.id === receptionNoteId
+    );
     if (!receptionNote) return;
 
     // Toggle selection
     if (selectedReceptionNotes.includes(receptionNoteId)) {
       // Remove from selection
-      setSelectedReceptionNotes(selectedReceptionNotes.filter(id => id !== receptionNoteId));
+      setSelectedReceptionNotes(
+        selectedReceptionNotes.filter((id) => id !== receptionNoteId)
+      );
     } else {
       // Add to selection
       setSelectedReceptionNotes([...selectedReceptionNotes, receptionNoteId]);
@@ -207,7 +237,7 @@ export default function SupplierInvoiceGenerator({
       style: "currency",
       currency: "DNT",
       minimumFractionDigits: 3,
-      maximumFractionDigits: 3
+      maximumFractionDigits: 3,
     }).format(amount);
   };
 
@@ -261,7 +291,8 @@ export default function SupplierInvoiceGenerator({
     const product = products.find((p) => p.id === selectedProduct);
     if (!product) return;
 
-    const discountAmount = (product.purchasePriceHT * newItemQuantity * newItemDiscount) / 100;
+    const discountAmount =
+      (product.purchasePriceHT * newItemQuantity * newItemDiscount) / 100;
     const total = product.purchasePriceHT * newItemQuantity - discountAmount;
 
     const item = {
@@ -319,7 +350,7 @@ export default function SupplierInvoiceGenerator({
     // Get product TVA rate (this would need to be fetched from product data)
     // For now, using a default rate until we implement product TVA fetching
     const itemTvaRate = 19; // Default rate
-    return sum + (item.totalPrice * itemTvaRate / 100);
+    return sum + (item.totalPrice * itemTvaRate) / 100;
   }, 0);
   const fodecAmount = (discountedSubtotal * fodecTax) / 100; // Calculate FODEC amount
   const finalTotal = discountedSubtotal + taxAmount + fodecAmount; // Include FODEC in final total
@@ -336,12 +367,13 @@ export default function SupplierInvoiceGenerator({
       if (activeTab === "from-order") {
         // Classic invoice generation from existing order
         if (!selectedOrder) return;
-        
+
         // Always provide a valid invoice number
-        const invoiceNumber = formData.customNumber.trim() !== ""
-          ? formData.customNumber.trim()
-          : generatePreviewInvoiceNumber();
-          
+        const invoiceNumber =
+          formData.customNumber.trim() !== ""
+            ? formData.customNumber.trim()
+            : generatePreviewInvoiceNumber();
+
         const invoiceData = {
           supplierId: selectedOrder.supplierId,
           orderId: selectedOrder.id,
@@ -374,10 +406,13 @@ export default function SupplierInvoiceGenerator({
             description: "Facture générée avec succès",
           });
         } else {
-          setError(result.error || "Erreur lors de la génération de la facture");
+          setError(
+            result.error || "Erreur lors de la génération de la facture"
+          );
           toast({
             title: "Erreur",
-            description: result.error || "Erreur lors de la génération de la facture",
+            description:
+              result.error || "Erreur lors de la génération de la facture",
             variant: "destructive",
           });
         }
@@ -386,9 +421,10 @@ export default function SupplierInvoiceGenerator({
         const invoiceData = {
           supplierId: selectedSupplier!.id,
           orderId: null,
-          invoiceNumber: formData.customNumber.trim() !== "" 
-            ? formData.customNumber.trim() 
-            : generatePreviewInvoiceNumber(),
+          invoiceNumber:
+            formData.customNumber.trim() !== ""
+              ? formData.customNumber.trim()
+              : generatePreviewInvoiceNumber(),
           amount: subtotal,
           taxAmount: taxAmount,
           totalAmount: finalTotal,
@@ -413,33 +449,40 @@ export default function SupplierInvoiceGenerator({
           setError(result.error || "Erreur lors de la création de la facture");
           toast({
             title: "Erreur",
-            description: result.error || "Erreur lors de la création de la facture",
+            description:
+              result.error || "Erreur lors de la création de la facture",
             variant: "destructive",
           });
         }
       } else {
         // Generate invoice from selected reception notes
         // For simplicity, we'll create one invoice with all items from selected reception notes
-        
+
         // Combine all items from selected reception notes
-        const allItems = selectedReceptionNotes.flatMap(noteId => {
-          const note = receptionNotes.find(rn => rn.id === noteId);
+        const allItems = selectedReceptionNotes.flatMap((noteId) => {
+          const note = receptionNotes.find((rn) => rn.id === noteId);
           return note ? note.items || [] : [];
         });
-        
+
         // Calculate totals
-        const totalAmount = allItems.reduce((sum, item) => sum + (item.receivedQuantity * item.unitPrice), 0);
+        const totalAmount = allItems.reduce(
+          (sum, item) => sum + item.receivedQuantity * item.unitPrice,
+          0
+        );
         const taxAmountRN = allItems.reduce((sum, item) => {
           const itemTvaRate = 19; // Default rate
-          return sum + (item.receivedQuantity * item.unitPrice * itemTvaRate / 100);
+          return (
+            sum + (item.receivedQuantity * item.unitPrice * itemTvaRate) / 100
+          );
         }, 0);
         const totalWithTax = totalAmount + taxAmountRN;
-        
+
         // Generate a unique invoice number
-        const invoiceNumber = formData.customNumber.trim() !== "" 
-          ? formData.customNumber.trim() 
-          : generatePreviewInvoiceNumber();
-        
+        const invoiceNumber =
+          formData.customNumber.trim() !== ""
+            ? formData.customNumber.trim()
+            : generatePreviewInvoiceNumber();
+
         // Create invoice
         const invoiceData = {
           supplierId: selectedSupplier!.id,
@@ -452,7 +495,7 @@ export default function SupplierInvoiceGenerator({
           dueDate: formData.dueDate.toISOString(),
           status: "En attente",
           notes: formData.notes,
-          items: allItems.map(item => ({
+          items: allItems.map((item) => ({
             productId: item.productId,
             productName: item.productName,
             quantity: item.receivedQuantity,
@@ -470,13 +513,17 @@ export default function SupplierInvoiceGenerator({
           resetForm();
           toast({
             title: "Succès",
-            description: "Facture créée avec succès à partir des bons de réception",
+            description:
+              "Facture créée avec succès à partir des bons de réception",
           });
         } else {
-          setError(result.error || "Erreur lors de la génération de la facture");
+          setError(
+            result.error || "Erreur lors de la génération de la facture"
+          );
           toast({
             title: "Erreur",
-            description: result.error || "Erreur lors de la génération de la facture",
+            description:
+              result.error || "Erreur lors de la génération de la facture",
             variant: "destructive",
           });
         }
@@ -522,13 +569,14 @@ export default function SupplierInvoiceGenerator({
     if (!validateForm()) {
       return;
     }
-    
+
     // Generate preview based on current workflow
     let previewData;
-    const invoiceNumber = formData.customNumber.trim() !== ""
-      ? formData.customNumber.trim()
-      : generatePreviewInvoiceNumber();
-    
+    const invoiceNumber =
+      formData.customNumber.trim() !== ""
+        ? formData.customNumber.trim()
+        : generatePreviewInvoiceNumber();
+
     if (activeTab === "from-order") {
       // Preview for classic workflow
       if (!selectedOrder) return;
@@ -570,17 +618,22 @@ export default function SupplierInvoiceGenerator({
     } else {
       // Preview for reception notes
       if (!selectedSupplier) return;
-      const allItems = selectedReceptionNotes.flatMap(noteId => {
-        const note = receptionNotes.find(rn => rn.id === noteId);
+      const allItems = selectedReceptionNotes.flatMap((noteId) => {
+        const note = receptionNotes.find((rn) => rn.id === noteId);
         return note ? note.items || [] : [];
       });
-      const totalAmount = allItems.reduce((sum, item) => sum + (item.receivedQuantity * item.unitPrice), 0);
+      const totalAmount = allItems.reduce(
+        (sum, item) => sum + item.receivedQuantity * item.unitPrice,
+        0
+      );
       const taxAmountRN = allItems.reduce((sum, item) => {
         const itemTvaRate = 19; // Default rate
-        return sum + (item.receivedQuantity * item.unitPrice * itemTvaRate / 100);
+        return (
+          sum + (item.receivedQuantity * item.unitPrice * itemTvaRate) / 100
+        );
       }, 0);
       const totalWithTax = totalAmount + taxAmountRN;
-      
+
       previewData = {
         number: invoiceNumber,
         orderId: null,
@@ -598,7 +651,7 @@ export default function SupplierInvoiceGenerator({
         issueDate: new Date().toISOString(),
         dueDate: formData.dueDate.toISOString(),
         notes: formData.notes,
-        items: allItems.map(item => ({
+        items: allItems.map((item) => ({
           productId: item.productId,
           productName: item.productName,
           quantity: item.receivedQuantity,
@@ -608,19 +661,22 @@ export default function SupplierInvoiceGenerator({
         })),
       };
     }
-    
+
     setPreviewInvoice(previewData);
     setShowPreview(true);
   };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) {
-          resetForm();
-          onClose();
-        }
-      }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetForm();
+            onClose();
+          }
+        }}
+      >
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
@@ -641,7 +697,11 @@ export default function SupplierInvoiceGenerator({
               {/* Workflow Selection Tabs */}
               <div className="flex border-b">
                 <button
-                  className={`py-2 px-4 font-medium text-sm ${activeTab === "from-order" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+                  className={`py-2 px-4 font-medium text-sm ${
+                    activeTab === "from-order"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground"
+                  }`}
                   onClick={() => setActiveTab("from-order")}
                 >
                   <div className="flex items-center gap-2">
@@ -650,7 +710,11 @@ export default function SupplierInvoiceGenerator({
                   </div>
                 </button>
                 <button
-                  className={`py-2 px-4 font-medium text-sm ${activeTab === "new-invoice" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+                  className={`py-2 px-4 font-medium text-sm ${
+                    activeTab === "new-invoice"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground"
+                  }`}
                   onClick={() => setActiveTab("new-invoice")}
                 >
                   <div className="flex items-center gap-2">
@@ -659,7 +723,11 @@ export default function SupplierInvoiceGenerator({
                   </div>
                 </button>
                 <button
-                  className={`py-2 px-4 font-medium text-sm ${activeTab === "from-reception-notes" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+                  className={`py-2 px-4 font-medium text-sm ${
+                    activeTab === "from-reception-notes"
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground"
+                  }`}
                   onClick={() => setActiveTab("from-reception-notes")}
                 >
                   <div className="flex items-center gap-2">
@@ -686,14 +754,24 @@ export default function SupplierInvoiceGenerator({
                           label="Commande à facturer"
                           id="order"
                           value={selectedOrder?.id?.toString() || ""}
-                          onChange={(value) => handleOrderSelection(Number(value))}
+                          onChange={(value) =>
+                            handleOrderSelection(Number(value))
+                          }
                           options={supplierOrders}
-                          getOptionLabel={(order) => `Commande #${order.id} - ${new Date(order.orderDate).toLocaleDateString("fr-FR")} - ${formatCurrency(order.totalAmount + (order.taxAmount || 0))}`}
+                          getOptionLabel={(order) =>
+                            `Commande #${order.id} - ${new Date(
+                              order.orderDate
+                            ).toLocaleDateString("fr-FR")} - ${formatCurrency(
+                              order.totalAmount + (order.taxAmount || 0)
+                            )}`
+                          }
                           getOptionValue={(order) => order.id.toString()}
                           required
                         />
                         {formErrors.orderId && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.orderId}</p>
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.orderId}
+                          </p>
                         )}
 
                         {selectedOrder && (
@@ -701,29 +779,48 @@ export default function SupplierInvoiceGenerator({
                             <CardHeader className="pb-3">
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4 text-primary" />
-                                <span className="font-medium">Détails de la commande</span>
+                                <span className="font-medium">
+                                  Détails de la commande
+                                </span>
                               </div>
                             </CardHeader>
                             <CardContent className="space-y-3">
                               <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div>
-                                  <p className="text-muted-foreground">Fournisseur:</p>
-                                  <p className="font-medium">{selectedOrder.supplierName}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Entreprise:</p>
-                                  <p className="font-medium">{selectedOrder.supplierCompany}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Date de commande:</p>
+                                  <p className="text-muted-foreground">
+                                    Fournisseur:
+                                  </p>
                                   <p className="font-medium">
-                                    {new Date(selectedOrder.orderDate).toLocaleDateString("fr-FR")}
+                                    {selectedOrder.supplierName}
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Montant TTC:</p>
+                                  <p className="text-muted-foreground">
+                                    Entreprise:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedOrder.supplierCompany}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Date de commande:
+                                  </p>
+                                  <p className="font-medium">
+                                    {new Date(
+                                      selectedOrder.orderDate
+                                    ).toLocaleDateString("fr-FR")}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Montant TTC:
+                                  </p>
                                   <p className="font-medium text-primary">
-                                    {formatCurrency(selectedOrder.totalAmount + selectedOrder.taxAmount)}
+                                    {formatCurrency(
+                                      selectedOrder.totalAmount +
+                                        selectedOrder.taxAmount
+                                    )}
                                   </p>
                                 </div>
                               </div>
@@ -732,17 +829,26 @@ export default function SupplierInvoiceGenerator({
                                   Articles ({selectedOrder?.items?.length}):
                                 </p>
                                 <div className="space-y-1">
-                                  {selectedOrder?.items?.slice(0, 3).map((item) => (
-                                    <div key={item.id} className="text-xs bg-background/50 p-2 rounded">
-                                      <span className="font-medium">{item.productName}</span>
-                                      <span className="text-muted-foreground ml-2">
-                                        {item.quantity}x {formatCurrency(item.unitPrice)}
-                                      </span>
-                                    </div>
-                                  ))}
+                                  {selectedOrder?.items
+                                    ?.slice(0, 3)
+                                    .map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className="text-xs bg-background/50 p-2 rounded"
+                                      >
+                                        <span className="font-medium">
+                                          {item.productName}
+                                        </span>
+                                        <span className="text-muted-foreground ml-2">
+                                          {item.quantity}x{" "}
+                                          {formatCurrency(item.unitPrice)}
+                                        </span>
+                                      </div>
+                                    ))}
                                   {(selectedOrder?.items?.length ?? 0) > 3 && (
                                     <p className="text-xs text-muted-foreground">
-                                      +{(selectedOrder?.items?.length ?? 0) - 3} autre(s) article(s)
+                                      +{(selectedOrder?.items?.length ?? 0) - 3}{" "}
+                                      autre(s) article(s)
                                     </p>
                                   )}
                                 </div>
@@ -768,12 +874,16 @@ export default function SupplierInvoiceGenerator({
                           value={selectedSupplier?.id?.toString() || ""}
                           onChange={handleSupplierSelection}
                           options={suppliers}
-                          getOptionLabel={(supplier) => `${supplier.name} (${supplier.company})`}
+                          getOptionLabel={(supplier) =>
+                            `${supplier.name} (${supplier.company})`
+                          }
                           getOptionValue={(supplier) => supplier.id.toString()}
                           required
                         />
                         {formErrors.supplierId && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.supplierId}</p>
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.supplierId}
+                          </p>
                         )}
 
                         {selectedSupplier && (
@@ -782,19 +892,33 @@ export default function SupplierInvoiceGenerator({
                               <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                   <p className="text-muted-foreground">Nom:</p>
-                                  <p className="font-medium">{selectedSupplier.name}</p>
+                                  <p className="font-medium">
+                                    {selectedSupplier.name}
+                                  </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Entreprise:</p>
-                                  <p className="font-medium">{selectedSupplier.company}</p>
+                                  <p className="text-muted-foreground">
+                                    Entreprise:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedSupplier.company}
+                                  </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Email:</p>
-                                  <p className="font-medium">{selectedSupplier.email}</p>
+                                  <p className="text-muted-foreground">
+                                    Email:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedSupplier.email}
+                                  </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Téléphone:</p>
-                                  <p className="font-medium">{selectedSupplier.phone}</p>
+                                  <p className="text-muted-foreground">
+                                    Téléphone:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedSupplier.phone}
+                                  </p>
                                 </div>
                               </div>
                             </CardContent>
@@ -816,7 +940,12 @@ export default function SupplierInvoiceGenerator({
                         label="Numéro de facture (optionnel)"
                         id="customNumber"
                         value={formData.customNumber}
-                        onChange={(e) => setFormData({ ...formData, customNumber: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            customNumber: e.target.value,
+                          })
+                        }
                         placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
                         error={formErrors.number}
                       />
@@ -829,7 +958,7 @@ export default function SupplierInvoiceGenerator({
                               variant="outline"
                               className={cn(
                                 "w-full justify-start text-left font-normal",
-                                !formData.dueDate && "text-muted-foreground",
+                                !formData.dueDate && "text-muted-foreground"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -844,12 +973,17 @@ export default function SupplierInvoiceGenerator({
                             <Calendar
                               mode="single"
                               selected={formData.dueDate}
-                              onSelect={(date) => date && setFormData({ ...formData, dueDate: date })}
+                              onSelect={(date) =>
+                                date &&
+                                setFormData({ ...formData, dueDate: date })
+                              }
                             />
                           </PopoverContent>
                         </Popover>
                         {formErrors.dueDate && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.dueDate}</p>
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.dueDate}
+                          </p>
                         )}
                       </div>
 
@@ -857,7 +991,9 @@ export default function SupplierInvoiceGenerator({
                         label="Conditions de paiement"
                         id="paymentTerms"
                         value={formData.paymentTerms}
-                        onChange={(value) => setFormData({ ...formData, paymentTerms: value })}
+                        onChange={(value) =>
+                          setFormData({ ...formData, paymentTerms: value })
+                        }
                         options={paymentTermsOptions}
                         getOptionLabel={(opt) => opt.label}
                         getOptionValue={(opt) => opt.value}
@@ -867,7 +1003,9 @@ export default function SupplierInvoiceGenerator({
                         label="Notes (optionnel)"
                         id="notes"
                         value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, notes: e.target.value })
+                        }
                         textarea
                       />
                     </CardContent>
@@ -882,7 +1020,9 @@ export default function SupplierInvoiceGenerator({
                       <FinancialSummaryCard
                         subtotal={selectedOrder.totalAmount}
                         tax={selectedOrder.taxAmount}
-                        total={selectedOrder.totalAmount + selectedOrder.taxAmount}
+                        total={
+                          selectedOrder.totalAmount + selectedOrder.taxAmount
+                        }
                         dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                         paymentTerms={formData.paymentTerms}
                         currency="DNT"
@@ -905,10 +1045,20 @@ export default function SupplierInvoiceGenerator({
                               label="Produit"
                               id="product"
                               value={selectedProduct?.toString() || ""}
-                              onChange={(value) => setSelectedProduct(Number(value) || null)}
-                              options={products.filter(p => p.isActive)}
-                              getOptionLabel={(product) => `${product.name} (${product.purchasePriceHT ? product.purchasePriceHT.toFixed(3) : "N/A"} DNT)`}
-                              getOptionValue={(product) => product.id.toString()}
+                              onChange={(value) =>
+                                setSelectedProduct(Number(value) || null)
+                              }
+                              options={products.filter((p) => p.isActive)}
+                              getOptionLabel={(product) =>
+                                `${product.name} (${
+                                  product.purchasePriceHT
+                                    ? product.purchasePriceHT.toFixed(3)
+                                    : "N/A"
+                                } DNT)`
+                              }
+                              getOptionValue={(product) =>
+                                product.id.toString()
+                              }
                               placeholder="Sélectionner un produit"
                             />
                           </div>
@@ -920,7 +1070,9 @@ export default function SupplierInvoiceGenerator({
                               min="1"
                               value={newItemQuantity}
                               onChange={(e) =>
-                                setNewItemQuantity(Number.parseInt(e.target.value) || 1)
+                                setNewItemQuantity(
+                                  Number.parseInt(e.target.value) || 1
+                                )
                               }
                               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             />
@@ -946,9 +1098,15 @@ export default function SupplierInvoiceGenerator({
                             <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
                               {selectedProduct
                                 ? (() => {
-                                    const product = products.find((p) => p.id === selectedProduct);
-                                    return product 
-                                      ? `${product.purchasePriceHT ? product.purchasePriceHT.toFixed(3) : "N/A"} DNT`
+                                    const product = products.find(
+                                      (p) => p.id === selectedProduct
+                                    );
+                                    return product
+                                      ? `${
+                                          product.purchasePriceHT
+                                            ? product.purchasePriceHT.toFixed(3)
+                                            : "N/A"
+                                        } DNT`
                                       : "0.000 DNT";
                                   })()
                                 : "0.000 DNT"}
@@ -973,8 +1131,12 @@ export default function SupplierInvoiceGenerator({
                                 <tr>
                                   <th className="text-left p-2">Article</th>
                                   <th className="text-right p-2 w-20">Qté</th>
-                                  <th className="text-right p-2 w-24">Prix unit.</th>
-                                  <th className="text-right p-2 w-20">Remise %</th>
+                                  <th className="text-right p-2 w-24">
+                                    Prix unit.
+                                  </th>
+                                  <th className="text-right p-2 w-20">
+                                    Remise %
+                                  </th>
                                   <th className="text-right p-2 w-24">Total</th>
                                   <th className="text-right p-2 w-16"></th>
                                 </tr>
@@ -984,7 +1146,9 @@ export default function SupplierInvoiceGenerator({
                                   <tr key={item.id} className="border-t">
                                     <td className="p-2">
                                       <div>
-                                        <div className="font-medium">{item.productName}</div>
+                                        <div className="font-medium">
+                                          {item.productName}
+                                        </div>
                                         <div className="text-sm text-muted-foreground">
                                           {item.description}
                                         </div>
@@ -1015,7 +1179,8 @@ export default function SupplierInvoiceGenerator({
                                           updateLineItem(
                                             item.id,
                                             "unitPrice",
-                                            Number.parseFloat(e.target.value) || 0
+                                            Number.parseFloat(e.target.value) ||
+                                              0
                                           )
                                         }
                                         className="w-24 md:w-28 text-right border rounded px-2 py-1 min-w-[100px]"
@@ -1031,7 +1196,8 @@ export default function SupplierInvoiceGenerator({
                                           updateLineItem(
                                             item.id,
                                             "discount",
-                                            Number.parseFloat(e.target.value) || 0
+                                            Number.parseFloat(e.target.value) ||
+                                              0
                                           )
                                         }
                                         className="w-20 md:w-24 text-right border rounded px-2 py-1 min-w-[80px]"
@@ -1071,14 +1237,16 @@ export default function SupplierInvoiceGenerator({
                                   max="100"
                                   value={fodecTax}
                                   onChange={(e) =>
-                                    setFodecTax(Number.parseFloat(e.target.value) || 0)
+                                    setFodecTax(
+                                      Number.parseFloat(e.target.value) || 0
+                                    )
                                   }
                                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Totals Summary */}
                           <div className="space-y-2 pt-4">
                             <div className="flex justify-between text-sm">
@@ -1117,101 +1285,189 @@ export default function SupplierInvoiceGenerator({
                       <CardContent className="flex-1 flex flex-col">
                         {selectedSupplier ? (
                           <>
-                            {receptionNotes.filter(rn => rn.supplierId === selectedSupplier.id).length > 0 ? (
+                            {receptionNotes.filter(
+                              (rn) => rn.supplierId === selectedSupplier.id
+                            ).length > 0 ? (
                               <div className="flex-1 overflow-auto space-y-2">
-                                {receptionNotes.filter(rn => rn.supplierId === selectedSupplier.id).map((rn) => (
-                                  <div 
-                                    key={rn.id} 
-                                    className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                                      selectedReceptionNotes.includes(rn.id)
-                                        ? "border-primary bg-primary/10"
-                                        : "hover:bg-muted"
-                                    }`}
-                                    onClick={() => handleReceptionNoteSelection(rn.id)}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        {selectedReceptionNotes.includes(rn.id) ? (
-                                          <Check className="h-4 w-4 text-primary" />
-                                        ) : (
-                                          <div className="h-4 w-4 border rounded"></div>
-                                        )}
-                                        <div>
-                                          <div className="font-medium">{rn.receptionNumber}</div>
-                                          <div className="text-sm text-muted-foreground">
-                                            {new Date(rn.receptionDate).toLocaleDateString("fr-FR")} • {formatCurrency(rn.items?.reduce((sum, item) => sum + (item.receivedQuantity * item.unitPrice), 0) || 0)}
+                                {receptionNotes
+                                  .filter(
+                                    (rn) =>
+                                      rn.supplierId === selectedSupplier.id
+                                  )
+                                  .map((rn) => (
+                                    <div
+                                      key={rn.id}
+                                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                                        selectedReceptionNotes.includes(rn.id)
+                                          ? "border-primary bg-primary/10"
+                                          : "hover:bg-muted"
+                                      }`}
+                                      onClick={() =>
+                                        handleReceptionNoteSelection(rn.id)
+                                      }
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          {selectedReceptionNotes.includes(
+                                            rn.id
+                                          ) ? (
+                                            <Check className="h-4 w-4 text-primary" />
+                                          ) : (
+                                            <div className="h-4 w-4 border rounded"></div>
+                                          )}
+                                          <div>
+                                            <div className="font-medium">
+                                              {rn.receptionNumber}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                              {new Date(
+                                                rn.receptionDate
+                                              ).toLocaleDateString(
+                                                "fr-FR"
+                                              )}{" "}
+                                              •{" "}
+                                              {formatCurrency(
+                                                rn.items?.reduce(
+                                                  (sum, item) =>
+                                                    sum +
+                                                    item.receivedQuantity *
+                                                      item.unitPrice,
+                                                  0
+                                                ) || 0
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="text-sm font-medium">
+                                            {rn.items?.length || 0} article
+                                            {rn.items?.length !== 1 ? "s" : ""}
                                           </div>
                                         </div>
                                       </div>
-                                      <div className="text-right">
-                                        <div className="text-sm font-medium">
-                                          {rn.items?.length || 0} article{rn.items?.length !== 1 ? 's' : ''}
-                                        </div>
-                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  ))}
                               </div>
                             ) : (
                               <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                                Aucun bon de réception trouvé pour ce fournisseur
+                                Aucun bon de réception trouvé pour ce
+                                fournisseur
                               </div>
                             )}
                           </>
                         ) : (
                           <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                            Veuillez sélectionner un fournisseur pour voir ses bons de réception
+                            Veuillez sélectionner un fournisseur pour voir ses
+                            bons de réception
                           </div>
                         )}
 
                         {/* Selected Reception Notes Summary */}
                         {selectedReceptionNotes.length > 0 && (
                           <div className="mt-4 pt-4 border-t">
-                            <h3 className="font-medium mb-2">Bons de réception sélectionnés:</h3>
+                            <h3 className="font-medium mb-2">
+                              Bons de réception sélectionnés:
+                            </h3>
                             <div className="space-y-2">
                               {selectedReceptionNotes.map((noteId) => {
-                                const note = receptionNotes.find(rn => rn.id === noteId);
+                                const note = receptionNotes.find(
+                                  (rn) => rn.id === noteId
+                                );
                                 if (!note) return null;
-                                
-                                const total = note.items?.reduce((sum, item) => sum + (item.receivedQuantity * item.unitPrice), 0) || 0;
-                                
+
+                                const total =
+                                  note.items?.reduce(
+                                    (sum, item) =>
+                                      sum +
+                                      item.receivedQuantity * item.unitPrice,
+                                    0
+                                  ) || 0;
+
                                 return (
-                                  <div key={note.id} className="flex justify-between items-center bg-muted p-2 rounded">
+                                  <div
+                                    key={note.id}
+                                    className="flex justify-between items-center bg-muted p-2 rounded"
+                                  >
                                     <div>
-                                      <span className="font-medium">{note.receptionNumber}</span>
+                                      <span className="font-medium">
+                                        {note.receptionNumber}
+                                      </span>
                                       <span className="text-sm text-muted-foreground ml-2">
-                                        ({note.items?.length || 0} article{note.items?.length !== 1 ? 's' : ''})
+                                        ({note.items?.length || 0} article
+                                        {note.items?.length !== 1 ? "s" : ""})
                                       </span>
                                     </div>
                                     <div className="text-right">
                                       <div>{formatCurrency(total)}</div>
                                       <div className="text-xs text-muted-foreground">
-                                        {new Date(note.receptionDate).toLocaleDateString("fr-FR")}
+                                        {new Date(
+                                          note.receptionDate
+                                        ).toLocaleDateString("fr-FR")}
                                       </div>
                                     </div>
                                   </div>
                                 );
                               })}
                             </div>
-                            
+
                             {/* Financial Summary */}
                             <div className="mt-4">
                               <FinancialSummaryCard
-                                subtotal={selectedReceptionNotes.reduce((sum, noteId) => {
-                                  const note = receptionNotes.find(rn => rn.id === noteId);
-                                  return sum + (note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0);
-                                }, 0)}
-                                tax={selectedReceptionNotes.reduce((sum, noteId) => {
-                                  const note = receptionNotes.find(rn => rn.id === noteId);
-                                  const itemsTotal = note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0;
-                                  return sum + (itemsTotal * 0.19); // 19% TVA
-                                }, 0)}
-                                total={selectedReceptionNotes.reduce((sum, noteId) => {
-                                  const note = receptionNotes.find(rn => rn.id === noteId);
-                                  const itemsTotal = note?.items?.reduce((itemSum, item) => itemSum + (item.receivedQuantity * item.unitPrice), 0) || 0;
-                                  return sum + (itemsTotal * 1.19); // 19% TVA
-                                }, 0)}
-                                dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
+                                subtotal={selectedReceptionNotes.reduce(
+                                  (sum, noteId) => {
+                                    const note = receptionNotes.find(
+                                      (rn) => rn.id === noteId
+                                    );
+                                    return (
+                                      sum +
+                                      (note?.items?.reduce(
+                                        (itemSum, item) =>
+                                          itemSum +
+                                          item.receivedQuantity *
+                                            item.unitPrice,
+                                        0
+                                      ) || 0)
+                                    );
+                                  },
+                                  0
+                                )}
+                                tax={selectedReceptionNotes.reduce(
+                                  (sum, noteId) => {
+                                    const note = receptionNotes.find(
+                                      (rn) => rn.id === noteId
+                                    );
+                                    const itemsTotal =
+                                      note?.items?.reduce(
+                                        (itemSum, item) =>
+                                          itemSum +
+                                          item.receivedQuantity *
+                                            item.unitPrice,
+                                        0
+                                      ) || 0;
+                                    return sum + itemsTotal * 0.19; // 19% TVA
+                                  },
+                                  0
+                                )}
+                                total={selectedReceptionNotes.reduce(
+                                  (sum, noteId) => {
+                                    const note = receptionNotes.find(
+                                      (rn) => rn.id === noteId
+                                    );
+                                    const itemsTotal =
+                                      note?.items?.reduce(
+                                        (itemSum, item) =>
+                                          itemSum +
+                                          item.receivedQuantity *
+                                            item.unitPrice,
+                                        0
+                                      ) || 0;
+                                    return sum + itemsTotal * 1.19; // 19% TVA
+                                  },
+                                  0
+                                )}
+                                dueDate={formData.dueDate.toLocaleDateString(
+                                  "fr-FR"
+                                )}
                                 paymentTerms={formData.paymentTerms}
                                 currency="DNT"
                               />
@@ -1229,7 +1485,11 @@ export default function SupplierInvoiceGenerator({
           {/* Action Buttons */}
           <div className="flex-shrink-0 border-t pt-4">
             <div className="flex flex-col sm:flex-row gap-3 justify-between">
-              <Button variant="outline" onClick={onClose} disabled={isGenerating}>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isGenerating}
+              >
                 <X className="h-4 w-4 mr-2" />
                 Annuler
               </Button>
@@ -1238,15 +1498,31 @@ export default function SupplierInvoiceGenerator({
                 <Button
                   variant="outline"
                   onClick={handleShowPreview}
-                  disabled={isGenerating || (activeTab === "from-order" ? !selectedOrder : (!selectedSupplier || (activeTab === "new-invoice" ? lineItems.length === 0 : selectedReceptionNotes.length === 0)))}
+                  disabled={
+                    isGenerating ||
+                    (activeTab === "from-order"
+                      ? !selectedOrder
+                      : !selectedSupplier ||
+                        (activeTab === "new-invoice"
+                          ? lineItems.length === 0
+                          : selectedReceptionNotes.length === 0))
+                  }
                   className="border-primary text-primary hover:bg-primary/10"
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   Aperçu
                 </Button>
-                <Button 
-                  onClick={handleGenerateInvoice} 
-                  disabled={isGenerating || (activeTab === "from-order" ? !selectedOrder : (!selectedSupplier || (activeTab === "new-invoice" ? lineItems.length === 0 : selectedReceptionNotes.length === 0)))}
+                <Button
+                  onClick={handleGenerateInvoice}
+                  disabled={
+                    isGenerating ||
+                    (activeTab === "from-order"
+                      ? !selectedOrder
+                      : !selectedSupplier ||
+                        (activeTab === "new-invoice"
+                          ? lineItems.length === 0
+                          : selectedReceptionNotes.length === 0))
+                  }
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {isGenerating ? "Génération..." : "Générer la facture"}
