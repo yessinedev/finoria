@@ -1,5 +1,4 @@
-"use client";
-
+"use client"
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-input";
@@ -54,6 +53,7 @@ export default function SettingsPage() {
     taxId: "",
     taxStatus: "",
     tvaNumber: "",
+    timbreFiscal: 1.000,
   });
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function SettingsPage() {
             c.tvaNumber !== null && c.tvaNumber !== undefined
               ? String(c.tvaNumber)
               : "",
-
+          timbreFiscal: c.timbreFiscal !== undefined ? c.timbreFiscal : 1.000,
         });
       } else {
         console.log("No company data received or invalid company data");
@@ -104,6 +104,7 @@ export default function SettingsPage() {
           taxId: "",
           taxStatus: "",
           tvaNumber: "",
+          timbreFiscal: 1.000,
         });
       }
     };
@@ -179,6 +180,11 @@ export default function SettingsPage() {
               : "";
             return taxFields.tvaNumber !== companyValue;
           }
+          // Special handling for timbreFiscal
+          if (key === 'timbreFiscal') {
+            const companyValue = company.timbreFiscal !== undefined ? company.timbreFiscal : 1.000;
+            return taxFields.timbreFiscal !== companyValue;
+          }
           return taxFields[key as keyof typeof taxFields] !==
             (company[key as keyof CompanyData] ?? "");
         }
@@ -201,6 +207,7 @@ export default function SettingsPage() {
         taxFields.tvaNumber !== ""
           ? parseInt(taxFields.tvaNumber) || null
           : null,
+      timbreFiscal: taxFields.timbreFiscal,
     };
 
     console.log("Saving company data:", updateData);
@@ -236,6 +243,7 @@ export default function SettingsPage() {
             result.data.tvaNumber !== null && result.data.tvaNumber !== undefined
               ? String(result.data.tvaNumber)
               : "",
+          timbreFiscal: result.data.timbreFiscal !== undefined ? result.data.timbreFiscal : 1.000,
         });
       }
       
@@ -661,6 +669,40 @@ export default function SettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Timbre Fiscal Field */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="timbreFiscal"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    Timbre Fiscal (DNT)
+                  </Label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      id="timbreFiscal"
+                      value={taxFields.timbreFiscal}
+                      onChange={(e) =>
+                        setTaxFields((prev) => ({
+                          ...prev,
+                          timbreFiscal: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      step="0.001"
+                      min="0"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="1.000"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-muted-foreground text-sm">DNT</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Montant du timbre fiscal à appliquer sur chaque facture
+                  </p>
+                </div>
+
                 {taxFields.taxStatus === "assujetti" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -679,7 +721,6 @@ export default function SettingsPage() {
                         required
                       />
                     </div>
-
                   </div>
                 )}
               </div>
