@@ -120,10 +120,15 @@ export default function InventoryList() {
   };
 
   // Get stock status badge
-  const getStockStatus = (stock: number) => {
-    if (stock <= 0) {
+  const getStockStatus = (product: Product) => {
+    // Service products don't have stock (case-insensitive check)
+    if (product.category?.toLowerCase() === "service") {
+      return <Badge variant="secondary">Service</Badge>;
+    }
+    
+    if (product.stock <= 0) {
       return <Badge variant="destructive">Rupture</Badge>;
-    } else if (stock <= 5) {
+    } else if (product.stock <= 5) {
       return <Badge variant="outline" className="border-yellow-500 text-yellow-500">Stock faible</Badge>;
     } else {
       return <Badge variant="default">En stock</Badge>;
@@ -250,7 +255,10 @@ export default function InventoryList() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentProducts.map((product) => (
+                  currentProducts.map((product) => {
+                    // Debug: log product data
+                    console.log('Product:', product.name, 'Category:', product.category, 'Stock:', product.stock, 'Stock type:', typeof product.stock);
+                    return (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">
                         <div>
@@ -270,15 +278,13 @@ export default function InventoryList() {
                         {product.purchasePriceHT ? `${product.purchasePriceHT.toFixed(3)} DNT` : "N/A"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{product.stock}</span>
-                        </div>
+                        {product.category?.toLowerCase() === "service" ? "Service" : product.stock}
                       </TableCell>
                       <TableCell>
-                        {getStockStatus(product.stock)}
+                        {getStockStatus(product)}
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 )}
               </TableBody>
             </Table>
