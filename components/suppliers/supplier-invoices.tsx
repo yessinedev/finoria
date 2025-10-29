@@ -17,11 +17,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { 
   Search, 
   Plus, 
@@ -30,13 +28,10 @@ import {
   FileText, 
   Eye, 
   Download, 
-  Printer,
   AlertTriangle,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  CheckCircle,
-  Clock
 } from "lucide-react";
 import { db } from "@/lib/database";
 import { SupplierInvoice, Supplier, SupplierOrder, Product } from "@/types/types";
@@ -51,26 +46,13 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { pdf } from "@react-pdf/renderer";
-import SupplierInvoicePDF, { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
+import { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
 import SupplierInvoicePreview from "./supplier-invoice-preview";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { supplierInvoiceSchema, SupplierInvoiceFormData } from "@/lib/validation/schemas";
+import SupplierInvoiceGenerator from "./SupplierInvoiceGenerator";
+
+import { supplierInvoiceSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
-import { StatusDropdown } from "@/components/common/StatusDropdown";
 import { EntitySelect } from "@/components/common/EntitySelect";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function SupplierInvoices() {
   const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
@@ -80,6 +62,7 @@ export default function SupplierInvoices() {
   const [filteredInvoices, setFilteredInvoices] = useState<SupplierInvoice[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const [currentInvoice, setCurrentInvoice] = useState<SupplierInvoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
@@ -104,7 +87,7 @@ export default function SupplierInvoices() {
   
   const { toast } = useToast();
 
-  // Form state
+  // Form state for edit dialog only
   const [formData, setFormData] = useState({
     supplierId: 0,
     orderId: 0,
@@ -117,23 +100,8 @@ export default function SupplierInvoices() {
     paymentDate: "",
   });
 
-  // Invoice items state
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
-  const [productSearchOpen, setProductSearchOpen] = useState(false);
-  const [itemQuantity, setItemQuantity] = useState(1);
-  const [itemUnitPrice, setItemUnitPrice] = useState(0);
-  const [itemDiscount, setItemDiscount] = useState(0); // Add discount state
-  
-  // Reception notes state
-  const [receptionNotes, setReceptionNotes] = useState<any[]>([]);
-  const [selectedReceptionNotes, setSelectedReceptionNotes] = useState<number[]>([]);
-  const [loadingReceptionNotes, setLoadingReceptionNotes] = useState(false);
-  const [activeTab, setActiveTab] = useState("order");
-
-  // Validation errors state
+  // Validation errors state for edit dialog only
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [itemErrors, setItemErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadInvoices();
@@ -175,32 +143,6 @@ export default function SupplierInvoices() {
     setCurrentPage(1); // Reset to first page when filters change
   }, [searchTerm, invoices, sortConfig]);
 
-  // Update form data when order is selected
-  useEffect(() => {
-    if (activeTab === "order" && formData.orderId && formData.orderId !== 0) {
-      const selectedOrder = orders.find(order => order.id === formData.orderId);
-      console.log('Selected order:', selectedOrder); // Debug log
-      if (selectedOrder && selectedOrder.items) {
-        console.log('Order items:', selectedOrder.items); // Debug log
-        // Convert order items to invoice items
-        const invoiceItemsFromOrder = selectedOrder.items.map(item => ({
-          id: Date.now() + Math.random(), // Temporary ID
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discount: item.discount || 0,
-          totalPrice: item.totalPrice,
-        }));
-        console.log('Invoice items from order:', invoiceItemsFromOrder); // Debug log
-        setInvoiceItems(invoiceItemsFromOrder);
-      }
-    } else if (activeTab !== "order") {
-      // Clear items when not on order tab
-      setInvoiceItems([]);
-    }
-  }, [formData.orderId, orders, activeTab]);
-
   const loadInvoices = async () => {
     try {
       setIsLoading(true);
@@ -237,9 +179,7 @@ export default function SupplierInvoices() {
   const loadOrders = async () => {
     try {
       const response = await db.supplierOrders.getAll();
-      console.log('Orders response:', response); // Debug log
       if (response.success && response.data) {
-        console.log('Orders data:', response.data); // Debug log
         setOrders(response.data);
       }
     } catch (error) {
@@ -277,26 +217,6 @@ export default function SupplierInvoices() {
     }
   };
 
-  const loadReceptionNotes = async () => {
-    setLoadingReceptionNotes(true);
-    try {
-      const response = await db.receptionNotes.getAll();
-      if (response.success && response.data) {
-        setReceptionNotes(response.data);
-      }
-    } catch (error) {
-      console.error("Failed to load reception notes:", error);
-      toast({
-        title: "Erreur",
-        description: "Erreur lors du chargement des bons de réception",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingReceptionNotes(false);
-    }
-  };
-
-
   const validateForm = () => {
     try {
       // Validate main form data
@@ -308,102 +228,22 @@ export default function SupplierInvoices() {
       
       supplierInvoiceSchema.parse(mainData);
       
-      // Additional validation: if no order is selected and no reception notes, we need at least one item
-      if ((!formData.orderId || formData.orderId === 0) && 
-          selectedReceptionNotes.length === 0 && 
-          (!invoiceItems || invoiceItems.length === 0)) {
-        toast({
-          title: "Erreur de validation",
-          description: "Veuillez ajouter au moins un article ou sélectionner un bon de réception",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
       setErrors({});
-      setItemErrors({});
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        const newItemErrors: Record<string, string> = {};
         
         error.errors.forEach((err) => {
           if (err.path.length > 0) {
-            // Handle items array errors
-            if (err.path[0] === 'items' && err.path.length > 2) {
-              const itemIndex = err.path[1];
-              const fieldName = err.path[2];
-              newItemErrors[`${itemIndex}-${fieldName}`] = err.message;
-            } else if (err.path[0] !== 'items') {
-              newErrors[err.path[0]] = err.message;
-            }
+            newErrors[err.path[0]] = err.message;
           }
         });
         
         setErrors(newErrors);
-        setItemErrors(newItemErrors);
         return false;
       }
       return false;
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!validateForm()) {
-      toast({
-        title: "Erreur de validation",
-        description: "Veuillez corriger les erreurs dans le formulaire",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Calculate totals using product TVA rates
-      let subtotal = 0;
-      let taxAmount = 0;
-      
-      // Calculate subtotal and tax amount based on individual product TVA rates
-      for (const item of invoiceItems) {
-        subtotal += item.totalPrice;
-        // Calculate tax per item using actual product TVA rate
-        const product = products.find(p => p.id === item.productId);
-        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
-        taxAmount += (item.totalPrice * itemTvaRate / 100);
-      }
-      
-      const totalAmount = subtotal + taxAmount;
-      
-      const invoiceData = {
-        ...formData,
-        supplierId: Number(formData.supplierId),
-        orderId: formData.orderId ? Number(formData.orderId) : null,
-        amount: Number(subtotal.toFixed(3)),
-        taxAmount: Number(taxAmount.toFixed(3)),
-        totalAmount: Number(totalAmount.toFixed(3)),
-        items: invoiceItems,
-      };
-
-      const response = await db.supplierInvoices.create(invoiceData);
-      if (response.success && response.data) {
-        // Refresh invoices to get the complete data with supplier information
-        await loadInvoices();
-        resetForm();
-        setIsDialogOpen(false);
-        toast({
-          title: "Succès",
-          description: "Facture fournisseur créée avec succès",
-        });
-      } else {
-        throw new Error(response.error || "Erreur lors de la création");
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Erreur lors de la création de la facture",
-        variant: "destructive",
-      });
     }
   };
 
@@ -420,29 +260,13 @@ export default function SupplierInvoices() {
     }
     
     try {
-      // Calculate totals using product TVA rates
-      let subtotal = 0;
-      let taxAmount = 0;
-      
-      // Calculate subtotal and tax amount based on individual product TVA rates
-      for (const item of invoiceItems) {
-        subtotal += item.totalPrice;
-        // Calculate tax per item using actual product TVA rate
-        const product = products.find(p => p.id === item.productId);
-        const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
-        taxAmount += (item.totalPrice * itemTvaRate / 100);
-      }
-      
-      const totalAmount = subtotal + taxAmount;
-
       const invoiceData = {
         ...formData,
         supplierId: Number(formData.supplierId),
         orderId: formData.orderId ? Number(formData.orderId) : null,
-        amount: Number(subtotal.toFixed(3)),
-        taxAmount: Number(taxAmount.toFixed(3)),
-        totalAmount: Number(totalAmount.toFixed(3)),
-        items: invoiceItems,
+        amount: Number(formData.amount.toFixed(3)),
+        taxAmount: Number(formData.taxAmount.toFixed(3)),
+        totalAmount: Number(formData.totalAmount.toFixed(3)),
       };
 
       const response = await db.supplierInvoices.update(currentInvoice.id, invoiceData);
@@ -502,38 +326,12 @@ export default function SupplierInvoices() {
       dueDate: "",
       paymentDate: "",
     });
-    setInvoiceItems([]);
-    setSelectedProduct(null);
-    setItemQuantity(1);
-    setItemUnitPrice(0);
-    setItemDiscount(0);
-    setSelectedReceptionNotes([]);
-    setActiveTab("order");
     setCurrentInvoice(null);
     setErrors({});
-    setItemErrors({});
-  };
-
-  // Function to generate a unique invoice number
-  const generateInvoiceNumber = () => {
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, "0");
-    return `FF-${year}${month}-${random}`;
   };
 
   const openCreateDialog = () => {
-    resetForm();
-    // Generate auto invoice number
-    setFormData(prev => ({
-      ...prev,
-      invoiceNumber: generateInvoiceNumber()
-    }));
-    // Load reception notes
-    loadReceptionNotes();
-    setIsDialogOpen(true);
+    setIsGeneratorOpen(true);
   };
 
   const openEditDialog = (invoice: SupplierInvoice) => {
@@ -548,13 +346,8 @@ export default function SupplierInvoices() {
       dueDate: invoice.dueDate ? invoice.dueDate.split("T")[0] : "",
       paymentDate: invoice.paymentDate ? invoice.paymentDate.split("T")[0] : "",
     });
-    setInvoiceItems(invoice.items || []);
     setCurrentInvoice(invoice);
     setErrors({});
-    setItemErrors({});
-    setItemDiscount(0);
-    setSelectedReceptionNotes([]);
-    setActiveTab("order");
     setIsDialogOpen(true);
   };
 
@@ -567,12 +360,8 @@ export default function SupplierInvoices() {
     e.preventDefault();
     if (currentInvoice) {
       handleUpdate();
-    } else {
-      handleCreate();
     }
   };
-
-  // Status functionality removed
 
   const handleViewInvoice = (invoice: SupplierInvoice) => {
     setSelectedInvoice(invoice);
@@ -599,8 +388,6 @@ export default function SupplierInvoices() {
       });
     }
   };
-
-  // Status functionality removed
 
   // Inline editing functions
   const startEditing = (invoiceId: number, field: string, value: string) => {
@@ -652,107 +439,6 @@ export default function SupplierInvoices() {
     setEditingValue("");
   };
 
-  const addInvoiceItem = () => {
-    if (!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0) return;
-
-    const product = products.find(p => p.id === selectedProduct);
-    if (!product) return;
-
-    // Calculate discounted price
-    const discountAmount = (itemUnitPrice * itemQuantity * itemDiscount) / 100;
-    const totalPrice = (itemUnitPrice * itemQuantity) - discountAmount;
-
-    const newItem = {
-      id: Date.now(), // Temporary ID for new items
-      productId: selectedProduct,
-      productName: product.name,
-      quantity: itemQuantity,
-      unitPrice: itemUnitPrice,
-      discount: itemDiscount, // Use the discount value
-      totalPrice: parseFloat(totalPrice.toFixed(3)),
-    };
-
-    setInvoiceItems([...invoiceItems, newItem]);
-    setSelectedProduct(null);
-    setItemQuantity(1);
-    setItemUnitPrice(0);
-    setItemDiscount(0); // Reset discount to 0
-    setItemErrors({}); // Clear item errors when adding new item
-  };
-
-  const removeInvoiceItem = (id: number) => {
-    setInvoiceItems(invoiceItems.filter(item => item.id !== id));
-  };
-
-  const handleReceptionNoteSelection = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedReceptionNotes(prev => [...prev, id]);
-      
-      // Add items from the selected reception note to the invoice
-      const selectedNote = receptionNotes.find(note => note.id === id);
-      if (selectedNote) {
-        const newItems = selectedNote.items.map((item: any) => ({
-          id: Date.now() + Math.random(), // Temporary ID
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.receivedQuantity,
-          unitPrice: item.unitPrice,
-          discount: 0,
-          totalPrice: item.receivedQuantity * item.unitPrice,
-        }));
-        
-        setInvoiceItems(prev => [...prev, ...newItems]);
-        
-        // Set supplier if not already set
-        if (!formData.supplierId && selectedNote.supplierId) {
-          setFormData(prev => ({
-            ...prev,
-            supplierId: selectedNote.supplierId
-          }));
-        }
-      }
-    } else {
-      setSelectedReceptionNotes(prev => prev.filter(noteId => noteId !== id));
-      
-      // Remove items from the deselected reception note
-      const selectedNote = receptionNotes.find(note => note.id === id);
-      if (selectedNote) {
-        const noteItemProductIds = selectedNote.items.map((item: any) => item.productId);
-        setInvoiceItems(prev => 
-          prev.filter(item => !noteItemProductIds.includes(item.productId))
-        );
-      }
-    }
-  };
-
-  const isReceptionNoteSelected = (id: number) => {
-    return selectedReceptionNotes.includes(id);
-  };
-
-  const isItemFromReceptionNote = (item: any) => {
-    // Items from reception notes would have been added with receivedQuantity
-    // We can check if the item's productId matches any item in selected reception notes
-    for (const noteId of selectedReceptionNotes) {
-      const note = receptionNotes.find(n => n.id === noteId);
-      if (note) {
-        for (const noteItem of note.items) {
-          if (noteItem.productId === item.productId) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  };
-
-  const canDeleteItem = (item: any) => {
-    // Can delete if no order is selected, no reception notes are selected, 
-    // or the item is not from a selected reception note
-    return (!formData.orderId || formData.orderId === 0) && 
-           (selectedReceptionNotes.length === 0 || !isItemFromReceptionNote(item));
-  };
-
-
   // Sorting functions
   const requestSort = (key: keyof SupplierInvoice) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -769,12 +455,6 @@ export default function SupplierInvoices() {
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  // Calculate statistics
-  const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-  const paidAmount = 0; // Status functionality removed
-  const pendingAmount = 0; // Status functionality removed
-  const overdueAmount = 0; // Status functionality removed
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -800,7 +480,14 @@ export default function SupplierInvoices() {
         </Button>
       </div>
 
-      {/* Dialog for creating/editing invoices */}
+      {/* Supplier Invoice Generator Dialog */}
+      <SupplierInvoiceGenerator
+        isOpen={isGeneratorOpen}
+        onClose={() => setIsGeneratorOpen(false)}
+        onInvoiceGenerated={loadInvoices}
+      />
+
+      {/* Dialog for editing invoices (keeping the existing edit dialog) */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -897,275 +584,19 @@ Commande #{order.id} - {order.supplierName}
 
             {/* Status functionality removed */}
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="order">Commande fournisseur</TabsTrigger>
-                <TabsTrigger value="manual">Sélection manuelle</TabsTrigger>
-                <TabsTrigger value="reception">Bons de réception</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="order" className="mt-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="orderId">Commande associée</Label>
-                    <Select
-                      value={formData.orderId.toString()}
-                      onValueChange={(value) => setFormData({ ...formData, orderId: Number(value) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une commande fournisseur" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Aucune</SelectItem>
-                        {orders.map((order) => (
-                          <SelectItem key={order.id} value={order.id.toString()}>
-                            Commande #{order.id} - {order.supplierName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {formData.orderId && formData.orderId !== 0 ? (
-                    <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
-                      Les articles sont automatiquement remplis à partir de la commande sélectionnée.
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
-                      Veuillez sélectionner une commande fournisseur pour remplir automatiquement les articles.
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="manual" className="mt-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Articles</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                      <div className="md:col-span-5">
-                        <Label>Produit</Label>
-                        <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={productSearchOpen}
-                              className="w-full justify-between"
-                            >
-                              {selectedProduct
-                                ? products.find((product) => product.id === selectedProduct)?.name
-                                : "Sélectionner un produit..."}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Rechercher un produit..." />
-                              <CommandList>
-                                <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
-                                <CommandGroup>
-                                  {products.map((product) => (
-                                    <CommandItem
-                                      key={product.id}
-                                      value={product.name}
-                                      onSelect={() => {
-                                        setSelectedProduct(product.id);
-                                        setItemUnitPrice(product.purchasePriceHT || 0);
-                                        setProductSearchOpen(false);
-                                      }}
-                                    >
-                                      <div className="flex flex-col flex-1">
-                                        <div className="flex items-center justify-between">
-                                          <span className="font-medium">
-                                            {product.name}
-                                          </span>
-                                        </div>
-                                        <span className="text-sm text-muted-foreground">
-                                          Achat: {product.purchasePriceHT ? product.purchasePriceHT.toFixed(3) : 'N/A'} DNT • Stock: {product.stock}
-                                        </span>
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label htmlFor="itemQuantity">Quantité</Label>
-                        <Input
-                          id="itemQuantity"
-                          type="number"
-                          min="1"
-                          value={itemQuantity}
-                          onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
-                          className="min-w-[100px]"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
-                        <Input
-                          id="itemUnitPrice"
-                          type="number"
-                          step="0.001"
-                          min="0"
-                          value={itemUnitPrice}
-                          onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
-                          className="min-w-[120px]"
-                        />
-                      </div>
-                      <div className="md:col-span-1">
-                        <Label htmlFor="itemDiscount">Remise %</Label>
-                        <Input
-                          id="itemDiscount"
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={itemDiscount}
-                          onChange={(e) => setItemDiscount(Number(e.target.value) || 0)}
-                          className="min-w-[80px]"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label>Total</Label>
-                        <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                          {((itemQuantity * itemUnitPrice) - ((itemQuantity * itemUnitPrice * itemDiscount) / 100)).toFixed(3)} DNT
-                        </div>
-                      </div>
-                      <div className="md:col-span-1">
-                        <Button
-                          type="button"
-                          onClick={addInvoiceItem}
-                          className="w-full"
-                          disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="reception" className="mt-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Bons de réception</Label>
-                    {loadingReceptionNotes ? (
-                      <div className="text-center py-2 text-muted-foreground">Chargement des bons de réception...</div>
-                    ) : receptionNotes.length === 0 ? (
-                      <div className="text-center py-2 text-muted-foreground">Aucun bon de réception disponible</div>
-                    ) : (
-                      <div className="border rounded-md max-h-40 overflow-y-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-10"></TableHead>
-                              <TableHead>N° Bon de réception</TableHead>
-                              <TableHead>Fournisseur</TableHead>
-                              <TableHead className="w-24">Date</TableHead>
-                              <TableHead className="w-20">Articles</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {receptionNotes.map((note) => (
-                              <TableRow key={note.id}>
-                                <TableCell>
-                                  <input
-                                    type="checkbox"
-                                    checked={isReceptionNoteSelected(note.id)}
-                                    onChange={(e) => handleReceptionNoteSelection(note.id, e.target.checked)}
-                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                </TableCell>
-                                <TableCell className="font-medium">{note.receptionNumber}</TableCell>
-                                <TableCell>{note.supplierName}</TableCell>
-                                <TableCell>{new Date(note.receptionDate).toLocaleDateString('fr-FR')}</TableCell>
-                                <TableCell>{note.items.length}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                    {selectedReceptionNotes.length > 0 && (
-                      <div className="text-sm text-muted-foreground">
-                        {selectedReceptionNotes.length} bon(s) de réception sélectionné(s)
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            {/* Invoice Items Table */}
-            <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produit</TableHead>
-                    <TableHead className="w-20">Quantité</TableHead>
-                    <TableHead className="w-24">Prix unit.</TableHead>
-                    <TableHead className="w-20">Remise %</TableHead>
-                    <TableHead className="w-24">Total</TableHead>
-                    {/* Only show delete button column when there are items that can be deleted */}
-                    {invoiceItems.some(item => canDeleteItem(item)) && (
-                      <TableHead className="w-16"></TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoiceItems.map((item, index) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.productName}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.unitPrice.toFixed(3)} DNT</TableCell>
-                      <TableCell>{item.discount.toFixed(2)}%</TableCell>
-                      <TableCell>{item.totalPrice.toFixed(3)} DNT</TableCell>
-                      {/* Only show delete button for items that can be deleted */}
-                      {canDeleteItem(item) && (
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeInvoiceItem(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Totals Section */}
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Sous-total:</span>
-                <span>{invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(3)} DNT</span>
+                <span>{formData.amount.toFixed(3)} DNT</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>TVA (par article):</span>
-                <span>{(invoiceItems.reduce((sum, item) => {
-                  // Get product TVA rate from product data
-                  const product = products.find(p => p.id === item.productId);
-                  const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
-                  return sum + (item.totalPrice * itemTvaRate / 100);
-                }, 0)).toFixed(3)} DNT</span>
+                <span>TVA:</span>
+                <span>{formData.taxAmount.toFixed(3)} DNT</span>
               </div>
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total TTC:</span>
-                  <span>{(invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0) + invoiceItems.reduce((sum, item) => {
-                    // Get product TVA rate from product data
-                    const product = products.find(p => p.id === item.productId);
-                    const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0;
-                    return sum + (item.totalPrice * itemTvaRate / 100);
-                  }, 0)).toFixed(3)} DNT</span>
+                  <span>{formData.totalAmount.toFixed(3)} DNT</span>
                 </div>
               </div>
             </div>
