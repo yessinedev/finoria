@@ -18,6 +18,10 @@ module.exports = {
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
+    // Preserve user data during updates
+    differentialPackage: true,
+    // Don't delete user data
+    deleteAppDataOnUninstall: false
   },
   // Disable Linux and macOS builds
   linux: {

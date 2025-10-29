@@ -5,7 +5,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const invoices = db
         .prepare(
           `
-        SELECT i.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress
+        SELECT i.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress, c.taxId as clientTaxId
         FROM invoices i
         JOIN clients c ON i.clientId = c.id
         ORDER BY i.issueDate DESC
@@ -33,8 +33,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-invoice", async (event, invoice) => {
     try {
       const insertInvoice = db.prepare(`
-        INSERT INTO invoices (number, saleId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (number, saleId, quoteId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const insertItem = db.prepare(`
@@ -42,12 +42,49 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
+      // Calculate total tax amount for the invoice based on individual product TVA rates
+      let totalTaxAmount = 0;
+      
+      // If we're creating from a sale, get the items from the sale
+      if (invoice.saleId) {
+        const getSaleItems = db.prepare(`
+          SELECT si.*, t.rate as tvaRate 
+          FROM sale_items si 
+          LEFT JOIN products p ON si.productId = p.id 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE si.saleId = ?
+        `);
+        const saleItems = getSaleItems.all(invoice.saleId);
+        
+        for (const item of saleItems) {
+          const itemTvaRate = item.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+        }
+      } else if (invoice.items && Array.isArray(invoice.items)) {
+        // Calculate tax for directly passed items
+        const getProductTva = db.prepare(`
+          SELECT t.rate as tvaRate 
+          FROM products p 
+          LEFT JOIN tva t ON p.tvaId = t.id 
+          WHERE p.id = ?
+        `);
+        
+        for (const item of invoice.items) {
+          const productTva = getProductTva.get(item.productId);
+          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
+          totalTaxAmount += itemTaxAmount;
+        }
+      }
+      
       const result = insertInvoice.run(
         invoice.number,
-        invoice.saleId,
+        invoice.saleId || null, // Allow null saleId
+        invoice.quoteId || null, // Allow null quoteId
         invoice.clientId,
         invoice.amount,
-        invoice.taxAmount,
+        totalTaxAmount,
         invoice.totalAmount,
         invoice.status,
         invoice.dueDate
@@ -55,8 +92,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const invoiceId = result.lastInsertRowid;
       
-      // Get sale items and convert them to invoice items
+      // Insert items - either from sale, quote, or directly passed items
       if (invoice.saleId) {
+        // Get sale items and convert them to invoice items
         const getSaleItems = db.prepare(`
           SELECT * FROM sale_items WHERE saleId = ?
         `);
@@ -64,6 +102,19 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         // Insert sale items as invoice items
         for (const item of saleItems) {
+          insertItem.run(
+            invoiceId,
+            item.productId,
+            item.productName,
+            item.quantity,
+            item.unitPrice,
+            item.discount || 0,
+            item.totalPrice
+          );
+        }
+      } else if (invoice.items && Array.isArray(invoice.items)) {
+        // Insert directly passed items
+        for (const item of invoice.items) {
           insertItem.run(
             invoiceId,
             item.productId,
@@ -168,7 +219,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       // Get the sale with client information
       const sale = db.prepare(`
-        SELECT s.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress
+        SELECT s.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress, c.taxId as clientTaxId
         FROM sales s
         JOIN clients c ON s.clientId = c.id
         WHERE s.id = ?
@@ -258,6 +309,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         clientName: sale.clientName,
         clientCompany: sale.clientCompany,
         clientAddress: sale.clientAddress,
+        clientTaxId: sale.clientTaxId, // Include client tax ID
         items: items
       };
       

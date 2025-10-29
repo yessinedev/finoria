@@ -5,13 +5,13 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag } from "lucide-react"
+import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag, Percent, MoreVertical } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import ProductFormModal from "@/components/products/ProductFormModal"
 import CategoryManagerModal from "@/components/category/CategoryManagerModal"
 import { db } from "@/lib/database"
-import type { Product, Category } from "@/types/types"
+import type { Product, Category, TVA } from "@/types/types"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -23,10 +23,20 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import { ActionsDropdown } from "@/components/common/actions-dropdown"
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [tvaRates, setTvaRates] = useState<TVA[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -37,13 +47,22 @@ export default function Products() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
   const { toast } = useToast()
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    price: 0,
     category: "",
     stock: 0,
     isActive: true,
+    reference: "",
+    tvaId: undefined,
+    sellingPriceHT: undefined,
+    sellingPriceTTC: undefined,
+    purchasePriceHT: undefined,
+    weightedAverageCostHT: undefined,
   })
 
   // Data table configuration
@@ -58,6 +77,13 @@ export default function Products() {
     filters,
   } = useDataTable(products, { key: "name", direction: "asc" })
 
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
 
   const columns = [
     {
@@ -92,9 +118,22 @@ export default function Products() {
     },
     {
       key: "price" as keyof Product,
-      label: "Prix",
+      label: "Prix de vente",
       sortable: true,
-      render: (value: number) => `${value.toFixed(3)} TND`,
+      render: (value: number, product: Product) => {
+        // Use sellingPriceTTC if available, otherwise fall back to sellingPriceHT
+        const price = product.sellingPriceTTC ?? product.sellingPriceHT ?? 0;
+        return price ? `${price.toFixed(2)} DNT` : "—";
+      },
+    },
+    {
+      key: "purchasePrice" as keyof Product,
+      label: "Prix d'achat",
+      sortable: true,
+      render: (value: number, product: Product) => {
+        const price = product.purchasePriceHT ?? 0;
+        return price ? `${price.toFixed(2)} DNT` : "—";
+      },
     },
     {
       key: "stock" as keyof Product,
@@ -136,7 +175,11 @@ export default function Products() {
     setError(null)
 
     try {
-      const [productsResult, categoriesResult] = await Promise.all([db.products.getAll(), db.categories.getAll()])
+      const [productsResult, categoriesResult, tvaResult] = await Promise.all([
+        db.products.getAll(), 
+        db.categories.getAll(),
+        db.tva.getAll()
+      ])
 
       if (productsResult.success) {
         setProducts(productsResult.data || [])
@@ -148,6 +191,12 @@ export default function Products() {
         setCategories(categoriesResult.data || [])
       } else {
         setError(categoriesResult.error || "Erreur lors du chargement des catégories")
+      }
+      
+      if (tvaResult.success) {
+        setTvaRates(tvaResult.data || [])
+      } else {
+        setError(tvaResult.error || "Erreur lors du chargement des taux de TVA")
       }
     } catch (error) {
       setError("Erreur inattendue lors du chargement")
@@ -196,7 +245,19 @@ export default function Products() {
   }
 
   const resetForm = () => {
-    setFormData({ name: "", description: "", price: 0, category: "", stock: 0, isActive: true })
+    setFormData({ 
+      name: "", 
+      description: "", 
+      category: "", 
+      stock: 0, 
+      isActive: true,
+      reference: "",
+      tvaId: undefined,
+      sellingPriceHT: undefined,
+      sellingPriceTTC: undefined,
+      purchasePriceHT: undefined,
+      weightedAverageCostHT: undefined,
+    })
     setEditingProduct(null)
     setIsDialogOpen(false)
     setError(null)
@@ -207,10 +268,16 @@ export default function Products() {
     setFormData({
       name: product.name,
       description: product.description,
-      price: product.price,
+
       category: product.category,
       stock: product.stock,
       isActive: product.isActive,
+      reference: product.reference || "",
+      tvaId: product.tvaId,
+      sellingPriceHT: product.sellingPriceHT,
+      sellingPriceTTC: product.sellingPriceTTC,
+      purchasePriceHT: product.purchasePriceHT,
+      weightedAverageCostHT: product.weightedAverageCostHT,
     })
     setIsDialogOpen(true)
   }
@@ -257,17 +324,25 @@ export default function Products() {
   }
 
   const renderActions = (product: Product) => (
-    <div className="flex justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => toggleProductStatus(product.id)} className="text-xs">
-        {product.isActive ? "Désactiver" : "Activer"}
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDelete(product)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: product.isActive ? "Désactiver" : "Activer",
+          onClick: () => toggleProductStatus(product.id),
+        },
+        {
+          label: "Modifier",
+          icon: <Edit className="h-4 w-4" />,
+          onClick: () => handleEdit(product),
+        },
+        {
+          label: "Supprimer",
+          icon: <Trash2 className="h-4 w-4" />,
+          onClick: () => handleDelete(product),
+          className: "text-red-600",
+        },
+      ]}
+    />
   )
 
   if (loading) {
@@ -313,6 +388,7 @@ export default function Products() {
             onSubmit={handleProductFormSubmit}
             editingProduct={editingProduct}
             categories={categories}
+            tvaRates={tvaRates}
             saving={saving}
             error={error}
             formData={formData}
@@ -336,7 +412,7 @@ export default function Products() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={filteredProducts}
+            data={currentProducts}
             columns={columns}
             sortConfig={sortConfig}
             searchTerm={searchTerm}
@@ -349,6 +425,44 @@ export default function Products() {
             emptyMessage="Aucun produit trouvé"
             actions={renderActions}
           />
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredProducts.length)} sur {filteredProducts.length} produits
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => paginate(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => paginate(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => paginate(currentPage + 1)}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
       

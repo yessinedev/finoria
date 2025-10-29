@@ -19,7 +19,6 @@ const initialData: OnboardingData = {
     taxId: "",
     taxStatus: "",
     tvaNumber: undefined,
-    tvaRate: undefined,
   },
   
 }

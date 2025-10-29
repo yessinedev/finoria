@@ -18,6 +18,7 @@
 /out/
 
 /dist
+database.db
 
 # production
 /build

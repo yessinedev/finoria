@@ -18,10 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle } from "lucide-react";
+import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle, Percent, Image as ImageIcon } from "lucide-react";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
+import VatManagement from "./VatManagement";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -47,12 +48,12 @@ export default function SettingsPage() {
     website: "",
     city: "",
     country: "",
+    logo: "",
   });
   const [taxFields, setTaxFields] = useState({
     taxId: "",
     taxStatus: "",
     tvaNumber: "",
-    tvaRate: "",
   });
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function SettingsPage() {
       // If your IPC returns { data: company }
       const c = res?.data;
       console.log("company: ", res);
-      if (c) {
+      if (c && c.id) {
         console.log("Company data received:", c);
         setCompany(c);
         setCompanyFields({
@@ -74,6 +75,7 @@ export default function SettingsPage() {
           website: c.website || "",
           city: c.city || "",
           country: c.country || "",
+          logo: c.logo || "",
         });
         setTaxFields({
           taxId: c.taxId || "",
@@ -82,13 +84,27 @@ export default function SettingsPage() {
             c.tvaNumber !== null && c.tvaNumber !== undefined
               ? String(c.tvaNumber)
               : "",
-          tvaRate:
-            c.tvaRate !== null && c.tvaRate !== undefined
-              ? String(c.tvaRate)
-              : "",
+
         });
       } else {
-        console.log("No company data received");
+        console.log("No company data received or invalid company data");
+        // Initialize with empty company data
+        setCompany(null);
+        setCompanyFields({
+          name: "",
+          address: "",
+          phone: "",
+          email: "",
+          website: "",
+          city: "",
+          country: "",
+          logo: "",
+        });
+        setTaxFields({
+          taxId: "",
+          taxStatus: "",
+          tvaNumber: "",
+        });
       }
     };
 
@@ -140,23 +156,43 @@ export default function SettingsPage() {
   };
 
   const handleSaveSettings = async () => {
-    if (!company) return;
+    // Don't return early if there's no company - we should create one in that case
     // Only save if something changed
-    const companyChanged = Object.keys(companyFields).some(
-      (key) =>
-        companyFields[key as keyof typeof companyFields] !==
-        (company[key as keyof CompanyData] || "")
-    );
-    const taxChanged = Object.keys(taxFields).some(
-      (key) =>
-        taxFields[key as keyof typeof taxFields] !==
-        (company[key as keyof CompanyData] || "")
-    );
+    let companyChanged = false;
+    let taxChanged = false;
+    
+    if (company) {
+      // Check if company fields changed
+      companyChanged = Object.keys(companyFields).some(
+        (key) =>
+          companyFields[key as keyof typeof companyFields] !==
+          (company[key as keyof CompanyData] ?? "")
+      );
+      
+      // Check if tax fields changed (using correct field mapping)
+      taxChanged = Object.keys(taxFields).some(
+        (key) => {
+          // Special handling for tvaNumber since it's stored as a number in company but string in taxFields
+          if (key === 'tvaNumber') {
+            const companyValue = company.tvaNumber !== null && company.tvaNumber !== undefined 
+              ? String(company.tvaNumber) 
+              : "";
+            return taxFields.tvaNumber !== companyValue;
+          }
+          return taxFields[key as keyof typeof taxFields] !==
+            (company[key as keyof CompanyData] ?? "");
+        }
+      );
+    } else {
+      // If there's no company, we should create one
+      companyChanged = true;
+    }
+    
     if (!companyChanged && !taxChanged) return;
 
     setIsSubmitting(true);
 
-    // Prepare the data for update
+    // Prepare the data for update/create
     const updateData = {
       ...companyFields,
       taxId: taxFields.taxId,
@@ -165,16 +201,44 @@ export default function SettingsPage() {
         taxFields.tvaNumber !== ""
           ? parseInt(taxFields.tvaNumber) || null
           : null,
-      tvaRate:
-        taxFields.tvaRate !== "" ? parseInt(taxFields.tvaRate) || null : null,
     };
 
-    console.log("Updating company with data:", updateData);
+    console.log("Saving company data:", updateData);
 
-    const result = await db.settings.update(company.id, updateData);
-    console.log("Update result:", result);
-
+    let result;
+    if (company && company.id) {
+      // Update existing company
+      result = await db.settings.update(company.id, updateData);
+    } else {
+      // Create new company
+      result = await db.settings.create(updateData);
+    }
+    
     if (result.success) {
+      // Update local state with the new/updated company data
+      if (result.data) {
+        setCompany(result.data);
+        // Update form fields to match saved data
+        setCompanyFields({
+          name: result.data.name || "",
+          address: result.data.address || "",
+          phone: result.data.phone || "",
+          email: result.data.email || "",
+          website: result.data.website || "",
+          city: result.data.city || "",
+          country: result.data.country || "",
+          logo: result.data.logo || "",
+        });
+        setTaxFields({
+          taxId: result.data.taxId || "",
+          taxStatus: result.data.taxStatus || "",
+          tvaNumber:
+            result.data.tvaNumber !== null && result.data.tvaNumber !== undefined
+              ? String(result.data.tvaNumber)
+              : "",
+        });
+      }
+      
       toast({
         title: "Succès",
         description: "Paramètres enregistrés avec succès",
@@ -187,8 +251,6 @@ export default function SettingsPage() {
       });
     }
 
-    console.log("Company Settings:", companyFields);
-    console.log("Tax Settings:", taxFields);
     setIsSubmitting(false);
   };
 
@@ -271,6 +333,42 @@ export default function SettingsPage() {
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier image valide",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Erreur",
+        description: "La taille de l'image ne doit pas dépasser 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageData = e.target?.result as string;
+      setCompanyFields(prev => ({ ...prev, logo: imageData }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setCompanyFields(prev => ({ ...prev, logo: "" }));
   };
 
   useEffect(() => {
@@ -387,16 +485,6 @@ export default function SettingsPage() {
                 Installer la mise à jour ({updateInfo?.version})
               </Button>
             )}
-            <Button
-              onClick={handleSaveSettings}
-              disabled={isSubmitting}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {isSubmitting
-                ? "Enregistrement..."
-                : "Enregistrer les modifications"}
-            </Button>
           </div>
 
           {/* Company Information */}
@@ -434,6 +522,24 @@ export default function SettingsPage() {
                   className="md:col-span-2"
                 />
                 <FormInput
+                  label="Ville"
+                  id="city"
+                  value={companyFields.city}
+                  onChange={(value) =>
+                    setCompanyFields((prev) => ({ ...prev, city: value }))
+                  }
+                  placeholder="Paris"
+                />
+                <FormInput
+                  label="Pays"
+                  id="country"
+                  value={companyFields.country}
+                  onChange={(value) =>
+                    setCompanyFields((prev) => ({ ...prev, country: value }))
+                  }
+                  placeholder="France"
+                />
+                <FormInput
                   label="Numéro de téléphone"
                   id="phone"
                   value={companyFields.phone}
@@ -451,6 +557,56 @@ export default function SettingsPage() {
                   }
                   placeholder="https://votreentreprise.com"
                 />
+              </div>
+              
+              {/* Logo Upload Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-foreground">
+                    Logo de l'entreprise
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      id="logo-upload"
+                    />
+                    <label
+                      htmlFor="logo-upload"
+                      className="cursor-pointer inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                    >
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      Choisir un logo
+                    </label>
+                    {companyFields.logo && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={removeLogo}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Supprimer
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Formats acceptés: JPG, PNG, GIF. Taille maximale: 2MB
+                  </p>
+                </div>
+                
+                {companyFields.logo && (
+                  <div className="flex items-center justify-center">
+                    <div className="border rounded-lg p-2 bg-muted">
+                      <img 
+                        src={companyFields.logo} 
+                        alt="Company Logo" 
+                        className="max-h-24 max-w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -523,22 +679,7 @@ export default function SettingsPage() {
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <FormInput
-                        label="Taux de TVA"
-                        type="number"
-                        id="tvaRate"
-                        value={taxFields.tvaRate?.toString() || ""}
-                        onChange={(value) =>
-                          setTaxFields((prev) => ({
-                            ...prev,
-                            tvaRate: value,
-                          }))
-                        }
-                        placeholder="19"
-                        required
-                      />
-                    </div>
+
                   </div>
                 )}
               </div>
@@ -557,6 +698,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* VAT Management */}
+          <VatManagement />
 
           {/* Save Button */}
         </div>

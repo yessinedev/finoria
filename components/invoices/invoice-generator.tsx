@@ -1,42 +1,50 @@
-"use client"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+"use client";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   FileText,
   AlertCircle,
   CalendarIcon,
   Building2,
-  CreditCard,
   Calculator,
   Wand2,
   Eye,
   Save,
   X,
-} from "lucide-react"
-import { format } from "date-fns"
-import { fr } from "date-fns/locale"
-import { cn } from "@/lib/utils"
-import { db } from "@/lib/database"
-import type { Sale } from "@/types/types"
-import { FormField } from "@/components/common/FormField"
-import { EntitySelect } from "@/components/common/EntitySelect"
-import { FinancialSummaryCard } from "@/components/common/FinancialSummaryCard"
-import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
-import { Label } from "@/components/ui/label"
-import { invoiceSchema } from "@/lib/validation/schemas"
-import { z } from "zod"
-import { useToast } from "@/hooks/use-toast"
+} from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { db } from "@/lib/database";
+import type { Sale } from "@/types/types";
+import { FormField } from "@/components/common/FormField";
+import { EntitySelect } from "@/components/common/EntitySelect";
+import { FinancialSummaryCard } from "@/components/common/FinancialSummaryCard";
+import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal";
+import { Label } from "@/components/ui/label";
+import { invoiceSchema } from "@/lib/validation/schemas";
+import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvoiceGeneratorProps {
-  isOpen: boolean
-  onClose: () => void
-  onInvoiceGenerated: () => void
-  availableSales: Sale[]
+  isOpen: boolean;
+  onClose: () => void;
+  onInvoiceGenerated: () => void;
+  availableSales: Sale[];
 }
 
 export default function InvoiceGenerator({
@@ -45,19 +53,19 @@ export default function InvoiceGenerator({
   onInvoiceGenerated,
   availableSales,
 }: InvoiceGeneratorProps) {
-  const { toast } = useToast()
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
+  const { toast } = useToast();
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [formData, setFormData] = useState({
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     paymentTerms: "30 jours net",
     notes: "",
     customNumber: "",
-  })
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
-  const [previewInvoice, setPreviewInvoice] = useState<any>(null)
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState<any>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Clear error when sale is selected
   useEffect(() => {
@@ -69,11 +77,11 @@ export default function InvoiceGenerator({
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: "TND",
+      currency: "DNT",
       minimumFractionDigits: 3,
-      maximumFractionDigits: 3
-    }).format(amount)
-  }
+      maximumFractionDigits: 3,
+    }).format(amount);
+  };
 
   const paymentTermsOptions = [
     { value: "15 jours net", label: "15 jours net" },
@@ -82,7 +90,7 @@ export default function InvoiceGenerator({
     { value: "60 jours net", label: "60 jours net" },
     { value: "Paiement comptant", label: "Paiement comptant" },
     { value: "Paiement à réception", label: "Paiement à réception" },
-  ]
+  ];
 
   const validateForm = () => {
     try {
@@ -92,12 +100,15 @@ export default function InvoiceGenerator({
       }
 
       const invoiceData = {
-        number: formData.customNumber.trim() !== "" ? formData.customNumber.trim() : generatePreviewInvoiceNumber(),
+        number:
+          formData.customNumber.trim() !== ""
+            ? formData.customNumber.trim()
+            : generatePreviewInvoiceNumber(),
         saleId: selectedSale.id,
         clientId: selectedSale.clientId,
-        amount: selectedSale.totalAmount,
-        taxAmount: selectedSale.taxAmount,
-        totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+        amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+        taxAmount: selectedSale.taxAmount, // TVA amount
+        totalAmount: selectedSale.totalAmount, // TTC amount
         status: "En attente",
         issueDate: new Date().toISOString(),
         dueDate: formData.dueDate.toISOString(),
@@ -122,109 +133,113 @@ export default function InvoiceGenerator({
   };
 
   const handleSaleSelection = (saleId: string) => {
-    const sale = availableSales.find((s) => s.id.toString() === saleId)
-    setSelectedSale(sale || null)
-    setError(null)
-  }
+    const sale = availableSales.find((s) => s.id.toString() === saleId);
+    setSelectedSale(sale || null);
+    setError(null);
+  };
 
   const handleGenerateInvoice = async () => {
     if (!validateForm()) {
       return;
     }
 
-    setIsGenerating(true)
-    setError(null)
+    setIsGenerating(true);
+    setError(null);
 
     try {
       // Always provide a valid invoice number
-      const invoiceNumber = formData.customNumber.trim() !== ""
-        ? formData.customNumber.trim()
-        : generatePreviewInvoiceNumber();
+      const invoiceNumber =
+        formData.customNumber.trim() !== ""
+          ? formData.customNumber.trim()
+          : generatePreviewInvoiceNumber();
       const invoiceData = {
         number: invoiceNumber,
         saleId: selectedSale.id,
         dueDate: formData.dueDate.toISOString(),
-        amount: selectedSale.totalAmount,
-        taxAmount: selectedSale.taxAmount,
-        totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+        amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+        taxAmount: selectedSale.taxAmount, // TVA amount
+        totalAmount: selectedSale.totalAmount, // TTC amount
         clientId: selectedSale.clientId,
         status: "En attente",
         notes: formData.notes,
       };
 
-      const result = await db.invoices.create(invoiceData)
+      const result = await db.invoices.create(invoiceData);
       if (result.success) {
-        onInvoiceGenerated()
-        onClose()
+        onInvoiceGenerated();
+        onClose();
         // Reset form
-        setSelectedSale(null)
+        setSelectedSale(null);
         setFormData({
           dueDate: new Date(Date.now()),
           paymentTerms: "30 jours net",
           notes: "",
           customNumber: "",
-        })
+        });
         setFormErrors({});
         toast({
           title: "Succès",
           description: "Facture générée avec succès",
         });
       } else {
-        setError(result.error || "Erreur lors de la génération de la facture")
+        setError(result.error || "Erreur lors de la génération de la facture");
         toast({
           title: "Erreur",
-          description: result.error || "Erreur lors de la génération de la facture",
+          description:
+            result.error || "Erreur lors de la génération de la facture",
           variant: "destructive",
         });
       }
     } catch (error) {
-      setError("Erreur inattendue lors de la génération")
+      setError("Erreur inattendue lors de la génération");
       toast({
         title: "Erreur",
         description: "Erreur inattendue lors de la génération",
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   const generatePreviewInvoiceNumber = () => {
-    const year = new Date().getFullYear()
-    const month = String(new Date().getMonth() + 1).padStart(2, "0")
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, "0");
     const random = Math.floor(Math.random() * 1000)
       .toString()
-      .padStart(3, "0")
-    return `FAC-${year}${month}-${random}`
-  }
+      .padStart(3, "0");
+    return `FAC-${year}${month}-${random}`;
+  };
 
   const handleShowPreview = () => {
     if (!validateForm()) {
       return;
     }
-    
-    if (!selectedSale) return
+
+    if (!selectedSale) return;
     // Prepare a preview invoice object
-    const invoiceNumber = formData.customNumber.trim() !== ""
-      ? formData.customNumber.trim()
-      : generatePreviewInvoiceNumber();
+    const invoiceNumber =
+      formData.customNumber.trim() !== ""
+        ? formData.customNumber.trim()
+        : generatePreviewInvoiceNumber();
     setPreviewInvoice({
       number: invoiceNumber,
       saleId: selectedSale.id,
       dueDate: formData.dueDate.toISOString(),
-      amount: selectedSale.totalAmount,
-      taxAmount: selectedSale.taxAmount,
-      totalAmount: selectedSale.totalAmount + selectedSale.taxAmount,
+      amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+      taxAmount: selectedSale.taxAmount, // TVA amount
+      totalAmount: selectedSale.totalAmount, // TTC amount
       clientId: selectedSale.clientId,
       status: "En attente",
       notes: formData.notes,
       clientName: selectedSale.clientName,
       clientCompany: selectedSale.clientCompany,
+      clientTaxId: selectedSale.clientTaxId, // Include client tax ID
       items: selectedSale.items,
       issueDate: new Date().toISOString(),
-    })
-    setShowPreview(true)
-  }
+    });
+    setShowPreview(true);
+  };
 
   return (
     <>
@@ -250,8 +265,8 @@ export default function InvoiceGenerator({
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Aucune vente disponible pour générer une facture. Toutes les ventes ont déjà une facture associée ou
-                    sont annulées.
+                    Aucune vente disponible pour générer une facture. Toutes les
+                    ventes ont déjà une facture associée ou sont annulées.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -272,12 +287,20 @@ export default function InvoiceGenerator({
                           value={selectedSale?.id?.toString() || ""}
                           onChange={handleSaleSelection}
                           options={availableSales}
-                          getOptionLabel={(sale) => `${sale.clientName} (${sale.clientCompany}) - ${new Date(sale.saleDate).toLocaleDateString("fr-FR")} - ${formatCurrency(sale.totalAmount + (sale.taxAmount || 0))}`}
+                          getOptionLabel={(sale) =>
+                            `${sale.clientName} (${
+                              sale.clientCompany
+                            }) - ${new Date(sale.saleDate).toLocaleDateString(
+                              "fr-FR"
+                            )} - ${formatCurrency(sale.totalAmount)}`
+                          }
                           getOptionValue={(sale) => sale.id.toString()}
                           required
                         />
                         {formErrors.saleId && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.saleId}</p>
+                          <p className="text-sm text-red-500 mt-1">
+                            {formErrors.saleId}
+                          </p>
                         )}
 
                         {selectedSale && (
@@ -285,29 +308,45 @@ export default function InvoiceGenerator({
                             <CardHeader className="pb-3">
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4 text-primary" />
-                                <span className="font-medium">Détails de la vente</span>
+                                <span className="font-medium">
+                                  Détails de la vente
+                                </span>
                               </div>
                             </CardHeader>
                             <CardContent className="space-y-3">
                               <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div>
-                                  <p className="text-muted-foreground">Client:</p>
-                                  <p className="font-medium">{selectedSale.clientName}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Entreprise:</p>
-                                  <p className="font-medium">{selectedSale.clientCompany}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Date de vente:</p>
+                                  <p className="text-muted-foreground">
+                                    Client:
+                                  </p>
                                   <p className="font-medium">
-                                    {new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")}
+                                    {selectedSale.clientName}
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="text-muted-foreground">Montant TTC:</p>
+                                  <p className="text-muted-foreground">
+                                    Entreprise:
+                                  </p>
+                                  <p className="font-medium">
+                                    {selectedSale.clientCompany}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Date de vente:
+                                  </p>
+                                  <p className="font-medium">
+                                    {new Date(
+                                      selectedSale.saleDate
+                                    ).toLocaleDateString("fr-FR")}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    Montant TTC:
+                                  </p>
                                   <p className="font-medium text-primary">
-                                    {formatCurrency(selectedSale.totalAmount + selectedSale.taxAmount)}
+                                    {formatCurrency(selectedSale.totalAmount)}
                                   </p>
                                 </div>
                               </div>
@@ -316,17 +355,26 @@ export default function InvoiceGenerator({
                                   Articles ({selectedSale?.items?.length}):
                                 </p>
                                 <div className="space-y-1">
-                                  {selectedSale?.items?.slice(0, 3).map((item) => (
-                                    <div key={item.id} className="text-xs bg-background/50 p-2 rounded">
-                                      <span className="font-medium">{item.productName}</span>
-                                      <span className="text-muted-foreground ml-2">
-                                        {item.quantity}x {formatCurrency(item.unitPrice)}
-                                      </span>
-                                    </div>
-                                  ))}
+                                  {selectedSale?.items
+                                    ?.slice(0, 3)
+                                    .map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className="text-xs bg-background/50 p-2 rounded"
+                                      >
+                                        <span className="font-medium">
+                                          {item.productName}
+                                        </span>
+                                        <span className="text-muted-foreground ml-2">
+                                          {item.quantity}x{" "}
+                                          {formatCurrency(item.unitPrice)}
+                                        </span>
+                                      </div>
+                                    ))}
                                   {(selectedSale?.items?.length ?? 0) > 3 && (
                                     <p className="text-xs text-muted-foreground">
-                                      +{(selectedSale?.items?.length ?? 0) - 3} autre(s) article(s)
+                                      +{(selectedSale?.items?.length ?? 0) - 3}{" "}
+                                      autre(s) article(s)
                                     </p>
                                   )}
                                 </div>
@@ -352,7 +400,12 @@ export default function InvoiceGenerator({
                           label="Numéro de facture (optionnel)"
                           id="customNumber"
                           value={formData.customNumber}
-                          onChange={(e) => setFormData({ ...formData, customNumber: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              customNumber: e.target.value,
+                            })
+                          }
                           placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
                           error={formErrors.number}
                         />
@@ -365,27 +418,37 @@ export default function InvoiceGenerator({
                                 variant="outline"
                                 className={cn(
                                   "w-full justify-start text-left font-normal",
-                                  !formData.dueDate && "text-muted-foreground",
+                                  !formData.dueDate && "text-muted-foreground"
                                 )}
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {formData.dueDate ? (
-                                  format(formData.dueDate, "PPP", { locale: fr })
+                                  format(formData.dueDate, "PPP", {
+                                    locale: fr,
+                                  })
                                 ) : (
                                   <span>Sélectionner une date</span>
                                 )}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
                               <Calendar
                                 mode="single"
                                 selected={formData.dueDate}
-                                onSelect={(date) => date && setFormData({ ...formData, dueDate: date })}
+                                onSelect={(date) =>
+                                  date &&
+                                  setFormData({ ...formData, dueDate: date })
+                                }
                               />
                             </PopoverContent>
                           </Popover>
                           {formErrors.dueDate && (
-                            <p className="text-sm text-red-500 mt-1">{formErrors.dueDate}</p>
+                            <p className="text-sm text-red-500 mt-1">
+                              {formErrors.dueDate}
+                            </p>
                           )}
                         </div>
 
@@ -393,7 +456,9 @@ export default function InvoiceGenerator({
                           label="Conditions de paiement"
                           id="paymentTerms"
                           value={formData.paymentTerms}
-                          onChange={(value) => setFormData({ ...formData, paymentTerms: value })}
+                          onChange={(value) =>
+                            setFormData({ ...formData, paymentTerms: value })
+                          }
                           options={paymentTermsOptions}
                           getOptionLabel={(opt) => opt.label}
                           getOptionValue={(opt) => opt.value}
@@ -403,7 +468,9 @@ export default function InvoiceGenerator({
                           label="Notes (optionnel)"
                           id="notes"
                           value={formData.notes}
-                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, notes: e.target.value })
+                          }
                           textarea
                         />
                       </CardContent>
@@ -411,12 +478,14 @@ export default function InvoiceGenerator({
 
                     {selectedSale && (
                       <FinancialSummaryCard
-                        subtotal={selectedSale.totalAmount}
-                        tax={selectedSale.taxAmount}
-                        total={selectedSale.totalAmount + selectedSale.taxAmount}
+                        subtotal={
+                          selectedSale.totalAmount - selectedSale.taxAmount
+                        } // HT amount
+                        tax={selectedSale.taxAmount} // TVA amount
+                        total={selectedSale.totalAmount} // TTC amount
                         dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                         paymentTerms={formData.paymentTerms}
-                        currency="TND"
+                        currency="DNT"
                       />
                     )}
                   </div>
@@ -428,7 +497,11 @@ export default function InvoiceGenerator({
           {/* Action Buttons */}
           <div className="flex-shrink-0 border-t pt-4">
             <div className="flex flex-col sm:flex-row gap-3 justify-between">
-              <Button variant="outline" onClick={onClose} disabled={isGenerating}>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isGenerating}
+              >
                 <X className="h-4 w-4 mr-2" />
                 Annuler
               </Button>
@@ -445,7 +518,10 @@ export default function InvoiceGenerator({
                     Aperçu
                   </Button>
                 )}
-                <Button onClick={handleGenerateInvoice} disabled={!selectedSale || isGenerating}>
+                <Button
+                  onClick={handleGenerateInvoice}
+                  disabled={!selectedSale || isGenerating}
+                >
                   <Save className="h-4 w-4 mr-2" />
                   {isGenerating ? "Génération..." : "Générer la facture"}
                 </Button>
@@ -462,5 +538,5 @@ export default function InvoiceGenerator({
         onPrint={() => {}}
       />
     </>
-  )
+  );
 }

@@ -3,6 +3,8 @@ const path = require("path");
 const Database = require("better-sqlite3");
 const { createTables, createIndexes } = require("./sql-schema.js");
 const { fork } = require("child_process");
+const fs = require("fs").promises;
+const fsSync = require("fs");
 
 let mainWindow;
 let db;
@@ -19,9 +21,42 @@ function notifyDataChange(table, action, data) {
   }
 }
 
+// Function to migrate database from old location to new location
+async function migrateDatabaseIfNeeded() {
+  if (!app.isPackaged) return; // Only needed in packaged app
+  
+  const oldDbPath = path.join(process.resourcesPath, "database.db");
+  const newDbPath = path.join(app.getPath("userData"), "database.db");
+  
+  // Check if old database exists and new database doesn't
+  const oldDbExists = fsSync.existsSync(oldDbPath);
+  const newDbExists = fsSync.existsSync(newDbPath);
+  
+  if (oldDbExists && !newDbExists) {
+    try {
+      // Ensure userData directory exists
+      await fs.mkdir(app.getPath("userData"), { recursive: true });
+      
+      // Move database from old location to new location
+      await fs.rename(oldDbPath, newDbPath);
+      console.log("Database migrated successfully from resources to userData directory");
+    } catch (error) {
+      console.error("Failed to migrate database:", error);
+    }
+  } else if (oldDbExists && newDbExists) {
+    // Both exist - keep the new one and remove the old one
+    try {
+      await fs.unlink(oldDbPath);
+      console.log("Removed old database from resources directory");
+    } catch (error) {
+      console.error("Failed to remove old database:", error);
+    }
+  }
+}
+
 function initDatabase() {
   const dbPath = app.isPackaged
-    ? path.join(process.resourcesPath, "database.db")
+    ? path.join(app.getPath("userData"), "database.db")
     : path.join(__dirname, "..", "database.db");
 
   db = new Database(dbPath);
@@ -95,7 +130,12 @@ async function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Migrate database if needed (only in packaged app)
+  if (app.isPackaged) {
+    await migrateDatabaseIfNeeded();
+  }
+  
   initDatabase();
   createWindow();
 
@@ -112,7 +152,13 @@ app.whenReady().then(() => {
     "enterprise-settings",
     "device",
     "database",
-    "updates"
+    "updates",
+    "credit-notes",
+    "purchase-orders",
+    "quote-to-invoice",
+    "tva",
+    "delivery-receipts",
+    "reception-notes"
   ].forEach((name) => {
     require(`./ipc-handlers/${name}`)(ipcMain, db, notifyDataChange);
   });

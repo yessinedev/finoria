@@ -4,7 +4,7 @@ import type { Client } from "@/types/types";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Users, AlertCircle, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Users, AlertCircle, AlertTriangle, MoreVertical } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -19,6 +19,15 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -30,6 +39,10 @@ export default function Clients() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const { toast } = useToast();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -50,6 +63,14 @@ export default function Clients() {
     sortConfig,
     filters,
   } = useDataTable(clients, { key: "name", direction: "asc" });
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentClients = filteredClients.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const columns = [
     {
@@ -203,18 +224,21 @@ export default function Clients() {
   };
 
   const renderActions = (client: Client) => (
-    <div className="flex justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => handleEdit(client)}>
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleDelete(client)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: "Modifier",
+          icon: <Edit className="h-4 w-4" />,
+          onClick: () => handleEdit(client),
+        },
+        {
+          label: "Supprimer",
+          icon: <Trash2 className="h-4 w-4" />,
+          onClick: () => handleDelete(client),
+          className: "text-red-600",
+        },
+      ]}
+    />
   );
 
   if (loading && !isDialogOpen) {
@@ -269,7 +293,7 @@ export default function Clients() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={filteredClients}
+            data={currentClients}
             columns={columns}
             sortConfig={sortConfig}
             searchTerm={searchTerm}
@@ -282,6 +306,44 @@ export default function Clients() {
             emptyMessage="Aucun client trouvé"
             actions={renderActions}
           />
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredClients.length)} sur {filteredClients.length} clients
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => paginate(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => paginate(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => paginate(currentPage + 1)}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
       

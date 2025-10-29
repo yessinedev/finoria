@@ -5,6 +5,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer";
 import type { Quote, LineItem } from "@/types/types";
 import { formatCurrency, formatQuantity } from "@/lib/utils";
@@ -24,6 +25,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#e0e7ff',
     paddingBottom: 8,
+  },
+  logoBox: {
+    backgroundColor: '#eef2ff',
+    borderRadius: 8,
+    padding: 8,
+    marginRight: 8,
+    width: 80,
+    height: 80,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
   },
   title: {
     fontSize: 24,
@@ -128,14 +142,27 @@ function formatDate(date: string) {
 // Removed local formatCurrency function since we're importing it from utils
 
 export function QuotePDFDocument({ quote, companySettings }: { quote: Quote; companySettings?: any }) {
+  // Calculate HT (before tax) correctly
+  const htAmount = quote.amount; // This is the correct HT amount from the database
+  const tvaAmount = quote.taxAmount; // This is the correct TVA amount from the database
+  const ttcAmount = quote.totalAmount; // This is the correct TTC amount from the database
+
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Finoria</Text>
-            <Text style={styles.subtitle}>Gestion & Facturation</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {companySettings?.logo ? (
+              <View style={styles.logoBox}>
+                <Image style={styles.logoImage} src={companySettings.logo} />
+              </View>
+            ) : (
+              <View style={styles.logoBox}>
+                <Text style={styles.title}>Finoria</Text>
+                <Text style={styles.subtitle}>Gestion & Facturation</Text>
+              </View>
+            )}
           </View>
           <View>
             <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{quote.number}</Text>
@@ -191,30 +218,23 @@ export function QuotePDFDocument({ quote, companySettings }: { quote: Quote; com
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>Sous-total HT</Text>
             <Text style={styles.totalsValue}>
-              {formatCurrency(
-                Array.isArray(quote.items) 
-                  ? quote.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity * (1 - item.discount / 100)), 0)
-                  : 0
-              )}
+              {formatCurrency(htAmount)}
             </Text>
           </View>
           <View style={styles.totalsRow}>
             {/* Calculate tax percentage from taxAmount and subtotal */}
             <Text style={styles.totalsLabel}>
               TVA {
-                Array.isArray(quote.items) && quote.items.length > 0
-                  ? Math.round(
-                      (quote.taxAmount / 
-                       quote.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity * (1 - item.discount / 100)), 0)) * 100
-                    ) || 20
-                  : 20
+                htAmount > 0 && tvaAmount > 0
+                  ? Math.round((tvaAmount / htAmount) * 100) || 0
+                  : 0
               }%
             </Text>
-            <Text style={styles.totalsValue}>{formatCurrency(quote.taxAmount || 0)}</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(tvaAmount || 0)}</Text>
           </View>
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>Total TTC</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(quote.totalAmount || 0)}</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(ttcAmount || 0)}</Text>
           </View>
         </View>
 

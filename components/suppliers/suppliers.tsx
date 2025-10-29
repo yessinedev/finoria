@@ -22,12 +22,21 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Building2, AlertTriangle } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Building2, AlertTriangle, MoreVertical } from "lucide-react";
 import { db } from "@/lib/database";
 import { Supplier } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
 import { supplierSchema, SupplierFormData } from "@/lib/validation/schemas";
 import { z } from "zod";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -39,6 +48,10 @@ export default function Suppliers() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const { toast } = useToast();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -65,6 +78,14 @@ export default function Suppliers() {
     );
     setFilteredSuppliers(filtered);
   }, [searchTerm, suppliers]);
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSuppliers = filteredSuppliers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const loadSuppliers = async () => {
     try {
@@ -242,7 +263,7 @@ export default function Suppliers() {
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="p-6 flex flex-col gap-2">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -397,36 +418,35 @@ export default function Suppliers() {
                   Chargement...
                 </TableCell>
               </TableRow>
-            ) : filteredSuppliers.length === 0 ? (
+            ) : currentSuppliers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center">
                   Aucun fournisseur trouvé
                 </TableCell>
               </TableRow>
             ) : (
-              filteredSuppliers.map((supplier) => (
+              currentSuppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell>{supplier.company || "-"}</TableCell>
                   <TableCell>{supplier.email || "-"}</TableCell>
                   <TableCell>{supplier.phone || "-"}</TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(supplier)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteDialog(supplier)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <ActionsDropdown
+                      actions={[
+                        {
+                          label: "Modifier",
+                          icon: <Edit className="h-4 w-4" />,
+                          onClick: () => openEditDialog(supplier),
+                        },
+                        {
+                          label: "Supprimer",
+                          icon: <Trash2 className="h-4 w-4" />,
+                          onClick: () => openDeleteDialog(supplier),
+                          className: "text-red-600",
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -434,6 +454,44 @@ export default function Suppliers() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-muted-foreground">
+            Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredSuppliers.length)} sur {filteredSuppliers.length} fournisseurs
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => paginate(currentPage - 1)}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    onClick={() => paginate(page)}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => paginate(currentPage + 1)}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

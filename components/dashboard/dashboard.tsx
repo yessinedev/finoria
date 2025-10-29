@@ -70,7 +70,7 @@ export default function Dashboard() {
       key: "amount" as keyof (typeof stats.recentSales)[0],
       label: "Montant",
       sortable: true,
-      render: (value: number) => `${(value || 0).toFixed(3)} TND`,
+      render: (value: number) => `${(value || 0).toFixed(3)} DNT`,
     },
     {
       key: "date" as keyof (typeof stats.recentSales)[0],
@@ -229,7 +229,7 @@ export default function Dashboard() {
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats.todayRevenue || 0).toFixed(3)} TND</div>
+            <div className="text-2xl font-bold">{(stats.todayRevenue || 0).toFixed(3)} DNT</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
               +12.5% vs hier
@@ -243,11 +243,7 @@ export default function Dashboard() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats.monthlyRevenue || 0).toFixed(3)} TND</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <Target className="h-3 w-3 mr-1" />
-              Objectif: 50 000 TND
-            </div>
+            <div className="text-2xl font-bold">{(stats.monthlyRevenue || 0).toFixed(3)} DNT</div>
           </CardContent>
         </Card>
 
@@ -408,7 +404,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">{(product.revenue || 0).toFixed(3)} TND</p>
+                      <p className="font-medium">{(product.revenue || 0).toFixed(3)} DNT</p>
                       <p className="text-sm text-muted-foreground">Revenu</p>
                     </div>
                   </div>

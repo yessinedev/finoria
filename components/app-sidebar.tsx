@@ -17,6 +17,7 @@ import {
   Building2,
   Package,
   ChevronDown,
+  Truck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -27,6 +28,10 @@ export type NavigationItem =
   | "sales"
   | "quotes"
   | "invoices"
+  | "credit-notes"
+  | "purchase-orders"
+  | "delivery-receipts"
+  | "reception-notes"
   | "inventory"
   | "stock-movements"
   | "settings";
@@ -41,6 +46,9 @@ const navigationItems = [
       { id: "quotes", label: "Devis" },
       { id: "sales", label: "Commande client" },
       { id: "invoices", label: "Facture" },
+      { id: "credit-notes", label: "Facture d'avoir" },
+      { id: "purchase-orders", label: "Bon de commande" },
+      { id: "delivery-receipts", label: "Bon de livraison" },
     ],
   },
   {
@@ -50,6 +58,7 @@ const navigationItems = [
     children: [
       { id: "purchase-order", label: "Commande fournisseur" },
       { id: "supplier-invoice", label: "Facture fournisseur" },
+      { id: "reception-notes", label: "Bon de réception" },
     ],
   },
 
@@ -103,7 +112,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
   const getRoute = (id: string) => {
     switch (id) {
       case "dashboard":
-        return "/";
+        return "/dashboard";
       case "clients":
         return "/clients";
       case "sales":
@@ -112,14 +121,18 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/quotes";
       case "invoices":
         return "/invoices";
-      case "delivery":
-        return "/sales/delivery";
-      case "output":
-        return "/sales/output";
+      case "credit-notes":
+        return "/credit-notes";
+      case "purchase-orders":
+        return "/purchase-orders";
+      case "delivery-receipts":
+        return "/delivery-receipts";
       case "purchase-order":
         return "/suppliers/orders";
       case "supplier-invoice":
         return "/suppliers/invoices";
+      case "reception-notes":
+        return "/suppliers/reception-notes";
       case "suppliers":
         return "/suppliers";
       case "inventory":

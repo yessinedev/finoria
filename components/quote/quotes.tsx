@@ -18,7 +18,8 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Trash2
+  Trash2,
+  MoreVertical
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -29,6 +30,9 @@ import { PDFViewer, pdf } from "@react-pdf/renderer";
 import { QuotePDFDocument } from "./quote-pdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 // TODO: Move to types.ts and backend
 export type QuoteStatus = "Brouillon" | "Envoyé" | "Accepté" | "Refusé";
@@ -65,6 +69,7 @@ export default function Quotes() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
 
   // DataTable logic (reuse from invoices)
@@ -125,28 +130,6 @@ export default function Quotes() {
       label: "Validité",
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
-    },
-    {
-      key: "status" as keyof Quote,
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "Brouillon", value: "Brouillon" },
-        { label: "Envoyé", value: "Envoyé" },
-        { label: "Accepté", value: "Accepté" },
-        { label: "Refusé", value: "Refusé" },
-      ],
-      render: (value: QuoteStatus) => (
-        <Badge
-          variant={getStatusVariant(value)}
-          className="flex items-center gap-1 w-fit"
-        >
-          {getStatusIcon(value)}
-          {value}
-        </Badge>
-      ),
     },
   ];
 
@@ -228,7 +211,7 @@ export default function Quotes() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: "TND",
+      currency: "DNT",
       minimumFractionDigits: 3,
       maximumFractionDigits: 3
     }).format(amount);
@@ -305,7 +288,17 @@ export default function Quotes() {
       }
     }
     
-    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={companySettings} />).toBlob();
+    // Make sure company settings are loaded
+    let currentCompanySettings = companySettings;
+    if (!currentCompanySettings) {
+      const settingsResult = await db.settings.get();
+      if (settingsResult.success && settingsResult.data) {
+        currentCompanySettings = settingsResult.data;
+        setCompanySettings(settingsResult.data);
+      }
+    }
+    
+    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={currentCompanySettings} />).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -374,6 +367,51 @@ export default function Quotes() {
     }
   };
 
+  const handleConvertToInvoice = async (quote: Quote) => {
+    setIsConverting(true);
+    try {
+      const result = await db.invoices.generateFromQuote(quote.id);
+      if (result.success) {
+        await loadData(); // Refresh the list
+        toast({
+          title: "Succès",
+          description: "Devis converti en facture avec succès",
+        });
+      } else {
+        throw new Error(result.error || "Erreur lors de la conversion du devis en facture");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la conversion du devis en facture",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const handleStatusChange = async (quoteId: number, newStatus: string) => {
+    try {
+      const result = await db.quotes.updateStatus(quoteId, newStatus);
+      if (result.success) {
+        await loadData(); // Refresh the list
+        toast({
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
+        });
+      } else {
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
+    }
+  };
+
   // TODO: Add quote creation and preview logic
 
   if (loading) {
@@ -429,16 +467,43 @@ export default function Quotes() {
             loading={loading}
             emptyMessage="Aucun devis trouvé"
             actions={(quote) => (
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleViewQuote(quote)}>
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleDownloadQuote(quote)}>
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleDeleteQuote(quote)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <div className="flex justify-end gap-2 items-center">
+                <StatusDropdown
+                  currentValue={quote.status}
+                  options={[
+                    { value: "Brouillon", label: "Brouillon", variant: "outline" },
+                    { value: "Envoyé", label: "Envoyé", variant: "secondary" },
+                    { value: "Accepté", label: "Accepté", variant: "default" },
+                    { value: "Refusé", label: "Refusé", variant: "destructive" },
+                  ]}
+                  onStatusChange={(newStatus) => handleStatusChange(quote.id, newStatus)}
+                />
+                <ActionsDropdown
+                  actions={[
+                    {
+                      label: "Voir",
+                      icon: <Eye className="h-4 w-4" />,
+                      onClick: () => handleViewQuote(quote),
+                    },
+                    {
+                      label: "Télécharger PDF",
+                      icon: <Download className="h-4 w-4" />,
+                      onClick: () => handleDownloadQuote(quote),
+                    },
+                    {
+                      label: "Convertir en facture",
+                      icon: <FileText className="h-4 w-4" />,
+                      onClick: () => handleConvertToInvoice(quote),
+                      disabled: isConverting || quote.status === "Accepté",
+                    },
+                    {
+                      label: "Supprimer",
+                      icon: <Trash2 className="h-4 w-4" />,
+                      onClick: () => handleDeleteQuote(quote),
+                      className: "text-red-600",
+                    },
+                  ]}
+                />
               </div>
             )}
           />

@@ -58,15 +58,33 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         // Generate quote number if not provided
         const quoteNumber = quote.number || generateQuoteNumber(db);
         
+        // Calculate total tax amount for the quote based on individual product TVA rates
+        let totalTaxAmount = 0;
+        if (quote.items && Array.isArray(quote.items) && quote.items.length > 0) {
+          const getProductTva = db.prepare(`
+            SELECT t.rate as tvaRate 
+            FROM products p 
+            LEFT JOIN tva t ON p.tvaId = t.id 
+            WHERE p.id = ?
+          `);
+          
+          for (const item of quote.items) {
+            const productTva = getProductTva.get(item.productId);
+            const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+            const itemTaxAmount = ((item.unitPrice * item.quantity * (1 - item.discount / 100)) * itemTvaRate / 100);
+            totalTaxAmount += itemTaxAmount;
+          }
+        }
+        
         const stmt = db.prepare(`
-          INSERT INTO quotes (number, clientId, amount, taxAmount, totalAmount, status, issueDate, dueDate, createdAt) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          INSERT INTO quotes (number, clientId, amount, taxAmount, totalAmount, status, issueDate, dueDate, createdAt, updatedAt) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `);
         const result = stmt.run(
           quoteNumber,
           quote.clientId,
           quote.amount,
-          quote.taxAmount,
+          totalTaxAmount,
           quote.totalAmount,
           quote.status || "En attente",
           quote.issueDate || new Date().toISOString(),
@@ -100,6 +118,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           number: quoteNumber,
           ...quote,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
         notifyDataChange("quotes", "create", newQuote);
         return newQuote;
@@ -123,15 +142,33 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("update-quote", async (event, id, quote) => {
     const trx = db.transaction(() => {
       try {
+        // Calculate total tax amount for the quote based on individual product TVA rates
+        let totalTaxAmount = 0;
+        if (quote.items && Array.isArray(quote.items) && quote.items.length > 0) {
+          const getProductTva = db.prepare(`
+            SELECT t.rate as tvaRate 
+            FROM products p 
+            LEFT JOIN tva t ON p.tvaId = t.id 
+            WHERE p.id = ?
+          `);
+          
+          for (const item of quote.items) {
+            const productTva = getProductTva.get(item.productId);
+            const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+            const itemTaxAmount = ((item.unitPrice * item.quantity * (1 - item.discount / 100)) * itemTvaRate / 100);
+            totalTaxAmount += itemTaxAmount;
+          }
+        }
+        
         const stmt = db.prepare(`
           UPDATE quotes 
-          SET clientId = ?, amount = ?, taxAmount = ?, totalAmount = ?, status = ?, issueDate = ?, dueDate = ?, updatedAt = CURRENT_TIMESTAMP 
+          SET clientId = ?, amount = ?, taxAmount = ?, totalAmount = ?, status = ?, issueDate = ?, dueDate = ?, updatedAt = CURRENT_TIMESTAMP
           WHERE id = ?
         `);
         const result = stmt.run(
           quote.clientId,
           quote.amount,
-          quote.taxAmount,
+          totalTaxAmount,
           quote.totalAmount,
           quote.status,
           quote.issueDate,
@@ -210,6 +247,33 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     } catch (error) {
       console.error("Error getting quote items:", error);
       throw new Error("Erreur lors de la récupération des articles du devis");
+    }
+  });
+  
+  // Update quote status
+  ipcMain.handle("update-quote-status", async (event, id, status) => {
+    try {
+      const stmt = db.prepare(
+        "UPDATE quotes SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?"
+      );
+      const result = stmt.run(status, id);
+      
+      // Check if any rows were affected
+      if (result.changes === 0) {
+        throw new Error("Devis non trouvé ou statut déjà mis à jour");
+      }
+      
+      const updatedQuote = {
+        id,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      notifyDataChange("quotes", "update", updatedQuote);
+      return updatedQuote;
+    } catch (error) {
+      console.error("Error updating quote status:", error);
+      throw new Error("Erreur lors de la mise à jour du statut du devis: " + error.message);
     }
   });
 };

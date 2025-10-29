@@ -8,10 +8,10 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Format currency values consistently across the application
  * @param amount - The amount to format
- * @param currency - The currency code (default: TND)
+ * @param currency - The currency code (default: DNT)
  * @returns Formatted currency string
  */
-export function formatCurrency(amount: number, currency: string = "TND"): string {
+export function formatCurrency(amount: number, currency: string = "DNT"): string {
   // Handle undefined, null, or NaN values
   if (amount === undefined || amount === null || isNaN(amount)) {
     amount = 0;

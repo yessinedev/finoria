@@ -9,9 +9,6 @@ import {
   AlertCircle,
   Eye,
   AlertTriangle,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -21,6 +18,25 @@ import SaleDetailsModal from "@/components/sales/SaleDetailsModal";
 import SaleForm from "@/components/sales/SaleForm";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+// Removed StatusDropdown import
+import { Edit, Trash2 } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function Sales() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -32,8 +48,9 @@ export default function Sales() {
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemDiscount, setNewItemDiscount] = useState(0);
-  const [globalDiscount, setGlobalDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(20);
+  // Removed globalDiscount state
+  // Removed taxRate - using per-item TVA calculation
+  const [fodecTax, setFodecTax] = useState(0); // New FODEC tax state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +59,17 @@ export default function Sales() {
   const [isSaleDetailsOpen, setIsSaleDetailsOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // State for stock alert dialog
+  const [showStockAlert, setShowStockAlert] = useState(false);
+  const [stockAlertData, setStockAlertData] = useState<{
+    insufficientItems: Array<{ name: string; requested: number; available: number }>;
+    onContinue: () => void;
+  } | null>(null);
 
   // Data table for sales list
   const {
@@ -59,10 +87,18 @@ export default function Sales() {
     ...sale,
     finalAmount:
       sale.totalAmount +
-      sale.taxAmount -
+      sale.taxAmount +
+      (sale.fodecAmount ?? 0) - // Include FODEC amount if exists
       (sale.discountAmount ?? 0),
   }));
-  
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSales = enrichedSales.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(enrichedSales.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const salesColumns = [
     {
@@ -83,39 +119,13 @@ export default function Sales() {
       label: "Montant TTC",
       sortable: true,
       render: (value?: number) =>
-        typeof value === "number" ? `${value.toFixed(3)} TND` : "—",
+        typeof value === "number" ? `${value.toFixed(3)} DNT` : "—",
     },
     {
       key: "saleDate" as keyof Sale,
       label: "Date",
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
-    },
-    {
-      key: "status" as keyof Sale,
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "En attente", value: "En attente" },
-        { label: "Confirmée", value: "Confirmée" },
-        { label: "Livrée", value: "Livrée" },
-        { label: "Annulée", value: "Annulée" },
-      ],
-      render: (value: string) => (
-        <Badge
-          variant={
-            value === "Confirmée"
-              ? "default"
-              : value === "Livrée"
-              ? "default"
-              : "secondary"
-          }
-        >
-          {value}
-        </Badge>
-      ),
     },
   ];
 
@@ -173,8 +183,8 @@ export default function Sales() {
       );
     } else {
       const discountAmount =
-        (product.price * newItemQuantity * newItemDiscount) / 100;
-      const total = product.price * newItemQuantity - discountAmount;
+        (product.sellingPriceHT * newItemQuantity * newItemDiscount) / 100;
+      const total = product.sellingPriceHT * newItemQuantity - discountAmount;
 
       const item: LineItem = {
         id: Date.now(),
@@ -182,7 +192,7 @@ export default function Sales() {
         name: product.name,
         description: product.description,
         quantity: newItemQuantity,
-        unitPrice: product.price,
+        unitPrice: product.sellingPriceHT,
         discount: newItemDiscount,
         total: total,
       };
@@ -207,58 +217,112 @@ export default function Sales() {
     setLineItems(
       lineItems.map((item) => {
         if (item.id === id) {
-          const updated = { ...item, [field]: value };
-          if (
-            field === "quantity" ||
-            field === "unitPrice" ||
-            field === "discount"
-          ) {
-            const discountAmount =
-              (updated.unitPrice * updated.quantity * updated.discount) / 100;
-            updated.total =
-              updated.unitPrice * updated.quantity - discountAmount;
+          const updatedItem = { ...item, [field]: value };
+          
+          // Recalculate total when quantity, unitPrice, or discount changes
+          if (["quantity", "unitPrice", "discount"].includes(field)) {
+            const quantity = field === "quantity" ? Number(value) : item.quantity;
+            const unitPrice = field === "unitPrice" ? Number(value) : item.unitPrice;
+            const discount = field === "discount" ? Number(value) : item.discount;
+            
+            const discountAmount = (unitPrice * quantity * discount) / 100;
+            updatedItem.total = unitPrice * quantity - discountAmount;
           }
-          return updated;
+          
+          return updatedItem;
         }
         return item;
       })
     );
   };
 
-  // Calculate totals
-  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-  const globalDiscountAmount = (subtotal * globalDiscount) / 100;
-  const discountedSubtotal = subtotal - globalDiscountAmount;
-  const taxAmount = (discountedSubtotal * taxRate) / 100;
-  const finalTotal = discountedSubtotal + taxAmount;
+  // Calculate totals with correct FODEC, TVA, and discount calculations
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0
+  );
+  
+  const totalDiscount = lineItems.reduce(
+    (sum, item) => sum + (item.unitPrice * item.quantity * item.discount) / 100,
+    0
+  );
+  
+  const discountedSubtotal = subtotal - totalDiscount;
+  
+  // Calculate FODEC on discounted subtotal
+  const fodecAmount = (discountedSubtotal * fodecTax) / 100;
+  
+  // Calculate tax (TVA) on (discounted subtotal + FODEC)
+  const taxAmount = lineItems.reduce((sum, item) => {
+    // Get product TVA rate
+    const product = products.find(p => p.id === item.productId);
+    const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0; // Use actual TVA rate or 0 if not found
+    // TVA is calculated on (discounted item total + FODEC portion for this item)
+    const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount / 100);
+    // Calculate FODEC portion for this item
+    const itemFodec = discountedSubtotal > 0 ? (itemTotal / discountedSubtotal) * fodecAmount : 0;
+    return sum + ((itemTotal + itemFodec) * itemTvaRate / 100);
+  }, 0);
+  
+  // Final total including tax and FODEC
+  const finalTotal = discountedSubtotal + fodecAmount + taxAmount;
 
   const handleSubmit = async (errors: Record<string, string>) => {
-    if (!selectedClient || lineItems.length === 0) {
-      setError(
-        "Veuillez sélectionner un client et ajouter au moins un article"
-      );
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
+    // Check stock availability before saving
+    const insufficientItems = [];
+    for (const item of lineItems) {
+      const product = products.find(p => p.id === item.productId);
+      if (product && product.stock !== undefined && product.stock < item.quantity) {
+        insufficientItems.push({
+          name: product.name,
+          requested: item.quantity,
+          available: product.stock
+        });
+      }
+    }
+
+    if (insufficientItems.length > 0) {
+      setStockAlertData({
+        insufficientItems,
+        onContinue: () => {
+          setShowStockAlert(false);
+          saveSale();
+        }
+      });
+      setShowStockAlert(true);
+      return;
+    }
+
+    await saveSale();
+  };
+
+  const saveSale = async () => {
     setSaving(true);
     setError(null);
 
     try {
       const saleData = {
-        clientId: Number.parseInt(selectedClient),
+        clientId: Number(selectedClient),
         items: lineItems.map((item) => ({
           productId: item.productId,
           productName: item.name,
+          description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discount: item.discount,
           totalPrice: item.total,
         })),
-        totalAmount: discountedSubtotal,
+        totalAmount: finalTotal, // TTC amount
         taxAmount: taxAmount,
-        discountAmount: globalDiscountAmount,
-        finalAmount: finalTotal,
-        status: "En attente",
+        fodecAmount: fodecAmount, // Include FODEC amount
+        discountAmount: 0, // No global discount
+        // Removed finalAmount field as it's not in the database schema
+        // Removed status field
         saleDate: new Date().toISOString(),
       };
 
@@ -285,7 +349,7 @@ export default function Sales() {
         
         setSelectedClient("");
         setLineItems([]);
-        setGlobalDiscount(0);
+        setFodecTax(0); // Reset FODEC tax
         setFormErrors({});
         toast({
           title: "Succès",
@@ -327,18 +391,7 @@ export default function Sales() {
     setIsSaleDetailsOpen(true);
   };
 
-  const handleStatusChange = async (saleId: number, newStatus: string) => {
-    try {
-      const result = await db.sales.updateStatus(saleId, newStatus);
-      if (result.success) {
-        await loadData();
-      } else {
-        setError(result.error || "Erreur lors de la mise à jour du statut");
-      }
-    } catch (error) {
-      setError("Erreur lors de la mise à jour du statut");
-    }
-  };
+  // Removed handleStatusChange function
 
   if (loading) {
     return (
@@ -378,6 +431,42 @@ export default function Sales() {
         </Alert>
       )}
 
+      {/* Stock Alert Dialog */}
+      <AlertDialog open={showStockAlert} onOpenChange={setShowStockAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Stock Insuffisant
+            </AlertDialogTitle>
+            <div className="text-sm text-muted-foreground">
+              Les articles suivants n'ont pas suffisamment de stock disponible :
+              <div className="mt-2 space-y-2">
+                {stockAlertData?.insufficientItems.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center p-2 bg-yellow-50 rounded">
+                    <span className="font-medium">{item.name}</span>
+                    <span>
+                      Demandé: {item.requested}, Disponible: {item.available}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4">
+                Voulez-vous continuer avec cette vente malgré le stock insuffisant ?
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowStockAlert(false)}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={stockAlertData?.onContinue}>
+              Continuer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {showSalesList ? (
         // Sales List View
         <Card>
@@ -389,7 +478,7 @@ export default function Sales() {
           </CardHeader>
           <CardContent>
             <DataTable
-              data={enrichedSales}
+              data={currentSales}
               columns={salesColumns}
               sortConfig={sortConfig}
               searchTerm={searchTerm}
@@ -400,26 +489,46 @@ export default function Sales() {
               onClearFilters={clearFilters}
               loading={loading}
               emptyMessage="Aucune vente trouvée"
-              actions={(sale) => (
-                <div className="flex justify-end gap-2 items-center">
-                  {/* Status dropdown for direct update */}
-                  <select
-                    value={sale.status}
-                    onChange={(e) => handleStatusChange(sale.id, e.target.value)}
-                    className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="En attente">En attente</option>
-                    <option value="Confirmée">Confirmée</option>
-                    <option value="Livrée">Livrée</option>
-                    <option value="Annulée">Annulée</option>
-                  </select>
-                  
-                  <Button variant="outline" size="sm" onClick={() => handleViewSale(sale)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              // Removed actions prop since we're removing the status dropdown
             />
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, enrichedSales.length)} sur {enrichedSales.length} ventes
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => paginate(currentPage - 1)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => paginate(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => paginate(currentPage + 1)}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -442,14 +551,15 @@ export default function Sales() {
           addLineItem={addLineItem}
           removeLineItem={removeLineItem}
           updateLineItem={updateLineItem}
-          globalDiscount={globalDiscount}
-          setGlobalDiscount={setGlobalDiscount}
-          taxRate={taxRate}
-          setTaxRate={setTaxRate}
+          // Removed globalDiscount and setGlobalDiscount
+          // Removed taxRate and setTaxRate - using per-item TVA calculation
+          fodecTax={fodecTax} // New FODEC tax prop
+          setFodecTax={setFodecTax} // New FODEC tax setter prop
           subtotal={subtotal}
-          globalDiscountAmount={globalDiscountAmount}
+          // Removed globalDiscountAmount
           discountedSubtotal={discountedSubtotal}
           taxAmount={taxAmount}
+          fodecAmount={fodecAmount} // New FODEC amount prop
           finalTotal={finalTotal}
           saving={saving}
           handleSubmit={handleSubmit}
@@ -464,4 +574,6 @@ export default function Sales() {
       />
     </div>
   );
+
+  // Removed renderActions function
 }

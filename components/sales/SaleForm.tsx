@@ -8,11 +8,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, Percent, Plus, Trash2, Save, Check, ChevronsUpDown } from "lucide-react";
+import { Calculator, Percent, Plus, Trash2, Save, Check, ChevronsUpDown, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Client, Product, LineItem } from "@/types/types";
 import { saleSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { EntitySelect } from "@/components/common/EntitySelect";
 
 interface SaleFormProps {
   clients: Client[];
@@ -32,14 +33,15 @@ interface SaleFormProps {
   addLineItem: () => void;
   removeLineItem: (id: number) => void;
   updateLineItem: (id: number, field: keyof LineItem, value: string | number) => void;
-  globalDiscount: number;
-  setGlobalDiscount: (discount: number) => void;
-  taxRate: number;
-  setTaxRate: (rate: number) => void;
+  // Removed globalDiscount and setGlobalDiscount
+  // Removed taxRate and setTaxRate - using per-item TVA calculation
+  fodecTax: number; // New FODEC tax state
+  setFodecTax: (rate: number) => void; // New FODEC tax setter
   subtotal: number;
-  globalDiscountAmount: number;
+  // Removed globalDiscountAmount
   discountedSubtotal: number;
   taxAmount: number;
+  fodecAmount: number; // New FODEC amount
   finalTotal: number;
   saving: boolean;
   handleSubmit: (errors: Record<string, string>) => void;
@@ -66,14 +68,15 @@ export default function SaleForm(props: SaleFormProps) {
     addLineItem,
     removeLineItem,
     updateLineItem,
-    globalDiscount,
-    setGlobalDiscount,
-    taxRate,
-    setTaxRate,
+    // Removed globalDiscount and setGlobalDiscount
+    // Removed taxRate and setTaxRate - using per-item TVA calculation
+    fodecTax, // New FODEC tax
+    setFodecTax, // New FODEC tax setter
     subtotal,
-    globalDiscountAmount,
+    // Removed globalDiscountAmount
     discountedSubtotal,
     taxAmount,
+    fodecAmount, // New FODEC amount
     finalTotal,
     saving,
     handleSubmit,
@@ -103,9 +106,9 @@ export default function SaleForm(props: SaleFormProps) {
         clientId: Number(selectedClient),
         totalAmount: discountedSubtotal,
         taxAmount: taxAmount,
-        discountAmount: globalDiscountAmount,
+        discountAmount: 0, // Removed global discount
         finalAmount: finalTotal,
-        status: "Confirmé",
+        // Removed status field
         saleDate: new Date().toISOString(),
         items: lineItems.map(item => ({
           productId: item.productId,
@@ -157,28 +160,17 @@ export default function SaleForm(props: SaleFormProps) {
           </CardHeader>
           <CardContent>
             <div>
-              <Label htmlFor="client">Sélectionner un client *</Label>
-              <Select
+              <EntitySelect
+                label="Sélectionner un client *"
+                id="client"
                 value={selectedClient}
-                onValueChange={setSelectedClient}
-              >
-                <SelectTrigger className={errors.clientId ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Choisir un client..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem
-                      key={client.id}
-                      value={client.id.toString()}
-                    >
-                      {client.name} - {client.company}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.clientId && (
-                <p className="text-sm text-red-500 mt-1">{errors.clientId}</p>
-              )}
+                onChange={setSelectedClient}
+                options={clients}
+                getOptionLabel={(client) => `${client.name} - ${client.company}`}
+                getOptionValue={(client) => client.id.toString()}
+                required
+                error={errors.clientId}
+              />
             </div>
           </CardContent>
         </Card>
@@ -243,7 +235,7 @@ export default function SaleForm(props: SaleFormProps) {
                                   </Badge>
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                  {product.price.toFixed(3)} TND • {product.description}
+                                  {product.sellingPriceHT ? `${product.sellingPriceHT.toFixed(3)} DNT` : "N/A"} • {product.description}
                                 </span>
                               </div>
                             </CommandItem>
@@ -285,10 +277,13 @@ export default function SaleForm(props: SaleFormProps) {
                 <Label>Prix unitaire</Label>
                 <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
                   {selectedProduct
-                    ? products
-                        .find((p) => p.id === selectedProduct)
-                        ?.price.toFixed(3) + " TND"
-                    : "0.000 TND"}
+                    ? (() => {
+                        const product = products.find((p) => p.id === selectedProduct);
+                        return product 
+                          ? `${product.sellingPriceHT ? product.sellingPriceHT.toFixed(3) : "N/A"} DNT`
+                          : "0.000 DNT";
+                      })()
+                    : "0.000 DNT"}
                 </div>
               </div>
               <div className="col-span-1">
@@ -307,10 +302,10 @@ export default function SaleForm(props: SaleFormProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Article</TableHead>
-                    <TableHead className="w-20">Qté</TableHead>
-                    <TableHead className="w-24">Prix unit.</TableHead>
-                    <TableHead className="w-20">Remise %</TableHead>
-                    <TableHead className="w-24">Total</TableHead>
+                    <TableHead className="w-24 md:w-32">Qté</TableHead>
+                    <TableHead className="w-28 md:w-36">Prix unit.</TableHead>
+                    <TableHead className="w-24 md:w-32">Remise %</TableHead>
+                    <TableHead className="w-28 md:w-36">Total</TableHead>
                     <TableHead className="w-16"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -337,13 +332,14 @@ export default function SaleForm(props: SaleFormProps) {
                               Number.parseInt(e.target.value) || 1
                             )
                           }
+                          className="w-full min-w-[80px]"
                         />
                       </TableCell>
                       <TableCell>
                         <Input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="0.001"
                           value={item.unitPrice}
                           onChange={(e) =>
                             updateLineItem(
@@ -352,6 +348,7 @@ export default function SaleForm(props: SaleFormProps) {
                               Number.parseFloat(e.target.value) || 0
                             )
                           }
+                          className="w-full min-w-[100px]"
                         />
                       </TableCell>
                       <TableCell>
@@ -367,10 +364,11 @@ export default function SaleForm(props: SaleFormProps) {
                               Number.parseFloat(e.target.value) || 0
                             )
                           }
+                          className="w-full min-w-[80px]"
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {item.total.toFixed(3)} TND
+                        {item.total.toFixed(3)} DNT
                       </TableCell>
                       <TableCell>
                         <Button
@@ -402,63 +400,48 @@ export default function SaleForm(props: SaleFormProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Global Discount */}
+            {/* FODEC Tax */}
             <div className="space-y-2">
-              <Label htmlFor="globalDiscount">Remise globale (%)</Label>
+              <Label htmlFor="fodecTax">Taxe FODEC (%)</Label>
               <div className="flex items-center gap-2">
                 <Percent className="h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="globalDiscount"
+                  id="fodecTax"
                   type="number"
                   min="0"
                   max="100"
-                  value={globalDiscount}
+                  value={fodecTax}
                   onChange={(e) =>
-                    setGlobalDiscount(
-                      Number.parseFloat(e.target.value) || 0
-                    )
+                    setFodecTax(Number.parseFloat(e.target.value) || 0)
                   }
                 />
               </div>
             </div>
-            {/* Tax Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="taxRate">Taux de TVA (%)</Label>
-              <Input
-                id="taxRate"
-                type="number"
-                min="0"
-                max="100"
-                value={taxRate}
-                onChange={(e) =>
-                  setTaxRate(Number.parseFloat(e.target.value) || 0)
-                }
-              />
-            </div>
+
             {/* Totals */}
             <div className="space-y-2 pt-4 border-t">
               <div className="flex justify-between text-sm">
                 <span>Sous-total:</span>
-                <span>{subtotal.toFixed(3)} TND</span>
+                <span>{subtotal.toFixed(3)} DNT</span>
               </div>
-              {globalDiscount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>Remise globale ({globalDiscount}%):</span>
-                  <span>-{globalDiscountAmount.toFixed(3)} TND</span>
-                </div>
-              )}
               <div className="flex justify-between text-sm">
                 <span>Sous-total après remise:</span>
-                <span>{discountedSubtotal.toFixed(3)} TND</span>
+                <span>{discountedSubtotal.toFixed(3)} DNT</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>TVA ({taxRate}%):</span>
-                <span>{taxAmount.toFixed(3)} TND</span>
+                <span>TVA (par article):</span>
+                <span>{taxAmount.toFixed(3)} DNT</span>
               </div>
+              {fodecTax > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>FODEC ({fodecTax}%):</span>
+                  <span>{fodecAmount.toFixed(3)} DNT</span>
+                </div>
+              )}
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total TTC:</span>
-                  <span>{finalTotal.toFixed(3)} TND</span>
+                  <span>{finalTotal.toFixed(3)} DNT</span>
                 </div>
               </div>
             </div>

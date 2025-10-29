@@ -2,7 +2,12 @@
 module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("get-products", async () => {
     try {
-      const products = db.prepare("SELECT * FROM products ORDER BY name").all();
+      const products = db.prepare(`
+        SELECT p.*, t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        ORDER BY p.name
+      `).all();
       return products;
     } catch (error) {
       console.error("Error getting products:", error);
@@ -12,7 +17,12 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("get-product-by-id", async (event, id) => {
     try {
-      const product = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
+      const product = db.prepare(`
+        SELECT p.*, t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `).get(id);
       if (!product) {
         throw new Error("Produit introuvable");
       }
@@ -26,16 +36,21 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-product", async (event, product) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO products (name, description, price, category, stock, isActive) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO products (name, description, category, stock, isActive, reference, tvaId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, weightedAverageCostHT) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         product.name,
         product.description,
-        product.price,
         product.category,
         product.stock,
-        product.isActive ? 1 : 0
+        product.isActive ? 1 : 0,
+        product.reference || null,
+        product.tvaId || null,
+        product.sellingPriceHT || null,
+        product.sellingPriceTTC || null,
+        product.purchasePriceHT || null,
+        product.weightedAverageCostHT || null
       );
       const newProduct = {
         id: result.lastInsertRowid,
@@ -53,14 +68,36 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("get-product-stock", async (event, id) => {
     try {
-      const product = db.prepare("SELECT stock FROM products WHERE id = ?").get(id);
-      if (!product) {
-        throw new Error("Produit introuvable");
-      }
-      return product.stock;
+      const stmt = db.prepare("SELECT stock FROM products WHERE id = ?");
+      const result = stmt.get(id);
+      return result ? result.stock : 0;
     } catch (error) {
       console.error("Error getting product stock:", error);
       throw new Error("Erreur lors de la récupération du stock du produit");
+    }
+  });
+
+  ipcMain.handle("check-product-stock", async (event, id, requestedQuantity) => {
+    try {
+      const stmt = db.prepare("SELECT stock, category FROM products WHERE id = ?");
+      const result = stmt.get(id);
+      
+      if (!result) {
+        return { available: false, stock: 0 };
+      }
+      
+      // Services don't have stock limitations
+      if (result.category === 'Service') {
+        return { available: true, stock: result.stock };
+      }
+      
+      return { 
+        available: result.stock >= requestedQuantity, 
+        stock: result.stock 
+      };
+    } catch (error) {
+      console.error("Error checking product stock:", error);
+      throw new Error("Erreur lors de la vérification du stock du produit");
     }
   });
 
@@ -81,16 +118,21 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE products 
-        SET name = ?, description = ?, price = ?, category = ?, stock = ?, isActive = ?, updatedAt = CURRENT_TIMESTAMP 
+        SET name = ?, description = ?, category = ?, stock = ?, isActive = ?, reference = ?, tvaId = ?, sellingPriceHT = ?, sellingPriceTTC = ?, purchasePriceHT = ?, weightedAverageCostHT = ?, updatedAt = CURRENT_TIMESTAMP 
         WHERE id = ?
       `);
       stmt.run(
         product.name,
         product.description,
-        product.price,
         product.category,
         product.stock,
         product.isActive ? 1 : 0,
+        product.reference || null,
+        product.tvaId || null,
+        product.sellingPriceHT || null,
+        product.sellingPriceTTC || null,
+        product.purchasePriceHT || null,
+        product.weightedAverageCostHT || null,
         id
       );
       const updatedProduct = {

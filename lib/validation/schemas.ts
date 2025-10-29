@@ -16,7 +16,7 @@ export const supplierOrderSchema = z.object({
   orderNumber: z.string().min(1, "Le numéro de commande est requis"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   orderDate: z.string().min(1, "La date de commande est requise"),
   deliveryDate: z.string().optional(),
   items: z.array(z.object({
@@ -37,7 +37,7 @@ export const supplierInvoiceSchema = z.object({
   amount: z.number().min(0, "Le montant doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().optional(),
   paymentDate: z.string().optional(),
@@ -56,9 +56,14 @@ export const supplierInvoiceSchema = z.object({
 export const productSchema = z.object({
   name: z.string().min(1, "Le nom du produit est requis"),
   description: z.string().optional(),
-  price: z.number().min(0, "Le prix doit être positif"),
   category: z.string().min(1, "La catégorie est requise"),
   stock: z.number().min(0, "Le stock doit être positif ou nul"),
+  reference: z.string().optional(),
+  tvaId: z.number().optional(),
+  sellingPriceHT: z.number().min(0, "Le prix de vente HT doit être positif").optional(),
+  sellingPriceTTC: z.number().min(0, "Le prix de vente TTC doit être positif").optional(),
+  purchasePriceHT: z.number().min(0, "Le prix d'achat HT doit être positif").optional(),
+  weightedAverageCostHT: z.number().min(0, "Le coût unitaire moyen pondéré HT doit être positif").optional(),
 });
 
 // Client validation schema
@@ -68,6 +73,7 @@ export const clientSchema = z.object({
   email: z.string().email("Email invalide").optional().or(z.string().length(0)),
   phone: z.string().optional(),
   address: z.string().optional(),
+  taxId: z.string().optional(), // New tax identification number field
 });
 
 // Sale validation schema
@@ -77,7 +83,7 @@ export const saleSchema = z.object({
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   discountAmount: z.number().min(0, "La remise doit être positive ou nulle").optional(),
   finalAmount: z.number().min(0, "Le montant final doit être positif").optional(),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   saleDate: z.string().min(1, "La date de vente est requise"),
   items: z.array(z.object({
     productId: z.number().min(1, "Le produit est requis"),
@@ -95,7 +101,7 @@ export const quoteSchema = z.object({
   amount: z.number().min(0, "Le montant doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().min(1, "La date d'échéance est requise"),
   items: z.array(z.object({
@@ -116,7 +122,7 @@ export const invoiceSchema = z.object({
   amount: z.number().min(0, "Le montant doit être positif"),
   taxAmount: z.number().min(0, "La taxe doit être positive"),
   totalAmount: z.number().min(0, "Le montant total doit être positif"),
-  status: z.string().min(1, "Le statut est requis"),
+  // Removed status field
   issueDate: z.string().min(1, "La date d'émission est requise"),
   dueDate: z.string().min(1, "La date d'échéance est requise"),
   items: z.array(z.object({

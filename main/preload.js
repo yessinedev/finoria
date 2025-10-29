@@ -43,12 +43,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateProductStock: (id, quantity) =>
     ipcRenderer.invoke("update-product-stock", id, quantity),
   getProductStock: (id) => ipcRenderer.invoke("get-product-stock", id),
+  checkProductStock: (id, requestedQuantity) => ipcRenderer.invoke("check-product-stock", id, requestedQuantity),
   deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
 
   // --- Sales API ---
   createSale: (sale) => ipcRenderer.invoke("create-sale", sale),
   getSales: () => ipcRenderer.invoke("get-sales"),
   getSalesWithItems: () => ipcRenderer.invoke("get-sales-with-items"),
+  getSale: (id) => ipcRenderer.invoke("get-sale", id),
   getSaleItems: (saleId) => ipcRenderer.invoke("get-sale-items", saleId),
   updateSaleStatus: (id, status) =>
     ipcRenderer.invoke("update-sale-status", id, status),
@@ -64,20 +66,63 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-invoice-status", id, status),
   generateInvoiceFromSale: (saleId) =>
     ipcRenderer.invoke("generate-invoice-from-sale", saleId),
+  generateInvoiceFromQuote: (quoteId) =>
+    ipcRenderer.invoke("generate-invoice-from-quote", quoteId),
   getInvoiceItems: (invoiceId) => ipcRenderer.invoke("get-invoice-items", invoiceId),
 
   // --- Quotes API ---
   getQuotes: () => ipcRenderer.invoke("get-quotes"),
   createQuote: (quote) => ipcRenderer.invoke("create-quote", quote),
   updateQuote: (id, quote) => ipcRenderer.invoke("update-quote", id, quote),
+  updateQuoteStatus: (id, status) => ipcRenderer.invoke("update-quote-status", id, status),
   deleteQuote: (id) => ipcRenderer.invoke("delete-quote", id),
   getQuoteItems: (quoteId) => ipcRenderer.invoke("get-quote-items", quoteId),
+  
+  // --- Credit Notes API ---
+  getCreditNotes: () => ipcRenderer.invoke("get-credit-notes"),
+  createCreditNote: (creditNote) => ipcRenderer.invoke("create-credit-note", creditNote),
+  updateCreditNoteStatus: (id, status) =>
+    ipcRenderer.invoke("update-credit-note-status", id, status),
+  generateCreditNoteFromInvoice: (invoiceId, reason) =>
+    ipcRenderer.invoke("generate-credit-note-from-invoice", invoiceId, reason),
+  getCreditNoteItems: (creditNoteId) => ipcRenderer.invoke("get-credit-note-items", creditNoteId),
+  
+  // --- Purchase Orders API ---
+  getPurchaseOrders: () => ipcRenderer.invoke("get-purchase-orders"),
+  createPurchaseOrder: (purchaseOrder) => ipcRenderer.invoke("create-purchase-order", purchaseOrder),
+  updatePurchaseOrderStatus: (id, status) =>
+    ipcRenderer.invoke("update-purchase-order-status", id, status),
+  generatePurchaseOrderFromSale: (saleId, deliveryDate) =>
+    ipcRenderer.invoke("generate-purchase-order-from-sale", saleId, deliveryDate),
+  getPurchaseOrderItems: (purchaseOrderId) => ipcRenderer.invoke("get-purchase-order-items", purchaseOrderId),
   
   // --- Stock Movements API ---
   getStockMovements: () => ipcRenderer.invoke("get-stock-movements"),
   createStockMovement: (movement) => ipcRenderer.invoke("create-stock-movement", movement),
   getStockMovementsByProduct: (productId) => ipcRenderer.invoke("get-stock-movements-by-product", productId),
 
+  // --- TVA API ---
+  getTvaRates: () => ipcRenderer.invoke("get-tva-rates"),
+  createTvaRate: (tvaRate) => ipcRenderer.invoke("create-tva-rate", tvaRate),
+  updateTvaRate: (id, tvaRate) => ipcRenderer.invoke("update-tva-rate", id, tvaRate),
+  deleteTvaRate: (id) => ipcRenderer.invoke("delete-tva-rate", id),
+  getTvaRate: (id) => ipcRenderer.invoke("get-tva-rate", id),
+
+  // --- Delivery Receipts API ---
+  createDeliveryReceipt: (deliveryReceipt) => ipcRenderer.invoke("create-delivery-receipt", deliveryReceipt),
+  updateDeliveryReceipt: (id, deliveryReceipt) => ipcRenderer.invoke("update-delivery-receipt", id, deliveryReceipt),
+  getDeliveryReceipts: () => ipcRenderer.invoke("get-delivery-receipts"),
+  getDeliveryReceipt: (id) => ipcRenderer.invoke("get-delivery-receipt", id),
+  getDeliveryReceiptBySale: (saleId) => ipcRenderer.invoke("get-delivery-receipt-by-sale", saleId),
+  deleteDeliveryReceipt: (id) => ipcRenderer.invoke("delete-delivery-receipt", id),
+
+  // --- Reception Notes API ---
+  createReceptionNote: (receptionNote) => ipcRenderer.invoke("create-reception-note", receptionNote),
+  getReceptionNotes: () => ipcRenderer.invoke("get-reception-notes"),
+  getReceptionNote: (id) => ipcRenderer.invoke("get-reception-note", id),
+  getReceptionNoteByOrder: (supplierOrderId) => ipcRenderer.invoke("get-reception-note-by-order", supplierOrderId),
+  updateReceptionNote: (id, receptionNote) => ipcRenderer.invoke("update-reception-note", id, receptionNote),
+  deleteReceptionNote: (id) => ipcRenderer.invoke("delete-reception-note", id),
 
   // --- Enterprise Settings API ---
   getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),

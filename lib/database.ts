@@ -24,18 +24,20 @@ interface ElectronAPI {
   createSupplierOrder: (order: any) => Promise<any>;
   updateSupplierOrder: (id: number, order: any) => Promise<any>;
   deleteSupplierOrder: (id: number) => Promise<boolean>;
+  // Removed updateSupplierOrderStatus function
 
   // Supplier Invoices
   getSupplierInvoices: () => Promise<any[]>;
   createSupplierInvoice: (invoice: any) => Promise<any>;
   updateSupplierInvoice: (id: number, invoice: any) => Promise<any>;
   deleteSupplierInvoice: (id: number) => Promise<boolean>;
-  updateSupplierInvoiceStatus: (id: number, status: string) => Promise<any>;
+  // Removed updateSupplierInvoiceStatus function
 
   // Products
   getProducts: () => Promise<any[]>;
   getProductById: (id: number) => Promise<any>;
   getProductStock: (id: number) => Promise<number>;
+  checkProductStock: (id: number, requestedQuantity: number) => Promise<{ available: boolean; stock: number }>;
   updateProductStock: (id: number, quantity: number) => Promise<any>;
   createProduct: (product: any) => Promise<any>;
   updateProduct: (id: number, product: any) => Promise<any>;
@@ -45,6 +47,7 @@ interface ElectronAPI {
   createSale: (sale: any) => Promise<any>;
   getSales: () => Promise<any[]>;
   getSalesWithItems: () => Promise<any[]>;
+  getSale: (id: number) => Promise<any>;
   getSaleItems: (saleId: number) => Promise<any[]>;
   updateSaleStatus: (id: number, status: string) => Promise<any>;
   deleteSale: (id: number) => Promise<boolean>;
@@ -57,21 +60,58 @@ interface ElectronAPI {
   createInvoice: (invoice: any) => Promise<any>;
   updateInvoiceStatus: (id: number, status: string) => Promise<any>;
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
+  generateInvoiceFromQuote: (quoteId: number) => Promise<any>;
   getInvoiceItems: (invoiceId: number) => Promise<any[]>;
 
-  //Quotes
+  // Quotes
   getQuotes: () => Promise<any[]>;
   createQuote: (quote: any) => Promise<any>;
   updateQuote: (id: number, quote: any) => Promise<any>;
+  updateQuoteStatus: (id: number, status: string) => Promise<any>;
   deleteQuote: (id: number) => Promise<boolean>;
   getQuoteItems: (quoteId: number) => Promise<any[]>;
+
+  // Credit Notes
+  getCreditNotes: () => Promise<any[]>;
+  createCreditNote: (creditNote: any) => Promise<any>;
+  updateCreditNoteStatus: (id: number, status: string) => Promise<any>;
+  generateCreditNoteFromInvoice: (invoiceId: number, reason: string) => Promise<any>;
+  getCreditNoteItems: (creditNoteId: number) => Promise<any[]>;
+
+  // Purchase Orders
+  getPurchaseOrders: () => Promise<any[]>;
+  createPurchaseOrder: (purchaseOrder: any) => Promise<any>;
+  // Removed updatePurchaseOrderStatus function
+  generatePurchaseOrderFromSale: (saleId: number, deliveryDate: string) => Promise<any>;
+  getPurchaseOrderItems: (purchaseOrderId: number) => Promise<any[]>;
+
+  // TVA
+  getTvaRates: () => Promise<any[]>;
+  createTvaRate: (tvaRate: any) => Promise<any>;
+  updateTvaRate: (id: number, tvaRate: any) => Promise<any>;
+  deleteTvaRate: (id: number) => Promise<boolean>;
+  getTvaRate: (id: number) => Promise<any>;
+
+  // Delivery Receipts
+  createDeliveryReceipt: (deliveryReceipt: any) => Promise<any>;
+  updateDeliveryReceipt: (id: number, deliveryReceipt: any) => Promise<any>;
+  getDeliveryReceipts: () => Promise<any[]>;
+  getDeliveryReceipt: (id: number) => Promise<any>;
+  getDeliveryReceiptBySale: (saleId: number) => Promise<any>;
+  deleteDeliveryReceipt: (id: number) => Promise<boolean>;
+
+  // Reception Notes
+  createReceptionNote: (receptionNote: any) => Promise<any>;
+  getReceptionNotes: () => Promise<any[]>;
+  getReceptionNote: (id: number) => Promise<any>;
+  getReceptionNoteByOrder: (supplierOrderId: number) => Promise<any>;
+  updateReceptionNote: (id: number, receptionNote: any) => Promise<any>;
+  deleteReceptionNote: (id: number) => Promise<boolean>;
 
   // Stock Movements
   getStockMovements: () => Promise<any[]>;
   createStockMovement: (movement: any) => Promise<any>;
   getStockMovementsByProduct: (productId: number) => Promise<any[]>;
-
-
 
   // Enterprise Settings
   getEnterpriseSettings: () => Promise<any>;
@@ -227,7 +267,8 @@ class DatabaseService {
     create: (supplier: any) =>
       this.handle(
         () =>
-          window.electronAPI?.createSupplier(supplier) || Promise.resolve(null),
+          window.electronAPI?.createSupplier(supplier) ||
+          Promise.resolve(null),
         "createSupplier"
       ),
     update: (id: number, supplier: any) =>
@@ -268,8 +309,17 @@ class DatabaseService {
     delete: (id: number) =>
       this.handle(
         () =>
-          window.electronAPI?.deleteSupplierOrder(id) || Promise.resolve(false),
+          window.electronAPI?.deleteSupplierOrder(id) ||
+          Promise.resolve(false),
         "deleteSupplierOrder"
+      ),
+    // Removed updateStatus function
+    getItems: (orderId: number) =>
+      this.handle(
+        () =>
+          window.electronAPI?.getPurchaseOrderItems(orderId) ||
+          Promise.resolve([]),
+        "getPurchaseOrderItems"
       ),
   };
 
@@ -301,13 +351,7 @@ class DatabaseService {
           Promise.resolve(false),
         "deleteSupplierInvoice"
       ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () =>
-          window.electronAPI?.updateSupplierInvoiceStatus(id, status) ||
-          Promise.resolve(null),
-        "updateSupplierInvoiceStatus"
-      ),
+    // Removed updateStatus function
   };
 
   // --- Products API ---
@@ -332,6 +376,11 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getProductStock(id) || Promise.resolve(0),
         "getProductStock"
+      ),
+    checkStock: (id: number, requestedQuantity: number) =>
+      this.handle(
+        () => window.electronAPI?.checkProductStock(id, requestedQuantity) || Promise.resolve({ available: true, stock: 0 }),
+        "checkProductStock"
       ),
     updateStock: (id: number, quantity: number) =>
       this.handle(
@@ -371,6 +420,11 @@ class DatabaseService {
         () => window.electronAPI?.getSalesWithItems() || Promise.resolve([]),
         "getSalesWithItems"
       ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getSale(id) || Promise.resolve(null),
+        "getSale"
+      ),
     getItems: (saleId: number) =>
       this.handle(
         () => window.electronAPI?.getSaleItems(saleId) || Promise.resolve([]),
@@ -378,9 +432,7 @@ class DatabaseService {
       ),
     updateStatus: (id: number, status: string) =>
       this.handle(
-        () =>
-          window.electronAPI?.updateSaleStatus(id, status) ||
-          Promise.resolve(null),
+        () => window.electronAPI?.updateSaleStatus(id, status),
         "updateSaleStatus"
       ),
     delete: (id: number) =>
@@ -416,9 +468,7 @@ class DatabaseService {
       ),
     updateStatus: (id: number, status: string) =>
       this.handle(
-        () =>
-          window.electronAPI?.updateInvoiceStatus(id, status) ||
-          Promise.resolve(null),
+        () => window.electronAPI?.updateInvoiceStatus(id, status),
         "updateInvoiceStatus"
       ),
     generateFromSale: (saleId: number) =>
@@ -427,6 +477,13 @@ class DatabaseService {
           window.electronAPI?.generateInvoiceFromSale(saleId) ||
           Promise.resolve(null),
         "generateInvoiceFromSale"
+      ),
+    generateFromQuote: (quoteId: number) =>
+      this.handle(
+        () =>
+          window.electronAPI?.generateInvoiceFromQuote(quoteId) ||
+          Promise.resolve(null),
+        "generateInvoiceFromQuote"
       ),
     getItems: (invoiceId: number) =>
       this.handle(
@@ -453,6 +510,12 @@ class DatabaseService {
           window.electronAPI?.updateQuote(id, quote) || Promise.resolve(null),
         "updateQuote"
       ),
+    // Update quote status with improved error handling
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () => window.electronAPI?.updateQuoteStatus(id, status),
+        "updateQuoteStatus"
+      ),
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteQuote(id) || Promise.resolve(false),
@@ -462,6 +525,171 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.getQuoteItems(quoteId) || Promise.resolve([]),
         "getQuoteItems"
+      ),
+  };
+
+  // --- Credit Notes API ---
+  creditNotes = {
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getCreditNotes() || Promise.resolve([]),
+        "getCreditNotes"
+      ),
+    create: (creditNote: any) =>
+      this.handle(
+        () =>
+          window.electronAPI?.createCreditNote(creditNote) ||
+          Promise.resolve(null),
+        "createCreditNote"
+      ),
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () => window.electronAPI?.updateCreditNoteStatus(id, status),
+        "updateCreditNoteStatus"
+      ),
+    generateFromInvoice: (invoiceId: number, reason: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.generateCreditNoteFromInvoice(invoiceId, reason) ||
+          Promise.resolve(null),
+        "generateCreditNoteFromInvoice"
+      ),
+    getItems: (creditNoteId: number) =>
+      this.handle(
+        () => window.electronAPI?.getCreditNoteItems(creditNoteId) || Promise.resolve([]),
+        "getCreditNoteItems"
+      ),
+  };
+
+  // --- Purchase Orders API ---
+  purchaseOrders = {
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getPurchaseOrders() || Promise.resolve([]),
+        "getPurchaseOrders"
+      ),
+    create: (purchaseOrder: any) =>
+      this.handle(
+        () =>
+          window.electronAPI?.createPurchaseOrder(purchaseOrder) ||
+          Promise.resolve(null),
+        "createPurchaseOrder"
+      ),
+    // Removed updateStatus function
+    generateFromSale: (saleId: number, deliveryDate: string) =>
+      this.handle(
+        () =>
+          window.electronAPI?.generatePurchaseOrderFromSale(saleId, deliveryDate) ||
+          Promise.resolve(null),
+        "generatePurchaseOrderFromSale"
+      ),
+    getItems: (purchaseOrderId: number) =>
+      this.handle(
+        () =>
+          window.electronAPI?.getPurchaseOrderItems(purchaseOrderId) ||
+          Promise.resolve([]),
+        "getPurchaseOrderItems"
+      ),
+  };
+
+  // --- TVA API ---
+  tva = {
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getTvaRates() || Promise.resolve([]),
+        "getTvaRates"
+      ),
+    create: (tvaRate: any) =>
+      this.handle(
+        () => window.electronAPI?.createTvaRate(tvaRate) || Promise.resolve(null),
+        "createTvaRate"
+      ),
+    update: (id: number, tvaRate: any) =>
+      this.handle(
+        () => window.electronAPI?.updateTvaRate(id, tvaRate) || Promise.resolve(null),
+        "updateTvaRate"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteTvaRate(id) || Promise.resolve(false),
+        "deleteTvaRate"
+      ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getTvaRate(id) || Promise.resolve(null),
+        "getTvaRate"
+      ),
+  };
+
+  // --- Delivery Receipts API ---
+  deliveryReceipts = {
+    create: (deliveryReceipt: any) =>
+      this.handle(
+        () => window.electronAPI?.createDeliveryReceipt(deliveryReceipt) || Promise.resolve(null),
+        "createDeliveryReceipt"
+      ),
+    update: (id: number, deliveryReceipt: any) =>
+      this.handle(
+        () => window.electronAPI?.updateDeliveryReceipt(id, deliveryReceipt) || Promise.resolve(null),
+        "updateDeliveryReceipt"
+      ),
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getDeliveryReceipts() || Promise.resolve([]),
+        "getDeliveryReceipts"
+      ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getDeliveryReceipt(id) || Promise.resolve(null),
+        "getDeliveryReceipt"
+      ),
+    getBySale: (saleId: number) =>
+      this.handle(
+        async () => {
+          const result = await window.electronAPI?.getDeliveryReceiptBySale(saleId) || Promise.resolve(null);
+          console.log("Database service getBySale result:", result); // Debug log
+          return result;
+        },
+        "getDeliveryReceiptBySale"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteDeliveryReceipt(id) || Promise.resolve(false),
+        "deleteDeliveryReceipt"
+      ),
+  };
+
+  // --- Reception Notes API ---
+  receptionNotes = {
+    create: (receptionNote: any) =>
+      this.handle(
+        () => window.electronAPI?.createReceptionNote(receptionNote) || Promise.resolve(null),
+        "createReceptionNote"
+      ),
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getReceptionNotes() || Promise.resolve([]),
+        "getReceptionNotes"
+      ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getReceptionNote(id) || Promise.resolve(null),
+        "getReceptionNote"
+      ),
+    getByOrder: (supplierOrderId: number) =>
+      this.handle(
+        () => window.electronAPI?.getReceptionNoteByOrder(supplierOrderId) || Promise.resolve(null),
+        "getReceptionNoteByOrder"
+      ),
+    update: (id: number, receptionNote: any) =>
+      this.handle(
+        () => window.electronAPI?.updateReceptionNote(id, receptionNote) || Promise.resolve(null),
+        "updateReceptionNote"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteReceptionNote(id) || Promise.resolve(false),
+        "deleteReceptionNote"
       ),
   };
 
@@ -552,4 +780,5 @@ class DatabaseService {
   };
 }
 
-export const db = new DatabaseService();
+const db = new DatabaseService();
+export { db };

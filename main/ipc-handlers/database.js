@@ -5,9 +5,9 @@ const fs = require("fs").promises;
 // Export database function
 async function exportDatabase() {
   try {
-    // Get the current database path
+    // Get the current database path (now in userData directory)
     const sourcePath = app.isPackaged
-      ? path.join(process.resourcesPath, "database.db")
+      ? path.join(app.getPath("userData"), "database.db")
       : path.join(__dirname, "..", "..", "database.db");
     
     // Generate export filename with timestamp
@@ -62,9 +62,9 @@ async function importDatabase() {
     
     const filePath = result.filePaths[0];
     
-    // Get the current database path
+    // Get the current database path (now in userData directory)
     const targetPath = app.isPackaged
-      ? path.join(process.resourcesPath, "database.db")
+      ? path.join(app.getPath("userData"), "database.db")
       : path.join(__dirname, "..", "..", "database.db");
     
     // Backup current database before import

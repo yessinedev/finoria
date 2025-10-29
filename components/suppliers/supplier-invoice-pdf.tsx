@@ -5,6 +5,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer"
 import type { SupplierInvoice } from "@/types/types";
 import { formatCurrency, formatQuantity } from "@/lib/utils";
@@ -49,6 +50,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     marginRight: 8,
+    width: 80,
+    height: 80,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
   },
   section: {
     marginTop: 16,
@@ -137,19 +145,27 @@ const styles = StyleSheet.create({
 })
 
 export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoice: SupplierInvoice; companySettings?: any }) {
+  // Calculate HT (before tax) correctly
+  const htAmount = invoice.amount; // This is the correct HT amount from the database
+  const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
+  const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
+
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={styles.logoBox}>
-
-            </View>
-            <View>
-              <Text style={styles.title}>FACTURE FOURNISSEUR</Text>
-              <Text style={styles.subtitle}>Gestion & Facturation</Text>
-            </View>
+            {companySettings?.logo ? (
+              <View style={styles.logoBox}>
+                <Image style={styles.logoImage} src={companySettings.logo} />
+              </View>
+            ) : (
+              <View style={styles.logoBox}>
+                <Text style={styles.title}>Finoria</Text>
+                <Text style={styles.subtitle}>Gestion & Facturation</Text>
+              </View>
+            )}
           </View>
           <View>
             <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{invoice.invoiceNumber}</Text>
@@ -162,10 +178,10 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
           <View style={[styles.card, { flex: 1 }]}> {/* Company */}
             <Text style={styles.cardTitle}>Émetteur</Text>
-            <Text style={styles.cardContent}>{companySettings?.name || 'GestVente SARL'}</Text>
-            <Text style={styles.cardContent}>{companySettings?.address || '123 Rue de l\'Entreprise, 75001 Paris'}</Text>
-            <Text style={styles.cardContent}>Tél: {companySettings?.phone || '01 23 45 67 89'}</Text>
-            <Text style={styles.cardContent}>{companySettings?.email || 'contact@gestvente.fr'}</Text>
+            <Text style={styles.cardContent}>{companySettings?.name}</Text>
+            <Text style={styles.cardContent}>{companySettings?.address}</Text>
+            <Text style={styles.cardContent}>Tél: {companySettings?.phone}</Text>
+            <Text style={styles.cardContent}>{companySettings?.email}</Text>
             {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
             {companySettings?.tvaNumber && <Text style={styles.cardContent}>N° TVA: {companySettings.tvaNumber}</Text>}
           </View>
@@ -223,15 +239,19 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings }: { invoi
         <View style={styles.totalsBox}>
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(invoice.amount)}</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(htAmount)}</Text>
           </View>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>TVA (19%):</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(invoice.taxAmount)}</Text>
+            <Text style={styles.totalsLabel}>
+              {tvaAmount > 0 && htAmount > 0
+                ? `TVA ${Math.round((tvaAmount / htAmount) * 100) || 0}%:`
+                : 'TVA (0%):'}
+            </Text>
+            <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
           </View>
           <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
             <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
-            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(invoice.totalAmount)}</Text>
+            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(ttcAmount)}</Text>
           </View>
         </View>
 

@@ -7,14 +7,27 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface TVA {
+  id: number;
+  rate: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: number;
   name: string;
   description: string;
-  price: number;
   category: string;
   stock: number;
   isActive: boolean;
+  reference?: string;
+  tvaId?: number;
+  sellingPriceHT?: number;
+  sellingPriceTTC?: number;
+  purchasePriceHT?: number;
+  weightedAverageCostHT?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +39,7 @@ export interface Client {
   email: string;
   phone?: string;
   address?: string;
+  taxId?: string; // New tax identification number field
 }
 
 export interface Supplier {
@@ -60,11 +74,13 @@ export interface Sale {
   clientEmail?: string;
   clientPhone?: string;
   clientAddress?: string;
+  clientTaxId?: string; // New client tax identification number field
   totalAmount: number;
   taxAmount: number;
   discountAmount?: number;
+  fodecAmount?: number; // New FODEC tax amount
   finalAmount?: number;
-  status: string;
+  // Removed status field
   saleDate: string;
   items?: SaleItem[];
 }
@@ -91,7 +107,7 @@ export interface SupplierOrder {
   supplierAddress?: string;
   totalAmount: number;
   taxAmount: number;
-  status: string;
+  // Removed status field
   orderDate: string;
   deliveryDate?: string;
   items?: SupplierOrderItem[];
@@ -125,7 +141,7 @@ export interface SupplierInvoice {
   issueDate: string;
   dueDate?: string;
   paymentDate?: string;
-  status: string;
+  status: InvoiceStatus;
   items?: SupplierInvoiceItem[];
 }
 
@@ -145,11 +161,13 @@ export interface Invoice {
   id: number;
   number: string;
   saleId: number;
+  clientId: number;
   clientName: string;
   clientCompany: string;
   clientEmail: string;
   clientPhone: string;
   clientAddress: string;
+  clientTaxId?: string; // New client tax identification number field
   amount: number;
   taxAmount: number;
   totalAmount: number;
@@ -163,6 +181,7 @@ export interface Invoice {
 
 export interface InvoiceItem {
   id: number;
+  productId: number;
   productName: string;
   description: string;
   quantity: number;
@@ -186,7 +205,7 @@ export interface Quote {
   issueDate: string;
   dueDate: string;
   paymentTerms?: string;
-  status: "En attente" | "Accepté" | "Refusé" | "Envoyé" | "Brouillon";
+  status: string;
   items: LineItem[];
   notes?: string;
 }
@@ -206,7 +225,7 @@ export interface DashboardStats {
     client: string;
     amount: number;
     date: string;
-    status: string;
+    // Removed status field
   }>;
   salesByMonth: Array<{
     month: string;
@@ -267,6 +286,111 @@ export interface SupplierPayment {
   createdAt: string;
 }
 
+export interface CreditNote {
+  id: number;
+  number: string;
+  originalInvoiceId: number;
+  clientId: number;
+  clientName: string;
+  clientCompany?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  clientTaxId?: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  reason: string;
+  issueDate: string;
+  dueDate?: string;
+  status?: string;
+  items: CreditNoteItem[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditNoteItem {
+  id: number;
+  productId: number;
+  productName: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  totalPrice: number;
+}
+
+export interface ReceptionNote {
+  id: number;
+  supplierOrderId: number;
+  receptionNumber: string;
+  driverName?: string;
+  vehicleRegistration?: string;
+  receptionDate: string;
+  notes?: string;
+  createdAt: string;
+  items: ReceptionNoteItem[];
+  supplierOrder?: SupplierOrder; // Reference to the original supplier order
+}
+
+export interface ReceptionNoteItem {
+  id: number;
+  productId: number;
+  productName: string;
+  orderedQuantity: number;
+  receivedQuantity: number;
+  unitPrice: number;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  number: string;
+  saleId: number;
+  clientId: number;
+  clientName: string;
+  clientCompany?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  orderDate: string;
+  deliveryDate?: string;
+  items?: PurchaseOrderItem[];
+}
+
+export interface PurchaseOrderItem {
+  id: number;
+  productId: number;
+  productName: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  totalPrice: number;
+}
+
+export interface DeliveryReceipt {
+  id: number;
+  saleId: number;
+  deliveryNumber: string;
+  driverName?: string;
+  vehicleRegistration?: string;
+  deliveryDate: string;
+  createdAt: string;
+  items: DeliveryReceiptItem[];
+}
+
+export interface DeliveryReceiptItem {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface CompanyInfo {
   name: string
   address: string
@@ -275,13 +399,13 @@ export interface CompanyInfo {
   website?: string
   city: string
   country: string
+  logo?: string
 }
 
 export interface TaxInfo {
   taxId: string
   taxStatus: string
   tvaNumber?: number
-  tvaRate?: number
 }
 
 export interface CreateCompanyData extends CompanyInfo, TaxInfo {}

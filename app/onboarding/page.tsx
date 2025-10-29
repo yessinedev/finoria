@@ -196,19 +196,7 @@ export default function OnboardingPage() {
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <FormInput
-                      label="Taux de TVA"
-                      type="number"
-                      id="tvaRate"
-                      value={data.taxInfo.tvaRate?.toString() || ""}
-                      onChange={(value) =>
-                        updateTaxInfo({ tvaRate: Number(value) })
-                      }
-                      placeholder="19"
-                      required
-                    />
-                  </div>
+
                 </div>
               )}
             </div>

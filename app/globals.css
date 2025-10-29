@@ -112,6 +112,37 @@
   --sidebar-ring: oklch(0.527 0.154 150.069);
 }
 
+/* Responsive table improvements */
+@media (max-width: 768px) {
+  .table-responsive {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .table-responsive th,
+  .table-responsive td {
+    white-space: nowrap;
+  }
+}
+
+/* Input field improvements for numeric values */
+input[type="number"] {
+  min-width: 80px;
+  padding: 0.5rem;
+}
+
+/* Ensure form elements are properly spaced on small screens */
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  .form-grid > div {
+    min-width: 100% !important;
+  }
+}
 
 @layer base {
   * {
@@ -121,5 +152,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-

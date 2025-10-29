@@ -17,11 +17,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { 
   Search, 
   Plus, 
@@ -30,13 +28,10 @@ import {
   FileText, 
   Eye, 
   Download, 
-  Printer,
   AlertTriangle,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  CheckCircle,
-  Clock
 } from "lucide-react";
 import { db } from "@/lib/database";
 import { SupplierInvoice, Supplier, SupplierOrder, Product } from "@/types/types";
@@ -51,23 +46,13 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { pdf } from "@react-pdf/renderer";
-import SupplierInvoicePDF, { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
+import { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
 import SupplierInvoicePreview from "./supplier-invoice-preview";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { supplierInvoiceSchema, SupplierInvoiceFormData } from "@/lib/validation/schemas";
+import SupplierInvoiceGenerator from "./SupplierInvoiceGenerator";
+
+import { supplierInvoiceSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
+import { EntitySelect } from "@/components/common/EntitySelect";
 
 export default function SupplierInvoices() {
   const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
@@ -77,6 +62,7 @@ export default function SupplierInvoices() {
   const [filteredInvoices, setFilteredInvoices] = useState<SupplierInvoice[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const [currentInvoice, setCurrentInvoice] = useState<SupplierInvoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
@@ -101,7 +87,7 @@ export default function SupplierInvoices() {
   
   const { toast } = useToast();
 
-  // Form state
+  // Form state for edit dialog only
   const [formData, setFormData] = useState({
     supplierId: 0,
     orderId: 0,
@@ -109,22 +95,13 @@ export default function SupplierInvoices() {
     amount: 0,
     taxAmount: 0,
     totalAmount: 0,
-    status: "En attente",
     issueDate: new Date().toISOString().split("T")[0],
     dueDate: "",
     paymentDate: "",
   });
 
-  // Invoice items state
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
-  const [productSearchOpen, setProductSearchOpen] = useState(false);
-  const [itemQuantity, setItemQuantity] = useState(1);
-  const [itemUnitPrice, setItemUnitPrice] = useState(0);
-
-  // Validation errors state
+  // Validation errors state for edit dialog only
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [itemErrors, setItemErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadInvoices();
@@ -166,32 +143,6 @@ export default function SupplierInvoices() {
     setCurrentPage(1); // Reset to first page when filters change
   }, [searchTerm, invoices, sortConfig]);
 
-  // Update form data when order is selected
-  useEffect(() => {
-    if (formData.orderId && formData.orderId !== 0) {
-      const selectedOrder = orders.find(order => order.id === formData.orderId);
-      console.log('Selected order:', selectedOrder); // Debug log
-      if (selectedOrder && selectedOrder.items) {
-        console.log('Order items:', selectedOrder.items); // Debug log
-        // Convert order items to invoice items
-        const invoiceItemsFromOrder = selectedOrder.items.map(item => ({
-          id: Date.now() + Math.random(), // Temporary ID
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discount: item.discount || 0,
-          totalPrice: item.totalPrice,
-        }));
-        console.log('Invoice items from order:', invoiceItemsFromOrder); // Debug log
-        setInvoiceItems(invoiceItemsFromOrder);
-      }
-    } else {
-      // Clear items when no order is selected
-      setInvoiceItems([]);
-    }
-  }, [formData.orderId, orders]);
-
   const loadInvoices = async () => {
     try {
       setIsLoading(true);
@@ -228,9 +179,7 @@ export default function SupplierInvoices() {
   const loadOrders = async () => {
     try {
       const response = await db.supplierOrders.getAll();
-      console.log('Orders response:', response); // Debug log
       if (response.success && response.data) {
-        console.log('Orders data:', response.data); // Debug log
         setOrders(response.data);
       }
     } catch (error) {
@@ -279,95 +228,22 @@ export default function SupplierInvoices() {
       
       supplierInvoiceSchema.parse(mainData);
       
-      // Additional validation: if no order is selected, we need at least one item
-      if ((!formData.orderId || formData.orderId === 0) && (!invoiceItems || invoiceItems.length === 0)) {
-        toast({
-          title: "Erreur de validation",
-          description: "Veuillez ajouter au moins un article",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
       setErrors({});
-      setItemErrors({});
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        const newItemErrors: Record<string, string> = {};
         
         error.errors.forEach((err) => {
           if (err.path.length > 0) {
-            // Handle items array errors
-            if (err.path[0] === 'items' && err.path.length > 2) {
-              const itemIndex = err.path[1];
-              const fieldName = err.path[2];
-              newItemErrors[`${itemIndex}-${fieldName}`] = err.message;
-            } else if (err.path[0] !== 'items') {
-              newErrors[err.path[0]] = err.message;
-            }
+            newErrors[err.path[0]] = err.message;
           }
         });
         
         setErrors(newErrors);
-        setItemErrors(newItemErrors);
         return false;
       }
       return false;
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!validateForm()) {
-      toast({
-        title: "Erreur de validation",
-        description: "Veuillez corriger les erreurs dans le formulaire",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      console.log('Invoice items before calculating totals:', invoiceItems); // Debug log
-      // Calculate totals
-      const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * 0.19; // 19% VAT
-      const totalAmount = subtotal + taxAmount;
-      
-      console.log('Calculated totals:', { subtotal, taxAmount, totalAmount }); // Debug log
-
-      const invoiceData = {
-        ...formData,
-        supplierId: Number(formData.supplierId),
-        orderId: formData.orderId ? Number(formData.orderId) : null,
-        amount: Number(subtotal.toFixed(3)),
-        taxAmount: Number(taxAmount.toFixed(3)),
-        totalAmount: Number(totalAmount.toFixed(3)),
-        items: invoiceItems,
-      };
-
-      console.log('Invoice data to be sent:', invoiceData); // Debug log
-
-      const response = await db.supplierInvoices.create(invoiceData);
-      if (response.success && response.data) {
-        // Refresh invoices to get the complete data with supplier information
-        await loadInvoices();
-        resetForm();
-        setIsDialogOpen(false);
-        toast({
-          title: "Succès",
-          description: "Facture fournisseur créée avec succès",
-        });
-      } else {
-        throw new Error(response.error || "Erreur lors de la création");
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Erreur lors de la création de la facture",
-        variant: "destructive",
-      });
     }
   };
 
@@ -384,19 +260,13 @@ export default function SupplierInvoices() {
     }
     
     try {
-      // Calculate totals
-      const subtotal = invoiceItems.reduce((sum, item) => sum + item.totalPrice, 0);
-      const taxAmount = subtotal * 0.19; // 19% VAT
-      const totalAmount = subtotal + taxAmount;
-
       const invoiceData = {
         ...formData,
         supplierId: Number(formData.supplierId),
         orderId: formData.orderId ? Number(formData.orderId) : null,
-        amount: Number(subtotal.toFixed(3)),
-        taxAmount: Number(taxAmount.toFixed(3)),
-        totalAmount: Number(totalAmount.toFixed(3)),
-        items: invoiceItems,
+        amount: Number(formData.amount.toFixed(3)),
+        taxAmount: Number(formData.taxAmount.toFixed(3)),
+        totalAmount: Number(formData.totalAmount.toFixed(3)),
       };
 
       const response = await db.supplierInvoices.update(currentInvoice.id, invoiceData);
@@ -452,38 +322,16 @@ export default function SupplierInvoices() {
       amount: 0,
       taxAmount: 0,
       totalAmount: 0,
-      status: "En attente",
       issueDate: new Date().toISOString().split("T")[0],
       dueDate: "",
       paymentDate: "",
     });
-    setInvoiceItems([]);
-    setSelectedProduct(null);
-    setItemQuantity(1);
-    setItemUnitPrice(0);
     setCurrentInvoice(null);
     setErrors({});
-    setItemErrors({});
-  };
-
-  // Function to generate a unique invoice number
-  const generateInvoiceNumber = () => {
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, "0");
-    return `FF-${year}${month}-${random}`;
   };
 
   const openCreateDialog = () => {
-    resetForm();
-    // Generate auto invoice number
-    setFormData(prev => ({
-      ...prev,
-      invoiceNumber: generateInvoiceNumber()
-    }));
-    setIsDialogOpen(true);
+    setIsGeneratorOpen(true);
   };
 
   const openEditDialog = (invoice: SupplierInvoice) => {
@@ -494,15 +342,12 @@ export default function SupplierInvoices() {
       amount: invoice.amount,
       taxAmount: invoice.taxAmount,
       totalAmount: invoice.totalAmount,
-      status: invoice.status,
       issueDate: invoice.issueDate.split("T")[0],
       dueDate: invoice.dueDate ? invoice.dueDate.split("T")[0] : "",
       paymentDate: invoice.paymentDate ? invoice.paymentDate.split("T")[0] : "",
     });
-    setInvoiceItems(invoice.items || []);
     setCurrentInvoice(invoice);
     setErrors({});
-    setItemErrors({});
     setIsDialogOpen(true);
   };
 
@@ -515,23 +360,6 @@ export default function SupplierInvoices() {
     e.preventDefault();
     if (currentInvoice) {
       handleUpdate();
-    } else {
-      handleCreate();
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "En attente":
-        return <Badge variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">En attente</Badge>;
-      case "Payée":
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Payée</Badge>;
-      case "En retard":
-        return <Badge variant="destructive">En retard</Badge>;
-      case "Annulée":
-        return <Badge variant="destructive">Annulée</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -556,27 +384,6 @@ export default function SupplierInvoices() {
       toast({
         title: "Erreur",
         description: "Erreur lors du téléchargement du PDF",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleStatusChange = async (invoiceId: number, newStatus: string) => {
-    try {
-      const result = await db.supplierInvoices.updateStatus(invoiceId, newStatus);
-      if (result.success) {
-        await loadInvoices();
-      } else {
-        toast({
-          title: "Erreur",
-          description: result.error || "Erreur lors de la mise à jour du statut",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du statut",
         variant: "destructive",
       });
     }
@@ -632,35 +439,6 @@ export default function SupplierInvoices() {
     setEditingValue("");
   };
 
-  const addInvoiceItem = () => {
-    if (!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0) return;
-
-    const product = products.find(p => p.id === selectedProduct);
-    if (!product) return;
-
-    const totalPrice = itemQuantity * itemUnitPrice;
-
-    const newItem = {
-      id: Date.now(), // Temporary ID for new items
-      productId: selectedProduct,
-      productName: product.name,
-      quantity: itemQuantity,
-      unitPrice: itemUnitPrice,
-      discount: 0, // Default discount value
-      totalPrice: parseFloat(totalPrice.toFixed(3)),
-    };
-
-    setInvoiceItems([...invoiceItems, newItem]);
-    setSelectedProduct(null);
-    setItemQuantity(1);
-    setItemUnitPrice(0);
-    setItemErrors({}); // Clear item errors when adding new item
-  };
-
-  const removeInvoiceItem = (id: number) => {
-    setInvoiceItems(invoiceItems.filter(item => item.id !== id));
-  };
-
   // Sorting functions
   const requestSort = (key: keyof SupplierInvoice) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -678,22 +456,10 @@ export default function SupplierInvoices() {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Calculate statistics
-  const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-  const paidAmount = filteredInvoices
-    .filter((invoice) => invoice.status === "Payée")
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-  const pendingAmount = filteredInvoices
-    .filter((invoice) => invoice.status === "En attente")
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-  const overdueAmount = filteredInvoices
-    .filter((invoice) => invoice.status === "En retard")
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: "TND",
+      currency: "DNT",
       minimumFractionDigits: 3,
       maximumFractionDigits: 3
     }).format(amount);
@@ -714,7 +480,14 @@ export default function SupplierInvoices() {
         </Button>
       </div>
 
-      {/* Dialog for creating/editing invoices */}
+      {/* Supplier Invoice Generator Dialog */}
+      <SupplierInvoiceGenerator
+        isOpen={isGeneratorOpen}
+        onClose={() => setIsGeneratorOpen(false)}
+        onInvoiceGenerated={loadInvoices}
+      />
+
+      {/* Dialog for editing invoices (keeping the existing edit dialog) */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -725,25 +498,17 @@ export default function SupplierInvoices() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="supplierId">Fournisseur *</Label>
-                <Select
+                <EntitySelect
+                  label="Fournisseur *"
+                  id="supplierId"
                   value={formData.supplierId.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, supplierId: Number(value) })}
-                >
-                  <SelectTrigger className={errors.supplierId ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Sélectionner un fournisseur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                        {supplier.name} {supplier.company && `(${supplier.company})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.supplierId && (
-                  <p className="text-sm text-red-500">{errors.supplierId}</p>
-                )}
+                  onChange={(value) => setFormData({ ...formData, supplierId: Number(value) })}
+                  options={suppliers}
+                  getOptionLabel={(supplier) => `${supplier.name} ${supplier.company ? `(${supplier.company})` : ''}`}
+                  getOptionValue={(supplier) => supplier.id.toString()}
+                  required
+                  error={errors.supplierId}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="invoiceNumber">Numéro de facture *</Label>
@@ -817,165 +582,25 @@ Commande #{order.id} - {order.supplierName}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Statut</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="En attente">En attente</SelectItem>
-                  <SelectItem value="Payée">Payée</SelectItem>
-                  <SelectItem value="En retard">En retard</SelectItem>
-                  <SelectItem value="Annulée">Annulée</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Status functionality removed */}
 
-            <div className="space-y-2">
-              <Label>Articles</Label>
-              {/* Only show product selection when no order is selected */}
-              {!formData.orderId || formData.orderId === 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                  <div className="md:col-span-5">
-                    <Label>Produit</Label>
-                    <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={productSearchOpen}
-                          className="w-full justify-between"
-                        >
-                          {selectedProduct
-                            ? products.find((product) => product.id === selectedProduct)?.name
-                            : "Sélectionner un produit..."}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput placeholder="Rechercher un produit..." />
-                          <CommandList>
-                            <CommandEmpty>Aucun produit trouvé.</CommandEmpty>
-                            <CommandGroup>
-                              {products.map((product) => (
-                                <CommandItem
-                                  key={product.id}
-                                  value={product.name}
-                                  onSelect={() => {
-                                    setSelectedProduct(product.id);
-                                    setItemUnitPrice(product.price);
-                                    setProductSearchOpen(false);
-                                  }}
-                                >
-                                  <div className="flex flex-col flex-1">
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-medium">
-                                        {product.name}
-                                      </span>
-                                    </div>
-                                    <span className="text-sm text-muted-foreground">
-                                      {product.price.toFixed(3)} TND • Stock: {product.stock}
-                                    </span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="itemQuantity">Quantité</Label>
-                    <Input
-                      id="itemQuantity"
-                      type="number"
-                      min="1"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(Number(e.target.value) || 1)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="itemUnitPrice">Prix unitaire</Label>
-                    <Input
-                      id="itemUnitPrice"
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={itemUnitPrice}
-                      onChange={(e) => setItemUnitPrice(Number(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label>Total</Label>
-                    <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm">
-                      {(itemQuantity * itemUnitPrice).toFixed(3)} TND
-                    </div>
-                  </div>
-                  <div className="md:col-span-1">
-                    <Button
-                      type="button"
-                      onClick={addInvoiceItem}
-                      className="w-full"
-                      disabled={!selectedProduct || itemQuantity <= 0 || itemUnitPrice <= 0}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+            <div className="border-t pt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Sous-total:</span>
+                <span>{formData.amount.toFixed(3)} DNT</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>TVA:</span>
+                <span>{formData.taxAmount.toFixed(3)} DNT</span>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between font-semibold">
+                  <span>Total TTC:</span>
+                  <span>{formData.totalAmount.toFixed(3)} DNT</span>
                 </div>
-              ) : (
-                // When an order is selected, show a message
-                <div className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
-                  Les articles sont automatiquement remplis à partir de la commande sélectionnée.
-                  Pour modifier les articles, veuillez sélectionner "Aucune" commande.
-                </div>
-              )}
+              </div>
             </div>
-
-            {/* Invoice Items Table */}
-            <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produit</TableHead>
-                    <TableHead className="w-20">Quantité</TableHead>
-                    <TableHead className="w-24">Prix unit.</TableHead>
-                    <TableHead className="w-24">Total</TableHead>
-                    {/* Only show delete button when no order is selected */}
-                    {(!formData.orderId || formData.orderId === 0) && (
-                      <TableHead className="w-16"></TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoiceItems.map((item, index) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.productName}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.unitPrice.toFixed(3)} TND</TableCell>
-                      <TableCell>{item.totalPrice.toFixed(3)} TND</TableCell>
-                      {/* Only show delete button when no order is selected */}
-                      {(!formData.orderId || formData.orderId === 0) && (
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeInvoiceItem(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
+                          
             <div className="flex justify-end space-x-2">
               <Button
                 type="button"
@@ -992,64 +617,7 @@ Commande #{order.id} - {order.supplierName}
         </DialogContent>
       </Dialog>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-600 font-medium">Total facturé</p>
-              <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalAmount)}</p>
-              <div className="flex items-center text-xs text-blue-600 mt-1">
-                <ArrowUpDown className="h-3 w-3 mr-1" />
-                +12% ce mois
-              </div>
-            </div>
-            <FileText className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
 
-        <div className="border rounded-lg p-4 bg-green-50 border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-green-600 font-medium">Montant payé</p>
-              <p className="text-2xl font-bold text-green-900">{formatCurrency(paidAmount)}</p>
-              <div className="flex items-center text-xs text-green-600 mt-1">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                {((paidAmount / totalAmount) * 100 || 0).toFixed(1)}% du total
-              </div>
-            </div>
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-
-        <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-orange-600 font-medium">En attente</p>
-              <p className="text-2xl font-bold text-orange-900">{formatCurrency(pendingAmount)}</p>
-              <div className="flex items-center text-xs text-orange-600 mt-1">
-                <Clock className="h-3 w-3 mr-1" />
-                {invoices.filter((i) => i.status === "En attente").length} facture(s)
-              </div>
-            </div>
-            <Clock className="h-8 w-8 text-orange-600" />
-          </div>
-        </div>
-
-        <div className="border rounded-lg p-4 bg-red-50 border-red-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-red-600 font-medium">En retard</p>
-              <p className="text-2xl font-bold text-red-900">{formatCurrency(overdueAmount)}</p>
-              <div className="flex items-center text-xs text-red-600 mt-1">
-                <ArrowUpDown className="h-3 w-3 mr-1" />
-                {invoices.filter((i) => i.status === "En retard").length} facture(s)
-              </div>
-            </div>
-            <AlertTriangle className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-      </div>
 
       <div className="mb-6">
         <div className="relative w-full max-w-sm">
@@ -1094,12 +662,6 @@ Commande #{order.id} - {order.supplierName}
                   <FileText className="h-4 w-4" />
                   <span>Montant</span>
                   <ArrowUpDown className="ml-2 h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <FileText className="h-4 w-4" />
-                  <span>Statut</span>
                 </div>
               </TableHead>
               <TableHead>
@@ -1167,20 +729,7 @@ Commande #{order.id} - {order.supplierName}
                     )}
                   </TableCell>
                   <TableCell>
-                    {invoice.totalAmount.toFixed(3)} TND
-                  </TableCell>
-                  <TableCell>
-                    {/* Status dropdown for direct update */}
-                    <select
-                      value={invoice.status}
-                      onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
-                      className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="En attente">En attente</option>
-                      <option value="Payée">Payée</option>
-                      <option value="En retard">En retard</option>
-                      <option value="Annulée">Annulée</option>
-                    </select>
+                    {invoice.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">

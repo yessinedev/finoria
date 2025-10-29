@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { EntitySelect } from "@/components/common/EntitySelect"
+import { StatusDropdown } from "@/components/common/StatusDropdown";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 import {
   FileText,
   Download,
@@ -23,15 +25,27 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Wand2,
+  MoreVertical,
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
-import InvoiceGeneratorModal from "@/components/invoices/InvoiceGeneratorModal"
+import UnifiedInvoiceGenerator from "@/components/invoices/UnifiedInvoiceGenerator"
 import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
 import { db } from "@/lib/database"
 import type { Invoice, Sale } from "@/types/types"
 import { pdf } from "@react-pdf/renderer"
 import { InvoicePDFDocument } from "./invoice-pdf"
+import { toast } from "@/components/ui/use-toast";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -45,6 +59,10 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
   const [companySettings, setCompanySettings] = useState<any>(null)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Data table configuration
   const filteredInvoicesByStatus = invoices.filter((invoice) => {
@@ -83,7 +101,7 @@ export default function Invoices() {
     filters,
   } = useDataTable(filteredInvoicesByDate, { key: "issueDate", direction: "desc" })
 
-  const columns = [
+  const invoicesColumns = [
     {
       key: "number" as keyof Invoice,
       label: "N° Facture",
@@ -104,7 +122,9 @@ export default function Invoices() {
       render: (value: string, invoice: Invoice) => (
         <div>
           <div className="font-medium">{value}</div>
-          <div className="text-sm text-muted-foreground">{invoice.clientCompany}</div>
+          <div className="text-sm text-muted-foreground">
+            {invoice.clientCompany}
+          </div>
         </div>
       ),
     },
@@ -140,21 +160,11 @@ export default function Invoices() {
       key: "status" as keyof Invoice,
       label: "Statut",
       sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "En attente", value: "En attente" },
-        { label: "Payée", value: "Payée" },
-        { label: "En retard", value: "En retard" },
-        { label: "Annulée", value: "Annulée" },
-      ],
-      render: (value: Invoice["status"], invoice: Invoice) => (
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusVariant(value)} className="flex items-center gap-1 w-fit">
-            {getStatusIcon(value)}
-            {value}
-          </Badge>
-        </div>
+      render: (value: string, invoice: Invoice) => (
+        <Badge variant={getStatusVariant(invoice.status)} className="flex items-center gap-1">
+          {getStatusIcon(invoice.status)}
+          {value}
+        </Badge>
       ),
     },
   ]
@@ -208,6 +218,7 @@ export default function Invoices() {
               items: [
                 {
                   id: 1,
+                  productId: 1, // Add productId
                   productName: "Consultation technique",
                   description: "Consultation technique d'une heure",
                   quantity: 1,
@@ -329,6 +340,7 @@ export default function Invoices() {
         items: invoice.items || [
           {
             id: 1,
+            productId: 1, // Add productId
             productName: "Consultation technique",
             description: "Consultation technique d'une heure",
             quantity: 1,
@@ -365,17 +377,23 @@ export default function Invoices() {
 
   const handleStatusChange = async (invoiceId: number, newStatus: string) => {
     try {
-      const result = await db.invoices.updateStatus(invoiceId, newStatus)
+      const result = await db.invoices.updateStatus(invoiceId, newStatus);
       if (result.success) {
-        await loadData()
-        // Don't close the preview modal since we're updating directly from the table
+        toast({
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
+        });
       } else {
-        setError(result.error || "Erreur lors de la mise à jour")
+        throw new Error(result.error || "Erreur lors de la mise à jour du statut");
       }
     } catch (error) {
-      setError("Erreur lors de la mise à jour du statut")
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   // Calculate statistics
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
@@ -391,42 +409,43 @@ export default function Invoices() {
 
   // Get sales that don't have invoices yet
   const availableSales = sales.filter(
-    (sale) => !invoices.some((invoice) => invoice.saleId === sale.id) && sale.status !== "Annulée",
+    (sale) => !invoices.some((invoice) => invoice.saleId === sale.id),
   )
 
   const renderActions = (invoice: Invoice) => (
     <div className="flex justify-end gap-2 items-center">
-      {/* Status dropdown for direct update */}
-      <select
-        value={invoice.status}
-        onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
-        className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="En attente">En attente</option>
-        <option value="Payée">Payée</option>
-        <option value="En retard">En retard</option>
-        <option value="Annulée">Annulée</option>
-      </select>
+      <StatusDropdown
+        currentValue={invoice.status}
+        options={[
+          { value: "En attente", label: "En attente", variant: "secondary" },
+          { value: "Payée", label: "Payée", variant: "default" },
+          { value: "En retard", label: "En retard", variant: "destructive" },
+          { value: "Annulée", label: "Annulée", variant: "outline" },
+        ]}
+        onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
+      />
       
-      <Button variant="outline" size="sm" onClick={async () => await handleViewInvoice(invoice)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => handleDownloadPDF(invoice)}
-        disabled={generatingPDF === invoice.id}
-      >
-        {generatingPDF === invoice.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-      </Button>
+      <ActionsDropdown
+        actions={[
+          {
+            label: "Voir",
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => handleViewInvoice(invoice),
+          },
+          {
+            label: "Télécharger PDF",
+            icon: <Download className="h-4 w-4" />,
+            onClick: () => handleDownloadPDF(invoice),
+          },
+        ]}
+      />
     </div>
-  )
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: "TND",
+      currency: "DNT",
       minimumFractionDigits: 3,
       maximumFractionDigits: 3
     }).format(amount)
@@ -443,6 +462,14 @@ export default function Invoices() {
     )
   }
 
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentInvoices = filteredInvoices.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage)
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+
   return (
     <div className="p-6 flex flex-col gap-2">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -453,10 +480,12 @@ export default function Invoices() {
           </p>
         </div>
 
-        <Button onClick={() => setIsGeneratorOpen(true)} className="w-fit">
-          <Plus className="h-4 w-4 mr-2" />
-          Générer une facture
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsGeneratorOpen(true)} className="w-fit">
+            <Plus className="h-4 w-4 mr-2" />
+            Générer une facture
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -605,8 +634,8 @@ export default function Invoices() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={filteredInvoices}
-            columns={columns}
+            data={currentInvoices}
+            columns={invoicesColumns}
             sortConfig={sortConfig}
             searchTerm={searchTerm}
             filters={filters}
@@ -618,12 +647,42 @@ export default function Invoices() {
             emptyMessage="Aucune facture trouvée"
             actions={renderActions}
           />
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Affichage de {indexOfFirstItem + 1} à {Math.min(indexOfLastItem, filteredInvoices.length)} sur {filteredInvoices.length} factures
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-sm font-medium">
+                  Page {currentPage} sur {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Invoice Generator Modal */}
-      <InvoiceGeneratorModal
-        open={isGeneratorOpen}
+      {/* Unified Invoice Generator Modal */}
+      <UnifiedInvoiceGenerator
+        isOpen={isGeneratorOpen}
         onClose={() => setIsGeneratorOpen(false)}
         onInvoiceGenerated={loadData}
         availableSales={availableSales}
