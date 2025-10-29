@@ -141,6 +141,8 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
   const htAmount = invoice.amount; // This is the correct HT amount from the database
   const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
   const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
+  const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+  const finalAmount = ttcAmount + timbreFiscal;
 
   return (
     <Document>
@@ -242,9 +244,13 @@ export function InvoicePDFDocument({ invoice, companySettings }: { invoice: Invo
             </Text>
             <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
           </View>
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>
+            <Text style={styles.totalsValue}>{formatCurrency(timbreFiscal)}</Text>
+          </View>
           <View style={[styles.totalsRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 4, paddingTop: 4 }]}>
             <Text style={[styles.totalsLabel, { fontSize: 14 }]}>Total TTC:</Text>
-            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(ttcAmount)}</Text>
+            <Text style={[styles.totalsValue, { color: '#6366f1', fontSize: 14 }]}>{formatCurrency(finalAmount)}</Text>
           </View>
         </View>
 
