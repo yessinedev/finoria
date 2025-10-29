@@ -298,16 +298,21 @@ export default function SettingsPage() {
   const handleImportDatabase = async () => {
     setIsImporting(true);
     try {
-      // Call the import function (opens file dialog)
       const result = await db.database.import();
       if (result.success && result.data) {
         if (result.data.success) {
+          const dataWithRestart = result.data as typeof result.data & {
+            restartRequired?: boolean;
+          };
+          const restartRequired = !!dataWithRestart.restartRequired;
+          const restartMessage = restartRequired
+            ? " L'application va redémarrer automatiquement."
+            : "";
+
           toast({
             title: "Succès",
-            description: result.data.message || "Base de données importée avec succès",
+            description: `${result.data.message || "Base de données importée avec succès"}${restartMessage}`,
           });
-          // Reload the page to reflect the new data
-          window.location.reload();
         } else {
           console.error("Error importing database:", result.data.error || "Unknown error");
           toast({
