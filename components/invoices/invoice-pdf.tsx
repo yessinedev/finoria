@@ -358,10 +358,12 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
                 <Text style={styles.totalsValue}>-{formatCurrency(totalRemise)}</Text>
               </View>
             )}
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>FODEC:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(fodecAmount)}</Text>
-            </View>
+            {fodecAmount > 0 && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>FODEC:</Text>
+                <Text style={styles.totalsValue}>{formatCurrency(fodecAmount)}</Text>
+              </View>
+            )}
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>TVA:</Text>
               <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>

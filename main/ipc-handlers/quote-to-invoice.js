@@ -4,7 +4,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       // Get the quote with client information
       const quote = db.prepare(`
-        SELECT q.*, c.name as clientName, c.company as clientCompany, c.address as clientAddress, c.taxId as clientTaxId
+        SELECT q.*, c.name as clientName, c.company as clientCompany, c.email as clientEmail, c.phone as clientPhone, c.address as clientAddress, c.taxId as clientTaxId
         FROM quotes q
         JOIN clients c ON q.clientId = c.id
         WHERE q.id = ?
