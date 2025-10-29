@@ -18,10 +18,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { db } from "@/lib/database";
 import type { SupplierOrder, SupplierOrderItem, ReceptionNote } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
-import { Package, User, Car, AlertTriangle } from "lucide-react";
+import { Package, User, Car, AlertTriangle, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ReceptionNoteFormProps {
   supplierOrder?: SupplierOrder;
@@ -37,7 +51,10 @@ export default function ReceptionNoteForm({
   onNoteCreated 
 }: ReceptionNoteFormProps) {
   const { toast } = useToast();
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [supplierOrders, setSupplierOrders] = useState<SupplierOrder[]>([]);
+  const [allSupplierOrders, setAllSupplierOrders] = useState<SupplierOrder[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(supplierOrder?.id || null);
   const [driverName, setDriverName] = useState("");
   const [vehicleRegistration, setVehicleRegistration] = useState("");
@@ -45,6 +62,8 @@ export default function ReceptionNoteForm({
   const [itemQuantities, setItemQuantities] = useState<Record<number, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [supplierSearchOpen, setSupplierSearchOpen] = useState(false);
+  const [orderSearchOpen, setOrderSearchOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -52,6 +71,7 @@ export default function ReceptionNoteForm({
       if (supplierOrder) {
         setSelectedOrderId(supplierOrder.id);
         setSupplierOrders([supplierOrder]);
+        setSelectedSupplierId(supplierOrder.supplierId);
         // Initialize item quantities with ordered quantities
         const initialQuantities: Record<number, number> = {};
         (supplierOrder.items || []).forEach(item => {
@@ -59,12 +79,14 @@ export default function ReceptionNoteForm({
         });
         setItemQuantities(initialQuantities);
       } else {
-        // Otherwise, load all supplier orders for selection
+        // Otherwise, load suppliers and orders for selection
+        loadSuppliers();
         loadSupplierOrders();
       }
     } else {
       // Reset form when closing
       setSelectedOrderId(supplierOrder?.id || null);
+      setSelectedSupplierId(null);
       setDriverName("");
       setVehicleRegistration("");
       setNotes("");
@@ -72,11 +94,23 @@ export default function ReceptionNoteForm({
     }
   }, [open, supplierOrder]);
 
+  const loadSuppliers = async () => {
+    try {
+      const result = await db.suppliers.getAll();
+      if (result.success) {
+        setSuppliers(result.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to load suppliers:", error);
+    }
+  };
+
   const loadSupplierOrders = async () => {
     setLoadingOrders(true);
     try {
       const result = await db.supplierOrders.getAll();
       if (result.success) {
+        setAllSupplierOrders(result.data || []);
         setSupplierOrders(result.data || []);
       }
     } catch (error) {
@@ -90,6 +124,18 @@ export default function ReceptionNoteForm({
       setLoadingOrders(false);
     }
   };
+
+  // Filter orders when supplier is selected
+  useEffect(() => {
+    if (selectedSupplierId) {
+      const filtered = allSupplierOrders.filter(order => order.supplierId === selectedSupplierId);
+      setSupplierOrders(filtered);
+      // Reset selected order when supplier changes
+      setSelectedOrderId(null);
+    } else {
+      setSupplierOrders(allSupplierOrders);
+    }
+  }, [selectedSupplierId, allSupplierOrders]);
 
   const handleQuantityChange = (itemId: number, value: string) => {
     const numValue = parseInt(value) || 0;
@@ -194,27 +240,125 @@ export default function ReceptionNoteForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Only show order selection if no order was pre-provided */}
           {!supplierOrder && (
-            <div className="space-y-2">
-              <Label htmlFor="supplierOrderId" className="flex items-center gap-2">
-                Commande fournisseur
-              </Label>
-              <select
-                id="supplierOrderId"
-                value={selectedOrderId || ""}
-                onChange={(e) => setSelectedOrderId(Number(e.target.value))}
-                disabled={loadingOrders}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">
-                  {loadingOrders ? "Chargement..." : "Sélectionner une commande"}
-                </option>
-                {supplierOrders.map((order) => (
-                  <option key={order.id} value={order.id}>
-                    {order.orderNumber} - {order.supplierName} ({new Date(order.orderDate).toLocaleDateString("fr-FR")})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Fournisseur *
+                </Label>
+                <Popover open={supplierSearchOpen} onOpenChange={setSupplierSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={supplierSearchOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedSupplierId
+                        ? suppliers.find((s) => s.id === selectedSupplierId)?.name +
+                          (suppliers.find((s) => s.id === selectedSupplierId)?.company
+                            ? ` (${suppliers.find((s) => s.id === selectedSupplierId)?.company})`
+                            : "")
+                        : "Rechercher un fournisseur..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Rechercher un fournisseur..." />
+                      <CommandList>
+                        <CommandEmpty>Aucun fournisseur trouvé.</CommandEmpty>
+                        <CommandGroup>
+                          {suppliers.map((supplier) => (
+                            <CommandItem
+                              key={supplier.id}
+                              value={`${supplier.name} ${supplier.company || ""}`}
+                              onSelect={() => {
+                                setSelectedSupplierId(supplier.id);
+                                setSupplierSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedSupplierId === supplier.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {supplier.name} {supplier.company ? `(${supplier.company})` : ""}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              {selectedSupplierId && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Commande fournisseur *
+                  </Label>
+                  <Popover open={orderSearchOpen} onOpenChange={setOrderSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={orderSearchOpen}
+                        className="w-full justify-between"
+                        disabled={loadingOrders}
+                      >
+                        {selectedOrderId
+                          ? (() => {
+                              const order = supplierOrders.find((o) => o.id === selectedOrderId);
+                              return order
+                                ? `${order.orderNumber} - ${new Date(order.orderDate).toLocaleDateString("fr-FR")} - ${order.totalAmount.toFixed(3)} DNT`
+                                : "Sélectionner une commande...";
+                            })()
+                          : loadingOrders
+                          ? "Chargement..."
+                          : supplierOrders.length === 0
+                          ? "Aucune commande disponible"
+                          : "Rechercher une commande..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Rechercher une commande..." />
+                        <CommandList>
+                          <CommandEmpty>Aucune commande trouvée.</CommandEmpty>
+                          <CommandGroup>
+                            {supplierOrders.map((order) => (
+                              <CommandItem
+                                key={order.id}
+                                value={`${order.orderNumber} ${order.orderDate}`}
+                                onSelect={() => {
+                                  setSelectedOrderId(order.id);
+                                  setOrderSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedOrderId === order.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{order.orderNumber}</span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {new Date(order.orderDate).toLocaleDateString("fr-FR")} - {order.totalAmount.toFixed(3)} DNT
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+            </>
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

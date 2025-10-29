@@ -529,7 +529,7 @@ export default function SettingsPage() {
                   onChange={(value) =>
                     setCompanyFields((prev) => ({ ...prev, address: value }))
                   }
-                  placeholder="123 rue des Affaires, Ville, État 12345"
+                  placeholder="Avenue Habib Bourguiba, Tunis 1000"
                   className="md:col-span-2"
                 />
                 <FormInput
@@ -539,7 +539,7 @@ export default function SettingsPage() {
                   onChange={(value) =>
                     setCompanyFields((prev) => ({ ...prev, city: value }))
                   }
-                  placeholder="Paris"
+                  placeholder="Tunis"
                 />
                 <FormInput
                   label="Pays"
@@ -548,7 +548,7 @@ export default function SettingsPage() {
                   onChange={(value) =>
                     setCompanyFields((prev) => ({ ...prev, country: value }))
                   }
-                  placeholder="France"
+                  placeholder="Tunisie"
                 />
                 <FormInput
                   label="Numéro de téléphone"
@@ -557,7 +557,7 @@ export default function SettingsPage() {
                   onChange={(value) =>
                     setCompanyFields((prev) => ({ ...prev, phone: value }))
                   }
-                  placeholder="+33 1 23 45 67 89"
+                  placeholder="+216 71 234 567"
                 />
                 <FormInput
                   label="Site web"
@@ -566,7 +566,7 @@ export default function SettingsPage() {
                   onChange={(value) =>
                     setCompanyFields((prev) => ({ ...prev, website: value }))
                   }
-                  placeholder="https://votreentreprise.com"
+                  placeholder="https://votreentreprise.tn"
                 />
               </div>
               

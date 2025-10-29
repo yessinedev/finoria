@@ -1108,7 +1108,7 @@ export default function SupplierInvoiceGenerator({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="flex-1 flex flex-col">
-                        <div className="grid grid-cols-12 gap-2 items-end mb-4">
+                        <div className="grid grid-cols-12 gap-2 items-end mb-8">
                           <div className="col-span-5">
                             <Label>Produit</Label>
                             <EntitySelect
@@ -1204,10 +1204,10 @@ export default function SupplierInvoiceGenerator({
                                   <th className="text-right p-2 w-24">
                                     Prix unit.
                                   </th>
-                                  <th className="text-right p-2 w-20">
+                                  <th className="text-right p-2 w-28">
                                     Remise %
                                   </th>
-                                  <th className="text-right p-2 w-24">Total</th>
+                                  <th className="text-right p-2 w-32">Total</th>
                                   <th className="text-right p-2 w-16"></th>
                                 </tr>
                               </thead>
@@ -1293,7 +1293,7 @@ export default function SupplierInvoiceGenerator({
                         )}
 
                         {/* Financial Summary */}
-                        <div className="border-t pt-4 mt-4">
+                        <div className="border-t pt-4 mt-8">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* FODEC Tax Input */}
                             <div className="space-y-2">

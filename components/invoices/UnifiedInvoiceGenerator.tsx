@@ -1100,10 +1100,10 @@ export default function UnifiedInvoiceGenerator({
                                   <th className="text-right p-2 w-24">
                                     Prix unit.
                                   </th>
-                                  <th className="text-right p-2 w-20">
+                                  <th className="text-right p-2 w-28">
                                     Remise %
                                   </th>
-                                  <th className="text-right p-2 w-24">Total</th>
+                                  <th className="text-right p-2 w-32">Total</th>
                                   <th className="text-right p-2 w-16"></th>
                                 </tr>
                               </thead>

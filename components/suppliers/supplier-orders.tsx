@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 import {
   Command,
   CommandEmpty,
@@ -658,8 +659,8 @@ export default function SupplierOrders() {
 
               <div className="space-y-2">
                 <Label>Articles</Label>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                  <div className="md:col-span-5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end mb-8">
+                  <div className="md:col-span-4">
                     <Label>Produit</Label>
                     <Popover
                       open={productSearchOpen}
@@ -798,8 +799,8 @@ export default function SupplierOrders() {
                         <TableHead className="w-28 md:w-36">
                           Prix unit.
                         </TableHead>
-                        <TableHead className="w-24 md:w-32">Remise %</TableHead>
-                        <TableHead className="w-28 md:w-36">Total</TableHead>
+                        <TableHead className="w-28 md:w-36">Remise %</TableHead>
+                        <TableHead className="w-32 md:w-40">Total</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -832,7 +833,7 @@ export default function SupplierOrders() {
               )}
 
               {/* Totals Section */}
-              <div className="border-t pt-4 space-y-2">
+              <div className="border-t pt-4 mt-6 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Sous-total:</span>
                   <span>
@@ -1006,29 +1007,26 @@ export default function SupplierOrders() {
                   </TableCell>
                   <TableCell>{order.totalAmount.toFixed(3)} DNT</TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(order)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCreateReceptionNote(order)}
-                      >
-                        <Package className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteDialog(order)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <ActionsDropdown
+                      actions={[
+                        {
+                          label: "Modifier",
+                          icon: <Edit className="h-4 w-4" />,
+                          onClick: () => openEditDialog(order),
+                        },
+                        {
+                          label: "Créer bon de réception",
+                          icon: <Package className="h-4 w-4" />,
+                          onClick: () => handleCreateReceptionNote(order),
+                        },
+                        {
+                          label: "Supprimer",
+                          icon: <Trash2 className="h-4 w-4" />,
+                          onClick: () => openDeleteDialog(order),
+                          className: "text-red-600",
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))

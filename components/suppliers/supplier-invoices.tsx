@@ -53,6 +53,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { pdf } from "@react-pdf/renderer";
 import { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
+import { ActionsDropdown } from "@/components/common/actions-dropdown";
 import SupplierInvoicePreview from "./supplier-invoice-preview";
 import SupplierInvoiceGenerator from "./SupplierInvoiceGenerator";
 
@@ -738,36 +739,31 @@ Commande #{order.id} - {order.supplierName}
                     {invoice.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(invoice)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewInvoice(invoice)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadPDF(invoice)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDeleteDialog(invoice)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <ActionsDropdown
+                      actions={[
+                        {
+                          label: "Modifier",
+                          icon: <Edit className="h-4 w-4" />,
+                          onClick: () => openEditDialog(invoice),
+                        },
+                        {
+                          label: "Voir",
+                          icon: <Eye className="h-4 w-4" />,
+                          onClick: () => handleViewInvoice(invoice),
+                        },
+                        {
+                          label: "Télécharger PDF",
+                          icon: <Download className="h-4 w-4" />,
+                          onClick: () => handleDownloadPDF(invoice),
+                        },
+                        {
+                          label: "Supprimer",
+                          icon: <Trash2 className="h-4 w-4" />,
+                          onClick: () => openDeleteDialog(invoice),
+                          className: "text-red-600",
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))
