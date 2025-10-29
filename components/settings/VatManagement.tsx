@@ -179,10 +179,7 @@ export default function VatManagement({ className }: VatManagementProps) {
                   <Input
                     id="rate"
                     type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={formData.rate}
+                    value={formData.rate.toString()}
                     onChange={(e) => setFormData({ ...formData, rate: Number(e.target.value) || 0 })}
                     required
                   />

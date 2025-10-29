@@ -202,9 +202,6 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
         const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
         totalTaxAmount += itemTaxAmount;
-        
-        // Update product stock
-        updateProductStock.run(item.quantity, item.productId);
       }
       
       // Update the order with the calculated tax amount
