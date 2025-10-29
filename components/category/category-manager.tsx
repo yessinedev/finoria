@@ -308,10 +308,6 @@ export default function CategoryManager({
           />
         </CardContent>
       </Card>
-
-      <div className="flex justify-end">
-        <Button onClick={onClose}>Fermer</Button>
-      </div>
     </div>
   );
 }
