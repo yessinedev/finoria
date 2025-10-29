@@ -304,8 +304,8 @@ export default function SaleForm(props: SaleFormProps) {
                     <TableHead>Article</TableHead>
                     <TableHead className="w-24 md:w-32">Qté</TableHead>
                     <TableHead className="w-28 md:w-36">Prix unit.</TableHead>
-                    <TableHead className="w-24 md:w-32">Remise %</TableHead>
-                    <TableHead className="w-28 md:w-36">Total</TableHead>
+                    <TableHead className="w-28 md:w-36">Remise %</TableHead>
+                    <TableHead className="w-32 md:w-40">Total</TableHead>
                     <TableHead className="w-16"></TableHead>
                   </TableRow>
                 </TableHeader>

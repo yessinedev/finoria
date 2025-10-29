@@ -83,7 +83,7 @@ export default function OnboardingPage() {
                 id="companyName"
                 value={data.companyInfo.name}
                 onChange={(value) => updateCompanyInfo({ name: value })}
-                placeholder="Acme Corporation"
+                placeholder="Société Exemple SARL"
                 required
               />
               <FormInput
@@ -91,7 +91,7 @@ export default function OnboardingPage() {
                 id="address"
                 value={data.companyInfo.address}
                 onChange={(value) => updateCompanyInfo({ address: value })}
-                placeholder="123 rue des Affaires, Ville, État 12345"
+                placeholder="Avenue Habib Bourguiba, Tunis 1000"
                 required
               />
               <FormInput
@@ -99,7 +99,7 @@ export default function OnboardingPage() {
                 id="phone"
                 value={data.companyInfo.phone}
                 onChange={(value) => updateCompanyInfo({ phone: value })}
-                placeholder="01 23 45 67 89"
+                placeholder="+216 71 234 567"
                 required
               />
               <FormInput
@@ -107,7 +107,7 @@ export default function OnboardingPage() {
                 id="email"
                 value={data.companyInfo.email}
                 onChange={(value) => updateCompanyInfo({ email: value })}
-                placeholder="contact@acme.com"
+                placeholder="contact@exemple.tn"
                 required
               />
               <FormInput
@@ -115,7 +115,7 @@ export default function OnboardingPage() {
                 id="website"
                 value={data.companyInfo.website || ""}
                 onChange={(value) => updateCompanyInfo({ website: value })}
-                placeholder="https://www.acme.com"
+                placeholder="https://www.exemple.tn"
                 required
               />
               <FormInput
@@ -123,7 +123,7 @@ export default function OnboardingPage() {
                 id="city"
                 value={data.companyInfo.city}
                 onChange={(value) => updateCompanyInfo({ city: value })}
-                placeholder="Ville"
+                placeholder="Tunis"
                 required
               />
               <FormInput
@@ -131,7 +131,7 @@ export default function OnboardingPage() {
                 id="country"
                 value={data.companyInfo.country}
                 onChange={(value) => updateCompanyInfo({ country: value })}
-                placeholder="Pays"
+                placeholder="Tunisie"
                 required
               />
             </div>

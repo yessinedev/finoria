@@ -14,14 +14,29 @@ import {
   Eye,
   Download,
   MoreVertical,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
 import type { PurchaseOrder, Sale } from "@/types/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { pdf } from "@react-pdf/renderer";
 import { PurchaseOrderPDFDocument } from "./purchase-order-pdf";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -29,7 +44,10 @@ import { ActionsDropdown } from "@/components/common/actions-dropdown";
 
 export default function PurchaseOrders() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
+  const [clients, setClients] = useState<any[]>([])
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null)
   const [sales, setSales] = useState<Sale[]>([])
+  const [allSales, setAllSales] = useState<Sale[]>([])
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,10 +64,24 @@ export default function PurchaseOrders() {
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null)
   const [deliveryDate, setDeliveryDate] = useState<string>("")
   const [creating, setCreating] = useState(false)
+  const [clientSearchOpen, setClientSearchOpen] = useState(false)
+  const [saleSearchOpen, setSaleSearchOpen] = useState(false)
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
+
+  // Filter sales when client is selected
+  useEffect(() => {
+    if (selectedClientId) {
+      const filtered = allSales.filter(sale => sale.clientId === selectedClientId);
+      setSales(filtered);
+      // Reset selected sale when client changes
+      setSelectedSaleId(null);
+    } else {
+      setSales(allSales);
+    }
+  }, [selectedClientId, allSales]);
 
   // DataTable logic
   const filteredPurchaseOrdersByDate = purchaseOrders.filter((purchaseOrder) => {
@@ -134,10 +166,11 @@ export default function PurchaseOrders() {
     setError(null);
 
     try {
-      const [purchaseOrdersResult, salesResult, productsResult] = await Promise.all([
+      const [purchaseOrdersResult, salesResult, productsResult, clientsResult] = await Promise.all([
         db.purchaseOrders.getAll(),
         db.sales.getAllWithItems(),
-        db.products.getAll()
+        db.products.getAll(),
+        db.clients.getAll()
       ]);
 
       if (purchaseOrdersResult.success) {
@@ -147,11 +180,16 @@ export default function PurchaseOrders() {
       }
 
       if (salesResult.success) {
+        setAllSales(salesResult.data || []);
         setSales(salesResult.data || []);
       }
       
       if (productsResult.success) {
         setProducts(productsResult.data || []);
+      }
+
+      if (clientsResult.success) {
+        setClients(clientsResult.data || []);
       }
     } catch (error) {
       setError("Erreur inattendue lors du chargement");
@@ -439,22 +477,116 @@ export default function PurchaseOrders() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="sale">Vente d'origine *</Label>
-              <select
-                id="sale"
-                value={selectedSaleId || ""}
-                onChange={(e) => setSelectedSaleId(Number(e.target.value) || null)}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Sélectionnez une vente</option>
-                {sales.map((sale) => (
-                  <option key={sale.id} value={sale.id}>
-                    VTE-{sale.id} - {sale.clientName} ({formatCurrency(sale.totalAmount + sale.taxAmount)})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-2">
+              <Label>Client *</Label>
+              <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={clientSearchOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedClientId
+                      ? clients.find((c) => c.id === selectedClientId)?.name +
+                        (clients.find((c) => c.id === selectedClientId)?.company
+                          ? ` (${clients.find((c) => c.id === selectedClientId)?.company})`
+                          : "")
+                      : "Rechercher un client..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Rechercher un client..." />
+                    <CommandList>
+                      <CommandEmpty>Aucun client trouvé.</CommandEmpty>
+                      <CommandGroup>
+                        {clients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={`${client.name} ${client.company || ""}`}
+                            onSelect={() => {
+                              setSelectedClientId(client.id);
+                              setClientSearchOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedClientId === client.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {client.name} {client.company ? `(${client.company})` : ""}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
+
+            {selectedClientId && (
+              <div className="space-y-2">
+                <Label>Vente d'origine *</Label>
+                <Popover open={saleSearchOpen} onOpenChange={setSaleSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={saleSearchOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedSaleId
+                        ? (() => {
+                            const selectedSale = sales.find((s) => s.id === selectedSaleId);
+                            return selectedSale
+                              ? `VTE-${selectedSale.id} - ${new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")} (${formatCurrency(selectedSale.totalAmount + selectedSale.taxAmount)})`
+                              : "Sélectionner une vente...";
+                          })()
+                        : sales.length === 0
+                        ? "Aucune vente disponible"
+                        : "Rechercher une vente..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Rechercher une vente..." />
+                      <CommandList>
+                        <CommandEmpty>Aucune vente trouvée.</CommandEmpty>
+                        <CommandGroup>
+                          {sales.map((sale) => (
+                            <CommandItem
+                              key={sale.id}
+                              value={`VTE-${sale.id} ${sale.saleDate}`}
+                              onSelect={() => {
+                                setSelectedSaleId(sale.id);
+                                setSaleSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedSaleId === sale.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">VTE-{sale.id}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {new Date(sale.saleDate).toLocaleDateString("fr-FR")} - {formatCurrency(sale.totalAmount + sale.taxAmount)}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="deliveryDate">Date de livraison prévue</Label>
@@ -471,6 +603,7 @@ export default function PurchaseOrders() {
               variant="outline"
               onClick={() => {
                 setIsCreating(false);
+                setSelectedClientId(null);
                 setSelectedSaleId(null);
                 setDeliveryDate("");
               }}

@@ -10,16 +10,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { db } from "@/lib/database";
 import type { Sale, DeliveryReceipt } from "@/types/types";
 import { useToast } from "@/hooks/use-toast";
-import { Truck, User, Car } from "lucide-react";
+import { Truck, User, Car, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DeliveryReceiptFormProps {
   sale?: Sale; // Optional sale prop for pre-selection
@@ -37,12 +44,17 @@ export default function DeliveryReceiptForm({
   onReceiptCreated 
 }: DeliveryReceiptFormProps) {
   const { toast } = useToast();
+  const [clients, setClients] = useState<any[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [allSales, setAllSales] = useState<Sale[]>([]);
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(sale?.id || deliveryReceipt?.saleId || null);
   const [driverName, setDriverName] = useState(deliveryReceipt?.driverName || "");
   const [vehicleRegistration, setVehicleRegistration] = useState(deliveryReceipt?.vehicleRegistration || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingSales, setLoadingSales] = useState(false);
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const [saleSearchOpen, setSaleSearchOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -50,17 +62,20 @@ export default function DeliveryReceiptForm({
       if (sale) {
         setSelectedSaleId(sale.id);
         setSales([sale]);
+        setSelectedClientId(sale.clientId);
       } else if (deliveryReceipt) {
         // If editing an existing delivery receipt, use the provided sale data if available
         if (sale) {
           setSelectedSaleId(sale.id);
           setSales([sale]);
+          setSelectedClientId(sale.clientId);
         } else {
           // Otherwise, load the associated sale
           loadSaleForReceipt(deliveryReceipt.saleId);
         }
       } else {
-        // Otherwise, load all sales for selection
+        // Otherwise, load clients and sales for selection
+        loadClients();
         loadSales();
       }
       
@@ -71,6 +86,7 @@ export default function DeliveryReceiptForm({
       }
     } else {
       // Reset form when closing
+      setSelectedClientId(null);
       setSelectedSaleId(sale?.id || deliveryReceipt?.saleId || null);
       setDriverName(deliveryReceipt?.driverName || "");
       setVehicleRegistration(deliveryReceipt?.vehicleRegistration || "");
@@ -87,11 +103,23 @@ export default function DeliveryReceiptForm({
     }
   };
 
+  const loadClients = async () => {
+    try {
+      const result = await db.clients.getAll();
+      if (result.success) {
+        setClients(result.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to load clients:", error);
+    }
+  };
+
   const loadSales = async () => {
     setLoadingSales(true);
     try {
       const result = await db.sales.getAllWithItems();
       if (result.success) {
+        setAllSales(result.data || []);
         setSales(result.data || []);
       }
     } catch (error) {
@@ -105,6 +133,18 @@ export default function DeliveryReceiptForm({
       setLoadingSales(false);
     }
   };
+
+  // Filter sales when client is selected
+  useEffect(() => {
+    if (selectedClientId) {
+      const filtered = allSales.filter(s => s.clientId === selectedClientId);
+      setSales(filtered);
+      // Reset selected sale when client changes
+      setSelectedSaleId(null);
+    } else {
+      setSales(allSales);
+    }
+  }, [selectedClientId, allSales]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,27 +261,125 @@ export default function DeliveryReceiptForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Only show sale selection if no sale was pre-provided and not editing */}
           {!sale && !deliveryReceipt && (
-            <div className="space-y-2">
-              <Label htmlFor="saleId" className="flex items-center gap-2">
-                Commande client
-              </Label>
-              <Select 
-                value={selectedSaleId?.toString() || ""} 
-                onValueChange={(value) => setSelectedSaleId(Number(value))}
-                disabled={loadingSales}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingSales ? "Chargement..." : "Sélectionner une commande"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {sales.map((sale) => (
-                    <SelectItem key={sale.id} value={sale.id.toString()}>
-                      CMD-{sale.id} - {sale.clientName} ({new Date(sale.saleDate).toLocaleDateString("fr-FR")})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Client *
+                </Label>
+                <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientSearchOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedClientId
+                        ? clients.find((c) => c.id === selectedClientId)?.name +
+                          (clients.find((c) => c.id === selectedClientId)?.company
+                            ? ` (${clients.find((c) => c.id === selectedClientId)?.company})`
+                            : "")
+                        : "Rechercher un client..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Rechercher un client..." />
+                      <CommandList>
+                        <CommandEmpty>Aucun client trouvé.</CommandEmpty>
+                        <CommandGroup>
+                          {clients.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={`${client.name} ${client.company || ""}`}
+                              onSelect={() => {
+                                setSelectedClientId(client.id);
+                                setClientSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedClientId === client.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {client.name} {client.company ? `(${client.company})` : ""}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {selectedClientId && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Commande client *
+                  </Label>
+                  <Popover open={saleSearchOpen} onOpenChange={setSaleSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={saleSearchOpen}
+                        className="w-full justify-between"
+                        disabled={loadingSales}
+                      >
+                        {selectedSaleId
+                          ? (() => {
+                              const selectedSale = sales.find((s) => s.id === selectedSaleId);
+                              return selectedSale
+                                ? `CMD-${selectedSale.id} - ${new Date(selectedSale.saleDate).toLocaleDateString("fr-FR")} (${(selectedSale.totalAmount + selectedSale.taxAmount).toFixed(3)} DNT)`
+                                : "Sélectionner une commande...";
+                            })()
+                          : loadingSales
+                          ? "Chargement..."
+                          : sales.length === 0
+                          ? "Aucune commande disponible"
+                          : "Rechercher une commande..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Rechercher une commande..." />
+                        <CommandList>
+                          <CommandEmpty>Aucune commande trouvée.</CommandEmpty>
+                          <CommandGroup>
+                            {sales.map((saleItem) => (
+                              <CommandItem
+                                key={saleItem.id}
+                                value={`CMD-${saleItem.id} ${saleItem.saleDate}`}
+                                onSelect={() => {
+                                  setSelectedSaleId(saleItem.id);
+                                  setSaleSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedSaleId === saleItem.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">CMD-{saleItem.id}</span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {new Date(saleItem.saleDate).toLocaleDateString("fr-FR")} - {(saleItem.totalAmount + saleItem.taxAmount).toFixed(3)} DNT
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+            </>
           )}
           
           <div className="space-y-2">
