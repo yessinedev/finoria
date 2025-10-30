@@ -56,7 +56,7 @@ export default function DeliveryReceiptPreview({
         
         <div className="flex-1 overflow-hidden">
           <div className="h-full border rounded-lg overflow-hidden">
-            <PDFViewer className="w-full h-full min-h-[500px]">
+            <PDFViewer className="w-full h-full min-h-[500px]" showToolbar={false}>
               <DeliveryReceiptPDFDocument 
                 deliveryReceipt={deliveryReceipt} 
                 sale={sale}

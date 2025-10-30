@@ -204,14 +204,13 @@ const styles = StyleSheet.create({
 })
 
 export function SupplierInvoicePDFDocument({ invoice, companySettings, products }: { invoice: SupplierInvoice; companySettings?: any; products?: any[] }) {
-  // Calculate HT (before tax) correctly
-  const htAmount = invoice.amount; // This is the correct HT amount from the database
-  const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
-  const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
-  const timbreFiscal = companySettings?.timbreFiscal || 1.000;
-  const finalAmount = ttcAmount + timbreFiscal;
+  // Calculate Total HT (sum of all item totals after discount)
+  // For supplier invoices: Total HT = sum of item totals
+  const totalHT = Array.isArray(invoice.items) 
+    ? invoice.items.reduce((sum, item) => sum + item.totalPrice, 0)
+    : invoice.amount;
 
-  // Calculate TVA breakdown by rate
+  // Calculate TVA breakdown by rate: TVA = Total HT × taux_TVA (no FODEC for supplier invoices)
   const tvaBreakdown: Record<number, { baseAmount: number; tvaAmount: number }> = {};
   
   if (Array.isArray(invoice.items) && Array.isArray(products)) {
@@ -224,9 +223,18 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
       }
       
       tvaBreakdown[tvaRate].baseAmount += item.totalPrice;
+      // TVA = Total HT × taux_TVA (no FODEC for supplier invoices)
       tvaBreakdown[tvaRate].tvaAmount += (item.totalPrice * tvaRate) / 100;
     });
   }
+
+  // Calculate totals
+  const totalBaseHT = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.baseAmount, 0) || totalHT;
+  const totalTVA = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.tvaAmount, 0);
+  const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+
+  // Calculate Total TTC: Total HT + TVA + Timbre Fiscal (no FODEC for supplier invoices)
+  const finalAmount = totalHT + totalTVA + timbreFiscal;
 
   return (
     <Document>
@@ -247,7 +255,6 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
           <View>
             <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{invoice.invoiceNumber}</Text>
             <Text style={styles.subtitle}>Date: {formatDate(invoice.issueDate)}</Text>
-            <Text style={styles.subtitle}>Échéance: {formatDate(invoice.dueDate || '')}</Text>
           </View>
         </View>
 
@@ -280,10 +287,6 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
             <View style={{ flex: 1 }}>
               <Text style={styles.totalsLabel}>Date d'émission</Text>
               <Text style={styles.cardContent}>{formatDate(invoice.issueDate)}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.totalsLabel}>Date d'échéance</Text>
-              <Text style={styles.cardContent}>{formatDate(invoice.dueDate || '')}</Text>
             </View>
           </View>
         </View>
@@ -334,15 +337,15 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
               ) : (
                 <View style={styles.tvaBreakdownRow}>
                   <Text style={styles.tvaBreakdownCell}>0%</Text>
-                  <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(htAmount)}</Text>
+                  <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(totalHT)}</Text>
                   <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(0)}</Text>
                 </View>
               )}
               {/* Total Row */}
               <View style={[styles.tvaBreakdownRow, { backgroundColor: '#eef2ff', fontWeight: 700 }]}>
                 <Text style={[styles.tvaBreakdownCell, { fontWeight: 700 }]}>Total</Text>
-                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(htAmount)}</Text>
-                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(tvaAmount)}</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalHT)}</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalTVA)}</Text>
               </View>
             </View>
           </View>
@@ -351,11 +354,11 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
           <View style={styles.totalsBox}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(htAmount)}</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(totalHT)}</Text>
             </View>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>TVA:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(totalTVA)}</Text>
             </View>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>

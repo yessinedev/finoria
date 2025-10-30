@@ -74,7 +74,7 @@ export default function InvoicePreview({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+        <DialogHeader className="shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -102,7 +102,7 @@ export default function InvoicePreview({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex-shrink-0 border-t pt-4">
+        <div className="shrink-0 border-t pt-4">
           <div className="flex flex-col sm:flex-row gap-3 justify-between">
             <div className="flex gap-2">
               {onStatusChange && (

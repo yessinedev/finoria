@@ -52,8 +52,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getSalesWithItems: () => ipcRenderer.invoke("get-sales-with-items"),
   getSale: (id) => ipcRenderer.invoke("get-sale", id),
   getSaleItems: (saleId) => ipcRenderer.invoke("get-sale-items", saleId),
-  updateSaleStatus: (id, status) =>
-    ipcRenderer.invoke("update-sale-status", id, status),
   deleteSale: (id) => ipcRenderer.invoke("delete-sale", id),
 
   // --- Dashboard API ---

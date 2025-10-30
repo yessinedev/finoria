@@ -32,28 +32,72 @@ module.exports = (ipcMain, db) => {
       
       // Today's revenue
       const todayRevenueStmt = db.prepare(`
-        SELECT COALESCE(SUM(totalAmount + taxAmount), 0) as revenue 
+        SELECT COALESCE(SUM(totalAmount), 0) as revenue 
         FROM sales 
         WHERE DATE(saleDate) = DATE('now')
       `);
       const todayRevenue = todayRevenueStmt.get();
+      
+      // Yesterday's revenue (for growth calculation)
+      const yesterdayRevenueStmt = db.prepare(`
+        SELECT COALESCE(SUM(totalAmount), 0) as revenue 
+        FROM sales 
+        WHERE DATE(saleDate) = DATE('now', '-1 day')
+      `);
+      const yesterdayRevenue = yesterdayRevenueStmt.get();
       
       // Monthly revenue (current month)
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
       const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
       
       const monthlyRevenueStmt = db.prepare(`
-        SELECT COALESCE(SUM(totalAmount + taxAmount), 0) as revenue 
+        SELECT COALESCE(SUM(totalAmount), 0) as revenue 
         FROM sales 
         WHERE DATE(saleDate) BETWEEN ? AND ?
       `);
       const monthlyRevenue = monthlyRevenueStmt.get(firstDayOfMonth, lastDayOfMonth);
+      
+      // Previous month revenue (for growth calculation)
+      const previousMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0];
+      const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0];
+      
+      const previousMonthRevenueStmt = db.prepare(`
+        SELECT COALESCE(SUM(totalAmount), 0) as revenue 
+        FROM sales 
+        WHERE DATE(saleDate) BETWEEN ? AND ?
+      `);
+      const previousMonthRevenue = previousMonthRevenueStmt.get(previousMonthStart, previousMonthEnd);
+      
+      // Calculate monthly goal (average of last 3 months revenue as goal)
+      const threeMonthsAgoStart = new Date(today.getFullYear(), today.getMonth() - 3, 1).toISOString().split('T')[0];
+      const threeMonthsAgoEnd = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0];
+      
+      const avgMonthlyRevenueStmt = db.prepare(`
+        SELECT COALESCE(AVG(monthly_revenue), 0) as avgRevenue
+        FROM (
+          SELECT 
+            strftime('%Y-%m', saleDate) as month,
+            SUM(totalAmount) as monthly_revenue
+          FROM sales 
+          WHERE DATE(saleDate) BETWEEN ? AND ?
+          GROUP BY strftime('%Y-%m', saleDate)
+        )
+      `);
+      const avgMonthlyRevenue = avgMonthlyRevenueStmt.get(threeMonthsAgoStart, threeMonthsAgoEnd);
       
       // Total clients
       const totalClientsStmt = db.prepare(
         "SELECT COUNT(*) as count FROM clients"
       );
       const totalClients = totalClientsStmt.get();
+
+      // Active clients in selected period (distinct clients with at least one sale)
+      const activeClientsStmt = db.prepare(`
+        SELECT COUNT(DISTINCT s.clientId) as count
+        FROM sales s
+        WHERE DATE(s.saleDate) BETWEEN ? AND ?
+      `);
+      const activeClients = activeClientsStmt.get(startDateStr, endDateStr);
       
       // Total products
       const totalProductsStmt = db.prepare(
@@ -80,22 +124,23 @@ module.exports = (ipcMain, db) => {
       );
       const pendingInvoices = pendingInvoicesStmt.get();
       
-      // Overdue invoices (due date < today and not paid)
+      // Overdue invoices - removed since invoices no longer have dueDate
+      // For now, count invoices with status 'En attente' as potentially overdue based on creation date
       const overdueInvoicesStmt = db.prepare(`
         SELECT COUNT(*) as count 
         FROM invoices 
-        WHERE status = 'En attente' AND DATE(dueDate) < DATE('now')
+        WHERE status = 'En attente' AND DATE(issueDate) < DATE('now', '-30 days')
       `);
       const overdueInvoices = overdueInvoicesStmt.get();
       
-      // Recent sales (last 10, within date range)
+      // Recent sales (last 5, within date range) - removed status field
       const recentSalesStmt = db.prepare(`
-        SELECT s.id, c.name as client, (s.totalAmount + s.taxAmount) as amount, s.saleDate as date, s.status
+        SELECT s.id, c.name as client, s.totalAmount as amount, s.saleDate as date
         FROM sales s
         JOIN clients c ON s.clientId = c.id
         WHERE DATE(s.saleDate) BETWEEN ? AND ?
         ORDER BY s.saleDate DESC
-        LIMIT 10
+        LIMIT 5
       `);
       const recentSales = recentSalesStmt.all(startDateStr, endDateStr);
       
@@ -106,7 +151,7 @@ module.exports = (ipcMain, db) => {
         salesByMonthQuery = `
           SELECT 
             strftime('%d/%m', saleDate) as month,
-            SUM(totalAmount + taxAmount) as revenue,
+            SUM(totalAmount) as revenue,
             COUNT(*) as sales
           FROM sales 
           WHERE DATE(saleDate) BETWEEN ? AND ?
@@ -118,7 +163,7 @@ module.exports = (ipcMain, db) => {
         salesByMonthQuery = `
           SELECT 
             strftime('%m/%Y', saleDate) as month,
-            SUM(totalAmount + taxAmount) as revenue,
+            SUM(totalAmount) as revenue,
             COUNT(*) as sales
           FROM sales 
           WHERE DATE(saleDate) BETWEEN ? AND ?
@@ -130,6 +175,19 @@ module.exports = (ipcMain, db) => {
       const salesByMonthStmt = db.prepare(salesByMonthQuery);
       const salesByMonth = salesByMonthStmt.all(startDateStr, endDateStr);
       
+      // Average sale amount in selected date range
+      const avgSaleAmountStmt = db.prepare(`
+        SELECT COALESCE(AVG(totalAmount), 0) as avg
+        FROM sales
+        WHERE DATE(saleDate) BETWEEN ? AND ?
+      `);
+      const avgSaleAmount = avgSaleAmountStmt.get(startDateStr, endDateStr);
+
+      // Month over month growth (percentage) based on revenue
+      const monthOverMonth = (previousMonthRevenue.revenue || 0) > 0
+        ? (((monthlyRevenue.revenue || 0) - (previousMonthRevenue.revenue || 0)) / (previousMonthRevenue.revenue || 1)) * 100
+        : 0;
+
       // Top products by revenue (within date range)
       const topProductsStmt = db.prepare(`
         SELECT 
@@ -176,8 +234,14 @@ module.exports = (ipcMain, db) => {
       // Return properly formatted data
       return {
         todayRevenue: todayRevenue.revenue || 0,
+        yesterdayRevenue: yesterdayRevenue.revenue || 0,
         monthlyRevenue: monthlyRevenue.revenue || 0,
+        previousMonthRevenue: previousMonthRevenue.revenue || 0,
+        monthlyGoal: avgMonthlyRevenue.avgRevenue || 0,
+        avgSaleAmount: avgSaleAmount.avg || 0,
+        monthOverMonth: monthOverMonth,
         totalClients: totalClients.count || 0,
+        activeClients: activeClients.count || 0,
         totalProducts: totalProducts.count || 0,
         lowStockProducts: lowStockProducts.count || 0,
         totalSales: totalSales.count || 0,
@@ -191,10 +255,16 @@ module.exports = (ipcMain, db) => {
     } catch (error) {
       console.error("Error getting dashboard stats:", error);
       // Return default values in case of error
-      return {
+        return {
         todayRevenue: 0,
+        yesterdayRevenue: 0,
         monthlyRevenue: 0,
+        previousMonthRevenue: 0,
+        monthlyGoal: 0,
+        avgSaleAmount: 0,
+        monthOverMonth: 0,
         totalClients: 0,
+        activeClients: 0,
         totalProducts: 0,
         lowStockProducts: 0,
         totalSales: 0,

@@ -143,30 +143,21 @@ export default function Invoices() {
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
     },
     {
-      key: "dueDate" as keyof Invoice,
-      label: "Échéance",
-      sortable: true,
-      render: (value: string, invoice: Invoice) => {
-        const dueDate = new Date(value)
-        const today = new Date()
-        const isOverdue = dueDate < today && invoice.status !== "Payée"
-        return (
-          <div className={isOverdue ? "text-red-600 font-medium" : ""}>
-            {dueDate.toLocaleDateString("fr-FR")}
-            {isOverdue && <div className="text-xs">En retard</div>}
-          </div>
-        )
-      },
-    },
-    {
       key: "status" as keyof Invoice,
       label: "Statut",
       sortable: true,
+      filterable: true,
       render: (value: string, invoice: Invoice) => (
-        <Badge variant={getStatusVariant(invoice.status)} className="flex items-center gap-1">
-          {getStatusIcon(invoice.status)}
-          {value}
-        </Badge>
+        <StatusDropdown
+          currentValue={invoice.status}
+          options={[
+            { value: "En attente", label: "En attente", variant: "secondary" },
+            { value: "Payée", label: "Payée", variant: "default" },
+            { value: "En retard", label: "En retard", variant: "destructive" },
+            { value: "Annulée", label: "Annulée", variant: "outline" },
+          ]}
+          onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
+        />
       ),
     },
   ]
@@ -457,38 +448,25 @@ export default function Invoices() {
   )
 
   const renderActions = (invoice: Invoice) => (
-    <div className="flex justify-end gap-2 items-center">
-      <StatusDropdown
-        currentValue={invoice.status}
-        options={[
-          { value: "En attente", label: "En attente", variant: "secondary" },
-          { value: "Payée", label: "Payée", variant: "default" },
-          { value: "En retard", label: "En retard", variant: "destructive" },
-          { value: "Annulée", label: "Annulée", variant: "outline" },
-        ]}
-        onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
-      />
-      
-      <ActionsDropdown
-        actions={[
-          {
-            label: "Voir",
-            icon: <Eye className="h-4 w-4" />,
-            onClick: () => handleViewInvoice(invoice),
-          },
-          {
-            label: "Télécharger PDF",
-            icon: <Download className="h-4 w-4" />,
-            onClick: () => handleDownloadPDF(invoice),
-          },
-          {
-            label: "Imprimer",
-            icon: <Printer className="h-4 w-4" />,
-            onClick: () => handlePrintInvoice(invoice),
-          },
-        ]}
-      />
-    </div>
+    <ActionsDropdown
+      actions={[
+        {
+          label: "Voir",
+          icon: <Eye className="h-4 w-4" />,
+          onClick: () => handleViewInvoice(invoice),
+        },
+        {
+          label: "Télécharger PDF",
+          icon: <Download className="h-4 w-4" />,
+          onClick: () => handleDownloadPDF(invoice),
+        },
+        {
+          label: "Imprimer",
+          icon: <Printer className="h-4 w-4" />,
+          onClick: () => handlePrintInvoice(invoice),
+        },
+      ]}
+    />
   );
 
   const formatCurrency = (amount: number) => {

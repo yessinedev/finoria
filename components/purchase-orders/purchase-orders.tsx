@@ -16,6 +16,7 @@ import {
   MoreVertical,
   Check,
   ChevronsUpDown,
+  Printer,
 } from "lucide-react";
 import {
   Command,
@@ -37,7 +38,7 @@ import type { PurchaseOrder, Sale } from "@/types/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency, cn } from "@/lib/utils";
-import { pdf } from "@react-pdf/renderer";
+import { pdf, PDFViewer } from "@react-pdf/renderer";
 import { PurchaseOrderPDFDocument } from "./purchase-order-pdf";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ActionsDropdown } from "@/components/common/actions-dropdown";
@@ -264,6 +265,40 @@ export default function PurchaseOrders() {
     }
   };
 
+  const handlePrintPurchaseOrder = async (purchaseOrder: PurchaseOrder) => {
+    try {
+      // If the purchase order doesn't have items, we need to add them
+      const purchaseOrderWithItems = {
+        ...purchaseOrder,
+        items: purchaseOrder.items || [],
+      };
+      
+      // Generate PDF and open print dialog
+      const blob = await pdf(<PurchaseOrderPDFDocument purchaseOrder={purchaseOrderWithItems} companySettings={companySettings} products={products} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      
+      // Open PDF in a new window and trigger print
+      const printWindow = window.open(url, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+      
+      // Clean up after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (error) {
+      console.error("Error printing purchase order:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de l'impression du bon de commande",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCreatePurchaseOrder = async () => {
     if (!selectedSaleId) {
       toast({
@@ -313,6 +348,11 @@ export default function PurchaseOrders() {
           icon: <Download className="h-4 w-4" />,
           onClick: () => handleDownloadPurchaseOrder(purchaseOrder),
           disabled: generatingPDF === purchaseOrder.id,
+        },
+        {
+          label: "Imprimer",
+          icon: <Printer className="h-4 w-4" />,
+          onClick: () => handlePrintPurchaseOrder(purchaseOrder),
         },
       ]}
     />
@@ -629,76 +669,11 @@ export default function PurchaseOrders() {
               Aperçu du bon de commande
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-auto border rounded bg-white p-4">
+          <div className="flex-1 overflow-auto border rounded bg-white" style={{ height: 500, minHeight: 400 }}>
             {selectedPurchaseOrder && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-2xl font-bold">Bon de commande #{selectedPurchaseOrder.number}</h2>
-                    <p className="text-muted-foreground">Date de commande: {new Date(selectedPurchaseOrder.orderDate).toLocaleDateString("fr-FR")}</p>
-                    {selectedPurchaseOrder.deliveryDate && (
-                      <p className="text-muted-foreground">Date de livraison prévue: {new Date(selectedPurchaseOrder.deliveryDate).toLocaleDateString("fr-FR")}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Client</h3>
-                    <p>{selectedPurchaseOrder.clientName}</p>
-                    {selectedPurchaseOrder.clientCompany && <p>{selectedPurchaseOrder.clientCompany}</p>}
-                    {selectedPurchaseOrder.clientAddress && <p>{selectedPurchaseOrder.clientAddress}</p>}
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold mb-2">Vente d'origine</h3>
-                    <p>#VTE-{selectedPurchaseOrder.saleId}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold mb-2">Articles</h3>
-                  <div className="border rounded">
-                    <table className="w-full">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="text-left p-2">Produit</th>
-                          <th className="text-right p-2">Quantité</th>
-                          <th className="text-right p-2">Prix unitaire</th>
-                          <th className="text-right p-2">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedPurchaseOrder.items.map((item) => (
-                          <tr key={item.id} className="border-t">
-                            <td className="p-2">{item.productName}</td>
-                            <td className="p-2 text-right">{item.quantity}</td>
-                            <td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td>
-                            <td className="p-2 text-right">{formatCurrency(item.totalPrice)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <div className="w-64">
-                    <div className="flex justify-between py-1">
-                      <span>Sous-total:</span>
-                      <span>{formatCurrency(selectedPurchaseOrder.amount)}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>TVA:</span>
-                      <span>{formatCurrency(selectedPurchaseOrder.taxAmount)}</span>
-                    </div>
-                    <div className="flex justify-between py-1 font-bold border-t">
-                      <span>Total:</span>
-                      <span>{formatCurrency(selectedPurchaseOrder.totalAmount)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <PDFViewer width="100%" height={500} showToolbar={false} style={{ border: "none", backgroundColor: "transparent" }}>
+                <PurchaseOrderPDFDocument purchaseOrder={selectedPurchaseOrder} companySettings={companySettings} products={products} />
+              </PDFViewer>
             )}
           </div>
         </DialogContent>

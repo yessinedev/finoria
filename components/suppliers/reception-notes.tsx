@@ -15,7 +15,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Download,
-  MoreVertical
+  MoreVertical,
+  Printer
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -46,6 +47,7 @@ import ReceptionNoteForm from "@/components/suppliers/ReceptionNoteForm";
 import ReceptionNoteEditForm from "@/components/suppliers/ReceptionNoteEditForm";
 import { ReceptionNoteViewModal } from "@/components/suppliers/ReceptionNoteViewModal";
 import { ActionsDropdown } from "@/components/common/actions-dropdown";
+import { pdf, PDFViewer } from "@react-pdf/renderer";
 
 export default function ReceptionNotes() {
   const [receptionNotes, setReceptionNotes] = useState<any[]>([]);
@@ -253,55 +255,77 @@ export default function ReceptionNotes() {
     loadData(); // Refresh the reception notes list
   };
 
-  const renderActions = (receptionNote: any) => (
-    <div className="flex items-center">
-      <PDFDownloadLink
-        document={
-          <ReceptionNotePDFDocument 
-            receptionNote={receptionNote} 
-            supplierOrder={receptionNote.supplierOrder}
-            companySettings={companySettings}
-          />
-        }
-        fileName={`bon-de-reception-${receptionNote.receptionNumber}.pdf`}
-      >
-        {({ loading }) => (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0 mr-1"
-            disabled={loading}
-            title="Télécharger PDF"
-          >
-            {loading ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-          </Button>
-        )}
-      </PDFDownloadLink>
-      <ActionsDropdown
-        actions={[
-          {
-            label: "Voir",
-            icon: <Eye className="h-4 w-4" />,
-            onClick: () => handleViewReceptionNote(receptionNote),
-          },
-          {
-            label: "Modifier",
-            icon: <Edit className="h-4 w-4" />,
-            onClick: () => handleEditReceptionNote(receptionNote),
-          },
-          {
-            label: "Supprimer",
-            icon: <Trash2 className="h-4 w-4" />,
-            onClick: () => handleDeleteReceptionNote(receptionNote),
-            className: "text-red-600",
-          },
-        ]}
+  const handleDownloadReceptionNote = async (receptionNote: any) => {
+    const blob = await pdf(
+      <ReceptionNotePDFDocument 
+        receptionNote={receptionNote} 
+        supplierOrder={receptionNote.supplierOrder}
+        companySettings={companySettings}
       />
-    </div>
+    ).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bon-de-reception-${receptionNote.receptionNumber}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  };
+
+  const handlePrintReceptionNote = async (receptionNote: any) => {
+    const blob = await pdf(
+      <ReceptionNotePDFDocument 
+        receptionNote={receptionNote} 
+        supplierOrder={receptionNote.supplierOrder}
+        companySettings={companySettings}
+      />
+    ).toBlob();
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
+  const renderActions = (receptionNote: any) => (
+    <ActionsDropdown
+      actions={[
+        {
+          label: "Voir",
+          icon: <Eye className="h-4 w-4" />,
+          onClick: () => handleViewReceptionNote(receptionNote),
+        },
+        {
+          label: "Télécharger PDF",
+          icon: <Download className="h-4 w-4" />,
+          onClick: () => handleDownloadReceptionNote(receptionNote),
+        },
+        {
+          label: "Imprimer",
+          icon: <Printer className="h-4 w-4" />,
+          onClick: () => handlePrintReceptionNote(receptionNote),
+        },
+        {
+          label: "Modifier",
+          icon: <Edit className="h-4 w-4" />,
+          onClick: () => handleEditReceptionNote(receptionNote),
+        },
+        {
+          label: "Supprimer",
+          icon: <Trash2 className="h-4 w-4" />,
+          onClick: () => handleDeleteReceptionNote(receptionNote),
+          className: "text-red-600",
+        },
+      ]}
+    />
   );
 
   if (loading) {
@@ -390,6 +414,8 @@ export default function ReceptionNotes() {
         open={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         receptionNote={selectedReceptionNote}
+        companySettings={companySettings}
+        supplierOrder={selectedReceptionNote?.supplierOrder}
       />
 
       {/* Delete Confirmation Dialog */}

@@ -744,9 +744,10 @@ export default function CreditNotes() {
               Créer une facture d'avoir
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-auto py-4 space-y-4">
+
+          <div className="flex-1 overflow-auto space-y-6 py-4 px-1 md:px-2">
             {/* Step 1: Search and Select Client */}
-            <div>
+            <Card className="bg-muted rounded-lg px-5 py-4 border-none">
               <SearchableEntitySelect
                 label="1. Rechercher et sélectionner le client *"
                 id="client"
@@ -754,165 +755,154 @@ export default function CreditNotes() {
                 onChange={(value) => {
                   const clientId = value ? Number(value) : null;
                   setSelectedClientId(clientId);
-                  // Reset invoice selection when client changes
                   setSelectedInvoiceId(null);
                   setSelectedInvoice(null);
                   setCreditItems({});
                 }}
                 options={clients}
-                getOptionLabel={(client) => 
+                getOptionLabel={(client) =>
                   `${client.name}${client.company ? ` (${client.company})` : ''}`
                 }
                 getOptionValue={(client) => client.id.toString()}
                 placeholder="Rechercher un client..."
                 required
               />
-            </div>
+            </Card>
 
             {/* Step 2: Search and Select Invoice (only show if client is selected) */}
             {selectedClientId && (
-              <div>
+              <Card className="bg-muted rounded-lg px-5 py-4 border-none">
                 <SearchableEntitySelect
                   label="2. Rechercher et sélectionner la facture d'origine *"
                   id="invoice"
                   value={selectedInvoiceId?.toString() || ""}
                   onChange={(value) => handleInvoiceSelect(value ? Number(value) : null)}
-                  options={invoices.filter((invoice) => invoice.clientId === selectedClientId)}
-                  getOptionLabel={(invoice) => 
-                    `${invoice.number} - ${formatCurrency(invoice.totalAmount)} - ${new Date(invoice.issueDate).toLocaleDateString("fr-FR")}`
-                  }
-                  getOptionValue={(invoice) => invoice.id.toString()}
+                  options={invoices.filter(inv => inv.clientId === selectedClientId)}
+                  getOptionLabel={inv => `#${inv.number} - ${formatCurrency(inv.totalAmount)} - ${new Date(inv.issueDate).toLocaleDateString('fr-FR')}`}
+                  getOptionValue={inv => inv.id.toString()}
                   placeholder="Rechercher une facture..."
                   required
                 />
-                {invoices.filter((invoice) => invoice.clientId === selectedClientId).length === 0 && (
-                  <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="text-sm text-yellow-800 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" />
-                      Aucune facture trouvée pour ce client
-                    </p>
-                  </div>
-                )}
-              </div>
+              </Card>
             )}
 
+            {/* Step 3: Items/lines selection */}
             {selectedInvoice && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Articles de la facture</h3>
-                  <div className="border rounded">
-                    <table className="w-full">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="text-left p-2 w-10">
-                            <input
-                              type="checkbox"
-                              checked={Object.values(creditItems).every(item => item.selected)}
-                              onChange={(e) => {
-                                const newCreditItems = {...creditItems};
-                                Object.keys(newCreditItems).forEach(key => {
-                                  newCreditItems[Number(key)].selected = e.target.checked;
-                                });
-                                setCreditItems(newCreditItems);
-                              }}
-                              className="h-4 w-4"
-                            />
-                          </th>
-                          <th className="text-left p-2">Produit</th>
-                          <th className="text-right p-2">Quantité facturée</th>
-                          <th className="text-right p-2">Quantité à créditer</th>
-                          <th className="text-right p-2">Prix unitaire</th>
-                          <th className="text-right p-2">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedInvoice.items.map((item) => {
-                          const creditItem = creditItems[item.id] || { selected: false, creditQuantity: 0 };
-                          return (
-                            <tr key={item.id} className="border-t">
-                              <td className="p-2">
-                                <input
-                                  type="checkbox"
-                                  checked={creditItem.selected}
-                                  onChange={(e) => {
-                                    setCreditItems({
-                                      ...creditItems,
-                                      [item.id]: {
-                                        ...creditItem,
-                                        selected: e.target.checked
-                                      }
-                                    });
-                                  }}
-                                  className="h-4 w-4"
-                                />
-                              </td>
-                              <td className="p-2">{item.productName}</td>
-                              <td className="p-2 text-right">{item.quantity}</td>
-                              <td className="p-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={item.quantity}
-                                  value={creditItem.creditQuantity}
-                                  onChange={(e) => {
-                                    const newQuantity = Math.min(Math.max(0, Number(e.target.value)), item.quantity);
-                                    setCreditItems({
-                                      ...creditItems,
-                                      [item.id]: {
-                                        ...creditItem,
-                                        creditQuantity: newQuantity
-                                      }
-                                    });
-                                  }}
-                                  className="w-20 text-right"
-                                  disabled={!creditItem.selected}
-                                />
-                              </td>
-                              <td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td>
-                              <td className="p-2 text-right">
-                                {formatCurrency(creditItem.selected ? (creditItem.creditQuantity * item.unitPrice) : 0)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+              <Card className="bg-card rounded-lg px-5 py-4 border border-dashed border-muted-foreground/30">
+                <div className="mb-3 text-lg font-medium text-primary">3. Sélectionner les articles et quantités à remettre en avoir</div>
+                <div className="border rounded">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2 w-10">
+                          <input
+                            type="checkbox"
+                            checked={Object.values(creditItems).every(item => item.selected)}
+                            onChange={(e) => {
+                              const newCreditItems = {...creditItems};
+                              Object.keys(newCreditItems).forEach(key => {
+                                newCreditItems[Number(key)].selected = e.target.checked;
+                              });
+                              setCreditItems(newCreditItems);
+                            }}
+                            className="h-4 w-4"
+                          />
+                        </th>
+                        <th className="text-left p-2">Produit</th>
+                        <th className="text-right p-2">Quantité facturée</th>
+                        <th className="text-right p-2">Quantité à créditer</th>
+                        <th className="text-right p-2">Prix unitaire</th>
+                        <th className="text-right p-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedInvoice.items.map((item) => {
+                        const creditItem = creditItems[item.id] || { selected: false, creditQuantity: 0 };
+                        return (
+                          <tr key={item.id} className="border-t">
+                            <td className="p-2">
+                              <input
+                                type="checkbox"
+                                checked={creditItem.selected}
+                                onChange={(e) => {
+                                  setCreditItems({
+                                    ...creditItems,
+                                    [item.id]: {
+                                      ...creditItem,
+                                      selected: e.target.checked
+                                    }
+                                  });
+                                }}
+                                className="h-4 w-4"
+                              />
+                            </td>
+                            <td className="p-2">{item.productName}</td>
+                            <td className="p-2 text-right">{item.quantity}</td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                min="0"
+                                max={item.quantity}
+                                value={creditItem.creditQuantity}
+                                onChange={(e) => {
+                                  const newQuantity = Math.min(Math.max(0, Number(e.target.value)), item.quantity);
+                                  setCreditItems({
+                                    ...creditItems,
+                                    [item.id]: {
+                                      ...creditItem,
+                                      creditQuantity: newQuantity
+                                    }
+                                  });
+                                }}
+                                className="w-20 text-right"
+                                disabled={!creditItem.selected}
+                              />
+                            </td>
+                            <td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td>
+                            <td className="p-2 text-right">
+                              {formatCurrency(creditItem.selected ? (creditItem.creditQuantity * item.unitPrice) : 0)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              </Card>
             )}
 
-            <div>
-              <Label htmlFor="reason">Motif de l'avoir *</Label>
+            {/* Step 4: Reason for credit note */}
+            <Card className="bg-muted rounded-lg px-5 py-4 border-none">
+              <Label htmlFor="reason">Motif (facultatif)</Label>
               <Textarea
                 id="reason"
+                className="mt-2 min-h-[80px]"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Indiquez le motif de cette facture d'avoir..."
-                rows={4}
-                disabled={creating}
               />
-            </div>
+            </Card>
           </div>
-          <DialogFooter className="gap-2">
+
+          {/* Footer buttons */}
+          <DialogFooter className="gap-2 pt-6 border-t">
             <Button
               variant="outline"
               onClick={() => {
                 setIsCreating(false);
+                setSelectedClientId(null);
                 setSelectedInvoiceId(null);
                 setSelectedInvoice(null);
                 setCreditItems({});
                 setReason("");
               }}
-              disabled={creating}
             >
               Annuler
             </Button>
             <Button
               onClick={handleCreateCreditNote}
-              disabled={creating || !selectedInvoiceId || !reason || !Object.values(creditItems).some(item => item.selected)}
+              disabled={creating || !selectedClientId || !selectedInvoiceId}
             >
-              {creating ? "Création en cours..." : "Créer l'avoir"}
+              {creating ? "Création en cours..." : "Créer la facture d'avoir"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -930,7 +920,7 @@ export default function CreditNotes() {
           <div className="flex-1 overflow-hidden">
             {selectedCreditNote && (
               <div className="h-full border rounded-lg overflow-hidden">
-                <PDFViewer className="w-full h-full min-h-[500px]">
+                <PDFViewer className="w-full h-full min-h-[500px]" showToolbar={false}>
                   <CreditNotePDFDocument 
                     creditNote={selectedCreditNote} 
                     companySettings={companySettings}
