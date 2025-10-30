@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
-  MoreVertical
+  MoreVertical,
+  Printer
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -311,6 +312,51 @@ export default function Quotes() {
     }, 100);
   };
 
+  const handlePrintQuote = async (quote: Quote) => {
+    // If the quote doesn't have items, fetch them
+    let quoteWithItems = quote;
+    if (!quote.items || !Array.isArray(quote.items)) {
+      try {
+        const itemsResult = await db.quotes.getItems(quote.id);
+        if (itemsResult.success) {
+          quoteWithItems = {
+            ...quote,
+            items: itemsResult.data || []
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching quote items:", error);
+      }
+    }
+    
+    // Make sure company settings are loaded
+    let currentCompanySettings = companySettings;
+    if (!currentCompanySettings) {
+      const settingsResult = await db.settings.get();
+      if (settingsResult.success && settingsResult.data) {
+        currentCompanySettings = settingsResult.data;
+        setCompanySettings(settingsResult.data);
+      }
+    }
+    
+    // Generate PDF and open print dialog
+    const blob = await pdf(<QuotePDFDocument quote={quoteWithItems} companySettings={currentCompanySettings} products={products} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    
+    // Open PDF in a new window and trigger print
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+    
+    // Clean up after a delay
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
   const handleDeleteQuote = (quote: Quote) => {
     setQuoteToDelete(quote);
     setIsDeleteDialogOpen(true);
@@ -489,6 +535,11 @@ export default function Quotes() {
                       label: "Télécharger PDF",
                       icon: <Download className="h-4 w-4" />,
                       onClick: () => handleDownloadQuote(quote),
+                    },
+                    {
+                      label: "Imprimer",
+                      icon: <Printer className="h-4 w-4" />,
+                      onClick: () => handlePrintQuote(quote),
                     },
                     {
                       label: "Convertir en facture",
