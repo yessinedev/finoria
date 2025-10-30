@@ -35,8 +35,7 @@ interface SaleFormProps {
   updateLineItem: (id: number, field: keyof LineItem, value: string | number) => void;
   // Removed globalDiscount and setGlobalDiscount
   // Removed taxRate and setTaxRate - using per-item TVA calculation
-  fodecTax: number; // New FODEC tax state
-  setFodecTax: (rate: number) => void; // New FODEC tax setter
+  fodecTax: number; // FODEC tax rate from company settings (read-only)
   subtotal: number;
   // Removed globalDiscountAmount
   discountedSubtotal: number;
@@ -70,8 +69,7 @@ export default function SaleForm(props: SaleFormProps) {
     updateLineItem,
     // Removed globalDiscount and setGlobalDiscount
     // Removed taxRate and setTaxRate - using per-item TVA calculation
-    fodecTax, // New FODEC tax
-    setFodecTax, // New FODEC tax setter
+    fodecTax, // FODEC tax rate (read-only from company settings)
     subtotal,
     // Removed globalDiscountAmount
     discountedSubtotal,
@@ -400,24 +398,6 @@ export default function SaleForm(props: SaleFormProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* FODEC Tax */}
-            <div className="space-y-2">
-              <Label htmlFor="fodecTax">Taxe FODEC (%)</Label>
-              <div className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="fodecTax"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={fodecTax}
-                  onChange={(e) =>
-                    setFodecTax(Number.parseFloat(e.target.value) || 0)
-                  }
-                />
-              </div>
-            </div>
-
             {/* Totals */}
             <div className="space-y-2 pt-4 border-t">
               <div className="flex justify-between text-sm">
@@ -433,8 +413,11 @@ export default function SaleForm(props: SaleFormProps) {
                 <span>{taxAmount.toFixed(3)} DNT</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>FODEC ({fodecTax}%):</span>
+                <span>FODEC ({fodecTax.toFixed(1)}%):</span>
                 <span>{fodecAmount.toFixed(3)} DNT</span>
+              </div>
+              <div className="text-xs text-muted-foreground italic">
+                * Configurable dans les paramètres de l'entreprise
               </div>
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">

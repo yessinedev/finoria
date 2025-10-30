@@ -55,7 +55,7 @@ function createTables(db) {
       sellingPriceHT REAL,
       sellingPriceTTC REAL,
       purchasePriceHT REAL,
-      weightedAverageCostHT REAL,
+      fodecApplicable BOOLEAN DEFAULT 0,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (category) REFERENCES categories(name),
@@ -89,6 +89,7 @@ function createTables(db) {
       unitPrice REAL NOT NULL,
       discount REAL DEFAULT 0,
       totalPrice REAL NOT NULL,
+      fodecApplicable BOOLEAN DEFAULT 0,
       FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE,
       FOREIGN KEY (productId) REFERENCES products(id)
     )
@@ -197,6 +198,7 @@ function createTables(db) {
       unitPrice REAL NOT NULL,
       discount REAL DEFAULT 0,
       totalPrice REAL NOT NULL,
+      fodecApplicable BOOLEAN DEFAULT 0,
       FOREIGN KEY (invoiceId) REFERENCES invoices(id) ON DELETE CASCADE,
       FOREIGN KEY (productId) REFERENCES products(id)
     )
@@ -279,7 +281,8 @@ function createTables(db) {
       taxStatus TEXT,
       tvaNumber INTEGER,
       logo TEXT,
-      timbreFiscal REAL DEFAULT 1.000
+      timbreFiscal REAL DEFAULT 1.000,
+      fodecRate REAL DEFAULT 1.0
     )
   `);
 
@@ -518,6 +521,100 @@ function createIndexes(db) {
       console.log("Adding fodecAmount column to invoices table...");
       db.exec("ALTER TABLE invoices ADD COLUMN fodecAmount REAL DEFAULT 0");
       console.log("fodecAmount column added successfully");
+    }
+
+    // Add fodecRate to companies table
+    const companiesTableInfo = db.prepare("PRAGMA table_info(companies)").all();
+    const hasFodecRate = companiesTableInfo.some(col => col.name === 'fodecRate');
+    
+    if (!hasFodecRate) {
+      console.log("Adding fodecRate column to companies table...");
+      db.exec("ALTER TABLE companies ADD COLUMN fodecRate REAL DEFAULT 1.0");
+      console.log("fodecRate column added successfully");
+    }
+
+    // Add fodecApplicable to products table
+    const productsTableInfo = db.prepare("PRAGMA table_info(products)").all();
+    const hasFodecApplicableProducts = productsTableInfo.some(col => col.name === 'fodecApplicable');
+    
+    if (!hasFodecApplicableProducts) {
+      console.log("Adding fodecApplicable column to products table...");
+      db.exec("ALTER TABLE products ADD COLUMN fodecApplicable BOOLEAN DEFAULT 0");
+      console.log("fodecApplicable column added successfully to products table");
+    }
+
+    // Add fodecApplicable to sale_items table
+    const saleItemsTableInfo = db.prepare("PRAGMA table_info(sale_items)").all();
+    const hasFodecApplicableSaleItems = saleItemsTableInfo.some(col => col.name === 'fodecApplicable');
+    
+    if (!hasFodecApplicableSaleItems) {
+      console.log("Adding fodecApplicable column to sale_items table...");
+      db.exec("ALTER TABLE sale_items ADD COLUMN fodecApplicable BOOLEAN DEFAULT 0");
+      console.log("fodecApplicable column added successfully to sale_items table");
+    }
+
+    // Add fodecApplicable to invoice_items table
+    const invoiceItemsTableInfo = db.prepare("PRAGMA table_info(invoice_items)").all();
+    const hasFodecApplicableInvoiceItems = invoiceItemsTableInfo.some(col => col.name === 'fodecApplicable');
+    
+    if (!hasFodecApplicableInvoiceItems) {
+      console.log("Adding fodecApplicable column to invoice_items table...");
+      db.exec("ALTER TABLE invoice_items ADD COLUMN fodecApplicable BOOLEAN DEFAULT 0");
+      console.log("fodecApplicable column added successfully to invoice_items table");
+    }
+
+    // Remove weightedAverageCostHT from products table if it exists
+    const productsTableCheckInfo = db.prepare("PRAGMA table_info(products)").all();
+    const hasWeightedAverageCost = productsTableCheckInfo.some(col => col.name === 'weightedAverageCostHT');
+    
+    if (hasWeightedAverageCost) {
+      try {
+        console.log("Removing weightedAverageCostHT column from products table...");
+        db.exec("ALTER TABLE products DROP COLUMN weightedAverageCostHT");
+        console.log("weightedAverageCostHT column removed successfully from products table");
+      } catch (dropError) {
+        // If DROP COLUMN is not supported, recreate the table without weightedAverageCostHT
+        console.log("DROP COLUMN not supported, recreating products table...");
+        
+        // Disable foreign key constraints temporarily
+        db.exec("PRAGMA foreign_keys = OFF");
+        
+        try {
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS products_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL UNIQUE,
+              description TEXT,
+              category TEXT NOT NULL,
+              stock INTEGER DEFAULT 0,
+              isActive BOOLEAN DEFAULT 1,
+              reference TEXT,
+              tvaId INTEGER,
+              sellingPriceHT REAL,
+              sellingPriceTTC REAL,
+              purchasePriceHT REAL,
+              fodecApplicable BOOLEAN DEFAULT 0,
+              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (category) REFERENCES categories(name),
+              FOREIGN KEY (tvaId) REFERENCES tva(id)
+            )
+          `);
+          
+          db.exec(`
+            INSERT INTO products_new (id, name, description, category, stock, isActive, reference, tvaId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, fodecApplicable, createdAt, updatedAt)
+            SELECT id, name, description, category, stock, isActive, reference, tvaId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, fodecApplicable, createdAt, updatedAt
+            FROM products
+          `);
+          
+          db.exec("DROP TABLE products");
+          db.exec("ALTER TABLE products_new RENAME TO products");
+          console.log("Products table recreated without weightedAverageCostHT column");
+        } finally {
+          // Re-enable foreign key constraints
+          db.exec("PRAGMA foreign_keys = ON");
+        }
+      }
     }
 
     // Remove status column from sales table if it exists (SQLite 3.35.0+)
