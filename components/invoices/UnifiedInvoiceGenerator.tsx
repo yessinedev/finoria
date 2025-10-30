@@ -115,6 +115,8 @@ export default function UnifiedInvoiceGenerator({
       // Set company settings
       if (settingsResult.success && settingsResult.data) {
         setCompanySettings(settingsResult.data);
+        // Set FODEC rate from company settings
+        setFodecTax(settingsResult.data.fodecRate || 0);
         // Use default tax rate instead of company TVA rate
         // taxRate is now calculated per item
       }
@@ -260,6 +262,7 @@ export default function UnifiedInvoiceGenerator({
       unitPrice: product.sellingPriceHT,
       discount: newItemDiscount,
       totalPrice: total,
+      fodecApplicable: product.fodecApplicable || false,
     };
 
     setLineItems([...lineItems, item]);
@@ -310,8 +313,22 @@ export default function UnifiedInvoiceGenerator({
     0
   );
   const discountedSubtotal = subtotal - totalDiscount;
-  // Calculate FODEC on discounted subtotal
-  const fodecAmount = (discountedSubtotal * fodecTax) / 100;
+  
+  // Calculate FODEC per line item only for FODEC-eligible products
+  const fodecAmount = lineItems.reduce((sum, item) => {
+    // Get product FODEC eligibility
+    const product = products.find((p) => p.id === item.productId);
+    if (product && product.fodecApplicable) {
+      // Calculate discounted item total
+      const itemTotal =
+        item.unitPrice * item.quantity -
+        (item.unitPrice * item.quantity * item.discount) / 100;
+      // Apply FODEC rate to this item
+      return sum + (itemTotal * fodecTax) / 100;
+    }
+    return sum;
+  }, 0);
+  
   // Calculate tax (TVA) on (discounted subtotal + FODEC)
   const taxAmount = lineItems.reduce((sum, item) => {
     // Get product TVA rate
@@ -322,11 +339,11 @@ export default function UnifiedInvoiceGenerator({
     const itemTotal =
       item.unitPrice * item.quantity -
       (item.unitPrice * item.quantity * item.discount) / 100;
-    // Calculate FODEC portion for this item
-    const itemFodec =
-      discountedSubtotal > 0
-        ? (itemTotal / discountedSubtotal) * fodecAmount
-        : 0;
+    // Calculate FODEC portion for this item (only if FODEC eligible)
+    let itemFodec = 0;
+    if (product && product.fodecApplicable) {
+      itemFodec = (itemTotal * fodecTax) / 100;
+    }
     return sum + ((itemTotal + itemFodec) * itemTvaRate) / 100;
   }, 0);
   // TTC (final total) is HT + FODEC + TVA
@@ -354,8 +371,9 @@ export default function UnifiedInvoiceGenerator({
           number: invoiceNumber,
           saleId: selectedSale.id,
           dueDate: new Date().toISOString(), // Issue date is now
-          amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
+          amount: selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0), // HT amount
           taxAmount: selectedSale.taxAmount, // TVA amount
+          fodecAmount: selectedSale.fodecAmount || 0, // FODEC amount
           totalAmount: selectedSale.totalAmount, // TTC amount
           clientId: selectedSale.clientId,
           status: "En attente",
@@ -398,7 +416,6 @@ export default function UnifiedInvoiceGenerator({
           taxAmount: taxAmount,
           discountAmount: 0,
           fodecAmount: fodecAmount, // Include FODEC amount
-          status: "Confirmée",
           saleDate: new Date().toISOString(),
         };
 
@@ -1166,25 +1183,18 @@ export default function UnifiedInvoiceGenerator({
                         {/* Financial Summary */}
                         <div className="border-t pt-4 mt-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* FODEC Tax Input */}
+                            {/* FODEC Tax Rate Display */}
                             <div className="space-y-2">
-                              <Label htmlFor="fodecTax">Taxe FODEC (%)</Label>
+                              <Label>Taux FODEC (%)</Label>
                               <div className="flex items-center gap-2">
                                 <Percent className="h-4 w-4 text-muted-foreground" />
-                                <input
-                                  id="fodecTax"
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={fodecTax}
-                                  onChange={(e) =>
-                                    setFodecTax(
-                                      Number.parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                />
+                                <div className="flex h-10 w-full rounded-md border border-input bg-gray-100 px-3 py-2 text-sm cursor-not-allowed">
+                                  {fodecTax.toFixed(1)}%
+                                </div>
                               </div>
+                              <p className="text-xs text-muted-foreground">
+                                Configurez dans les paramètres de l'entreprise
+                              </p>
                             </div>
                           </div>
 

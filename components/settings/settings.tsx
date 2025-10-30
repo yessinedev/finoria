@@ -54,6 +54,7 @@ export default function SettingsPage() {
     taxStatus: "",
     tvaNumber: "",
     timbreFiscal: 1.000,
+    fodecRate: 1.0,
   });
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export default function SettingsPage() {
               ? String(c.tvaNumber)
               : "",
           timbreFiscal: c.timbreFiscal !== undefined ? c.timbreFiscal : 1.000,
+          fodecRate: c.fodecRate !== undefined ? c.fodecRate : 1.0,
         });
       } else {
         // Initialize with empty company data
@@ -101,6 +103,7 @@ export default function SettingsPage() {
           taxStatus: "",
           tvaNumber: "",
           timbreFiscal: 1.000,
+          fodecRate: 1.0,
         });
       }
     };
@@ -181,6 +184,11 @@ export default function SettingsPage() {
             const companyValue = company.timbreFiscal !== undefined ? company.timbreFiscal : 1.000;
             return taxFields.timbreFiscal !== companyValue;
           }
+          // Special handling for fodecRate
+          if (key === 'fodecRate') {
+            const companyValue = company.fodecRate !== undefined ? company.fodecRate : 1.0;
+            return taxFields.fodecRate !== companyValue;
+          }
           return taxFields[key as keyof typeof taxFields] !==
             (company[key as keyof CompanyData] ?? "");
         }
@@ -204,6 +212,7 @@ export default function SettingsPage() {
           ? parseInt(taxFields.tvaNumber) || null
           : null,
       timbreFiscal: taxFields.timbreFiscal,
+      fodecRate: taxFields.fodecRate,
     };
 
 
@@ -239,6 +248,7 @@ export default function SettingsPage() {
               ? String(result.data.tvaNumber)
               : "",
           timbreFiscal: result.data.timbreFiscal !== undefined ? result.data.timbreFiscal : 1.000,
+          fodecRate: result.data.fodecRate !== undefined ? result.data.fodecRate : 1.0,
         });
       }
       
@@ -708,6 +718,38 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Montant du timbre fiscal à appliquer sur chaque facture
+                  </p>
+                </div>
+
+                {/* FODEC Rate Field */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="fodecRate"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    Taux FODEC (%)
+                  </Label>
+                  <div className="relative">
+                    <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="number"
+                      id="fodecRate"
+                      value={taxFields.fodecRate}
+                      onChange={(e) =>
+                        setTaxFields((prev) => ({
+                          ...prev,
+                          fodecRate: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="1.0"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Taux FODEC à appliquer sur les produits éligibles
                   </p>
                 </div>
 

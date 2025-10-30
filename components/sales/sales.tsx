@@ -58,6 +58,7 @@ export default function Sales() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isSaleDetailsOpen, setIsSaleDetailsOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [companySettings, setCompanySettings] = useState<any>(null);
   const { toast } = useToast();
 
   // Pagination state
@@ -145,15 +146,22 @@ export default function Sales() {
     setError(null);
 
     try {
-      const [clientsResult, productsResult, salesResult] = await Promise.all([
+      const [clientsResult, productsResult, salesResult, settingsResult] = await Promise.all([
         db.clients.getAll(),
         db.products.getAll(),
         db.sales.getAllWithItems(),
+        db.settings.get(),
       ]);
 
       if (clientsResult.success) setClients(clientsResult.data || []);
       if (productsResult.success) setProducts(productsResult.data || []);
       if (salesResult.success) setSales(salesResult.data || []);
+      
+      // Set company settings and FODEC rate
+      if (settingsResult.success && settingsResult.data) {
+        setCompanySettings(settingsResult.data);
+        setFodecTax(settingsResult.data.fodecRate || 1);
+      }
     } catch (error) {
       setError("Erreur lors du chargement des données");
     } finally {
@@ -191,6 +199,7 @@ export default function Sales() {
         unitPrice: product.sellingPriceHT,
         discount: newItemDiscount,
         total: total,
+        fodecApplicable: product.fodecApplicable || false,
       };
 
       setLineItems([...lineItems, item]);
@@ -245,17 +254,30 @@ export default function Sales() {
   
   const discountedSubtotal = subtotal - totalDiscount;
   
-  // Calculate FODEC on discounted subtotal
-  const fodecAmount = (discountedSubtotal * fodecTax) / 100;
+  // Calculate FODEC per line item only for FODEC-eligible products
+  const fodecAmount = lineItems.reduce((sum, item) => {
+    if (item.fodecApplicable) {
+      // Calculate discounted item total
+      const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount / 100);
+      // Apply FODEC rate to this item
+      return sum + (itemTotal * fodecTax / 100);
+    }
+    return sum;
+  }, 0);
   
-  // Calculate tax (TVA) on discounted subtotal only (NOT including FODEC)
+  // Calculate tax (TVA) on (discounted item total + FODEC portion for this item)
   const taxAmount = lineItems.reduce((sum, item) => {
     // Get product TVA rate
     const product = products.find(p => p.id === item.productId);
     const itemTvaRate = product && 'tvaRate' in product ? (product.tvaRate as number) : 0; // Use actual TVA rate or 0 if not found
-    // TVA is calculated on the discounted item total only
+    // TVA is calculated on (discounted item total + FODEC portion for this item)
     const itemTotal = item.unitPrice * item.quantity - (item.unitPrice * item.quantity * item.discount / 100);
-    return sum + (itemTotal * itemTvaRate / 100);
+    // Calculate FODEC portion for this item (only if FODEC eligible)
+    let itemFodec = 0;
+    if (item.fodecApplicable) {
+      itemFodec = itemTotal * fodecTax / 100;
+    }
+    return sum + ((itemTotal + itemFodec) * itemTvaRate / 100);
   }, 0);
   
   // Final total: HT + FODEC + TVA
@@ -310,6 +332,7 @@ export default function Sales() {
           unitPrice: item.unitPrice,
           discount: item.discount,
           totalPrice: item.total,
+          fodecApplicable: item.fodecApplicable || false,
         })),
         totalAmount: finalTotal, // TTC amount
         taxAmount: taxAmount,
@@ -343,7 +366,6 @@ export default function Sales() {
         
         setSelectedClient("");
         setLineItems([]);
-        setFodecTax(0); // Reset FODEC tax
         setFormErrors({});
         toast({
           title: "Succès",
@@ -547,8 +569,7 @@ export default function Sales() {
           updateLineItem={updateLineItem}
           // Removed globalDiscount and setGlobalDiscount
           // Removed taxRate and setTaxRate - using per-item TVA calculation
-          fodecTax={fodecTax} // New FODEC tax prop
-          setFodecTax={setFodecTax} // New FODEC tax setter prop
+          fodecTax={fodecTax} // FODEC tax rate from company settings
           subtotal={subtotal}
           // Removed globalDiscountAmount
           discountedSubtotal={discountedSubtotal}

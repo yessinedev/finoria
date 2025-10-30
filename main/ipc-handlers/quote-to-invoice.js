@@ -33,10 +33,15 @@ module.exports = (ipcMain, db, notifyDataChange) => {
                        String(lastNumber + 1).padStart(4, "0");
       }
       
+      // Get company FODEC rate
+      const getCompanySettings = db.prepare("SELECT fodecRate FROM companies ORDER BY id LIMIT 1");
+      const companySettings = getCompanySettings.get();
+      const fodecRate = companySettings?.fodecRate || 1.0;
+      
       // Create a sale record with the same items as the quote
       const saleStmt = db.prepare(`
-        INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, saleDate) 
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO sales (clientId, totalAmount, taxAmount, discountAmount, fodecAmount, saleDate) 
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
       
       // Calculate discount amount from quote items
@@ -44,11 +49,16 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         return sum + (item.unitPrice * item.quantity * item.discount / 100);
       }, 0);
       
+      // Calculate subtotal HT from items
+      const subtotalHT = items.reduce((sum, item) => sum + item.totalPrice, 0);
+      
+      // Note: fodecAmount and final totals will be calculated and updated after processing items
       const saleResult = saleStmt.run(
         quote.clientId,
-        quote.amount,
-        quote.taxAmount,
+        subtotalHT, // Use subtotal HT as base
+        0, // Placeholder for taxAmount, will be updated
         discountAmount,
+        0, // Placeholder for fodecAmount, will be updated
         new Date().toISOString()
       );
       
@@ -56,8 +66,24 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       // Insert sale items based on quote items
       const insertSaleItem = db.prepare(`
-        INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, discount, totalPrice)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, discount, totalPrice, fodecApplicable)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      // Get product FODEC eligibility
+      const getProductFodec = db.prepare(`
+        SELECT fodecApplicable 
+        FROM products 
+        WHERE id = ?
+      `);
+      
+      // Calculate FODEC amount
+      let totalFodecAmount = 0;
+      
+      // Insert invoice items based on quote items
+      const insertInvoiceItem = db.prepare(`
+        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice, fodecApplicable)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       // Prepare statement to get product TVA rate
@@ -79,6 +105,16 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       let totalTaxAmount = 0;
       
       for (const item of items) {
+        // Get product FODEC eligibility
+        const productFodec = getProductFodec.get(item.productId);
+        const fodecApplicable = productFodec?.fodecApplicable ? 1 : 0;
+        
+        // Calculate FODEC for this item if applicable
+        if (fodecApplicable) {
+          const itemFodecAmount = (item.totalPrice * fodecRate / 100);
+          totalFodecAmount += itemFodecAmount;
+        }
+        
         insertSaleItem.run(
           saleId,
           item.productId,
@@ -86,7 +122,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           item.quantity,
           item.unitPrice,
           item.discount || 0,
-          item.totalPrice
+          item.totalPrice,
+          fodecApplicable
         );
         
         // Get product TVA rate and calculate tax for this item
@@ -99,31 +136,41 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         updateStockStmt.run(item.quantity, item.productId);
       }
       
-      // Update the sale with the calculated tax amount
-      const updateTaxStmt = db.prepare(`
+      // Update the sale with the calculated tax and FODEC amounts
+      const updateAmountsStmt = db.prepare(`
         UPDATE sales 
-        SET taxAmount = ? 
+        SET taxAmount = ?, fodecAmount = ?
         WHERE id = ?
       `);
-      updateTaxStmt.run(totalTaxAmount, saleId);
+      updateAmountsStmt.run(totalTaxAmount, totalFodecAmount, saleId);
       
-      // Create the invoice object referencing the newly created sale
+      // Calculate final total amount: HT + FODEC + TVA
+      const totalAmount = subtotalHT + totalFodecAmount + totalTaxAmount;
+      const updateTotalStmt = db.prepare(`
+        UPDATE sales 
+        SET totalAmount = ?
+        WHERE id = ?
+      `);
+      updateTotalStmt.run(totalAmount, saleId);
+      
+      // Create the invoice object with calculated amounts
       const invoice = {
         number: invoiceNumber,
         saleId: saleId, // Reference to the newly created sale
         quoteId: quoteId, // Store reference to the original quote
         clientId: quote.clientId,
-        amount: quote.amount,
-        taxAmount: quote.taxAmount,
-        totalAmount: quote.totalAmount,
+        amount: subtotalHT, // HT amount
+        taxAmount: totalTaxAmount,
+        fodecAmount: totalFodecAmount,
+        totalAmount: totalAmount,
         status: "En attente",
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
       };
       
       // Insert the invoice
       const insertInvoice = db.prepare(`
-        INSERT INTO invoices (number, saleId, quoteId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (number, saleId, quoteId, clientId, amount, taxAmount, fodecAmount, totalAmount, status, dueDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const result = insertInvoice.run(
@@ -133,6 +180,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.clientId,
         invoice.amount,
         invoice.taxAmount,
+        invoice.fodecAmount,
         invoice.totalAmount,
         invoice.status,
         invoice.dueDate
@@ -140,21 +188,21 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       const invoiceId = result.lastInsertRowid;
       
-      // Insert invoice items based on quote items
-      const insertItem = db.prepare(`
-        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-      
+      // Insert invoice items based on quote items (insertInvoiceItem already defined above)
       for (const item of items) {
-        insertItem.run(
+        // Get product FODEC eligibility (already retrieved in the sale items loop, but we need it again here)
+        const productFodec = getProductFodec.get(item.productId);
+        const fodecApplicable = productFodec?.fodecApplicable ? 1 : 0;
+        
+        insertInvoiceItem.run(
           invoiceId,
           item.productId,
           item.productName,
           item.quantity,
           item.unitPrice,
           item.discount || 0,
-          item.totalPrice
+          item.totalPrice,
+          fodecApplicable
         );
       }
       

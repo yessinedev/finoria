@@ -62,7 +62,7 @@ export default function Products() {
     sellingPriceHT: undefined,
     sellingPriceTTC: undefined,
     purchasePriceHT: undefined,
-    weightedAverageCostHT: undefined,
+    fodecApplicable: false,
   })
 
   // Data table configuration
@@ -258,7 +258,7 @@ export default function Products() {
       sellingPriceHT: undefined,
       sellingPriceTTC: undefined,
       purchasePriceHT: undefined,
-      weightedAverageCostHT: undefined,
+      fodecApplicable: false,
     })
     setEditingProduct(null)
     setIsDialogOpen(false)
@@ -279,7 +279,7 @@ export default function Products() {
       sellingPriceHT: product.sellingPriceHT,
       sellingPriceTTC: product.sellingPriceTTC,
       purchasePriceHT: product.purchasePriceHT,
-      weightedAverageCostHT: product.weightedAverageCostHT,
+      fodecApplicable: product.fodecApplicable || false,
     })
     setIsDialogOpen(true)
   }

@@ -28,7 +28,7 @@ export interface Product {
   sellingPriceHT?: number;
   sellingPriceTTC?: number;
   purchasePriceHT?: number;
-  weightedAverageCostHT?: number;
+  fodecApplicable?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -65,6 +65,7 @@ export interface LineItem {
   unitPrice: number;
   discount: number;
   total: number;
+  fodecApplicable?: boolean;
 }
 
 export interface Sale {
@@ -95,6 +96,7 @@ export interface SaleItem {
   unitPrice: number;
   discount?: number;
   totalPrice: number;
+  fodecApplicable?: boolean;
 }
 
 export interface SupplierOrder {
@@ -190,6 +192,7 @@ export interface InvoiceItem {
   unitPrice: number;
   discount: number;
   totalPrice: number;
+  fodecApplicable?: boolean;
 }
 
 export interface Quote {
@@ -417,6 +420,7 @@ export interface TaxInfo {
   taxStatus: string
   tvaNumber?: number
   timbreFiscal?: number
+  fodecRate?: number
 }
 
 export interface CreateCompanyData extends CompanyInfo, TaxInfo {}

@@ -20,8 +20,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         // Insert sale items
         const itemStmt = db.prepare(`
-          INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, discount, totalPrice) 
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO sale_items (saleId, productId, productName, quantity, unitPrice, discount, totalPrice, fodecApplicable) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         // Prepare statement to get product TVA rate
@@ -50,7 +50,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.quantity,
             item.unitPrice,
             item.discount || 0,
-            item.totalPrice
+            item.totalPrice,
+            item.fodecApplicable ? 1 : 0
           );
           
           // Get product TVA rate and calculate tax for this item

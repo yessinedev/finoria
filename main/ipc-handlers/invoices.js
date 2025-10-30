@@ -32,9 +32,14 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
   ipcMain.handle("create-invoice", async (event, invoice) => {
     try {
+      // Get company FODEC rate
+      const getCompanySettings = db.prepare("SELECT fodecRate FROM companies ORDER BY id LIMIT 1");
+      const companySettings = getCompanySettings.get();
+      const fodecRate = companySettings?.fodecRate || 1.0;
+      
       const insertInvoice = db.prepare(`
-        INSERT INTO invoices (number, saleId, quoteId, clientId, amount, taxAmount, totalAmount, status, dueDate) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoices (number, saleId, quoteId, clientId, amount, taxAmount, fodecAmount, totalAmount, status, dueDate) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const insertItem = db.prepare(`
@@ -42,8 +47,17 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
-      // Calculate total tax amount for the invoice based on individual product TVA rates
+      // Calculate total tax amount and FODEC for the invoice based on individual product rates
       let totalTaxAmount = 0;
+      let totalFodecAmount = 0;
+      
+      // Get product data queries
+      const getProductData = db.prepare(`
+        SELECT p.fodecApplicable, t.rate as tvaRate 
+        FROM products p 
+        LEFT JOIN tva t ON p.tvaId = t.id 
+        WHERE p.id = ?
+      `);
       
       // If we're creating from a sale, get the items from the sale
       if (invoice.saleId) {
@@ -60,22 +74,37 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           const itemTvaRate = item.tvaRate || 0; // Default to 0 if no TVA rate
           const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
           totalTaxAmount += itemTaxAmount;
+          
+          // Calculate FODEC if applicable
+          if (item.fodecApplicable) {
+            const itemFodecAmount = (item.totalPrice * fodecRate / 100);
+            totalFodecAmount += itemFodecAmount;
+          }
         }
       } else if (invoice.items && Array.isArray(invoice.items)) {
-        // Calculate tax for directly passed items
-        const getProductTva = db.prepare(`
-          SELECT t.rate as tvaRate 
-          FROM products p 
-          LEFT JOIN tva t ON p.tvaId = t.id 
-          WHERE p.id = ?
-        `);
-        
+        // Calculate tax and FODEC for directly passed items
         for (const item of invoice.items) {
-          const productTva = getProductTva.get(item.productId);
-          const itemTvaRate = productTva?.tvaRate || 0; // Default to 0 if no TVA rate
+          const productData = getProductData.get(item.productId);
+          const itemTvaRate = productData?.tvaRate || 0; // Default to 0 if no TVA rate
           const itemTaxAmount = (item.totalPrice * itemTvaRate / 100);
           totalTaxAmount += itemTaxAmount;
+          
+          // Calculate FODEC if applicable
+          if (productData && productData.fodecApplicable) {
+            const itemFodecAmount = (item.totalPrice * fodecRate / 100);
+            totalFodecAmount += itemFodecAmount;
+          }
         }
+      }
+      
+      // Use provided fodecAmount if available, otherwise use calculated one
+      const finalFodecAmount = invoice.fodecAmount !== undefined ? invoice.fodecAmount : totalFodecAmount;
+      
+      // Recalculate total amount if FODEC was calculated (for purchase orders or other cases)
+      let finalTotalAmount = invoice.totalAmount;
+      if (invoice.fodecAmount === undefined) {
+        // If fodecAmount was calculated, we need to add it to the total
+        finalTotalAmount = invoice.amount + totalTaxAmount + finalFodecAmount;
       }
       
       const result = insertInvoice.run(
@@ -85,7 +114,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         invoice.clientId,
         invoice.amount,
         totalTaxAmount,
-        invoice.totalAmount,
+        finalFodecAmount,
+        finalTotalAmount,
         invoice.status,
         invoice.dueDate
       );
@@ -132,6 +162,9 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       const newInvoice = {
         id: invoiceId,
         ...invoice,
+        taxAmount: totalTaxAmount,
+        fodecAmount: finalFodecAmount,
+        totalAmount: finalTotalAmount,
         issueDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
@@ -160,48 +193,42 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           // First check if sale exists
           const sale = db.prepare("SELECT * FROM sales WHERE id = ?").get(currentInvoice.saleId);
           if (sale) {
-            // Only process stock return if sale is not already cancelled
-            if (sale.status !== "Annulée") {
-              // Get sale items
-              const items = db.prepare("SELECT * FROM sale_items WHERE saleId = ?").all(currentInvoice.saleId);
+            // Get sale items
+            const items = db.prepare("SELECT * FROM sale_items WHERE saleId = ?").all(currentInvoice.saleId);
+            
+            // Return stock for each item (add back the quantity that was deducted)
+            const updateStockStmt = db.prepare(`
+              UPDATE products 
+              SET stock = stock + ? 
+              WHERE id = ? AND category != 'Service'
+            `);
+            
+            // Create stock movement records for the return
+            const insertMovementStmt = db.prepare(`
+              INSERT INTO stock_movements (
+                productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+            
+            for (const item of items) {
+              // Only return stock for non-service products
+              updateStockStmt.run(item.quantity, item.productId);
               
-              // Return stock for each item (add back the quantity that was deducted)
-              const updateStockStmt = db.prepare(`
-                UPDATE products 
-                SET stock = stock + ? 
-                WHERE id = ? AND category != 'Service'
-              `);
-              
-              // Create stock movement records for the return
-              const insertMovementStmt = db.prepare(`
-                INSERT INTO stock_movements (
-                  productId, productName, quantity, movementType, sourceType, sourceId, reference, reason
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-              `);
-              
-              for (const item of items) {
-                // Only return stock for non-service products
-                updateStockStmt.run(item.quantity, item.productId);
-                
-                // Create stock movement record for the return
-                insertMovementStmt.run(
-                  item.productId,
-                  item.productName,
-                  item.quantity,
-                  'IN',
-                  'invoice_cancellation',
-                  currentInvoice.saleId,
-                  `SALE-${currentInvoice.saleId}`, 
-                  'Vente annulée'
-                );
-              }
-              
-              // Update the associated sale status to "Annulée" to maintain referential integrity
-              const updateSaleStmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
-              updateSaleStmt.run("Annulée", currentInvoice.saleId);
-              
-              notifyDataChange("sales", "update", { id: currentInvoice.saleId, status: "Annulée" });
+              // Create stock movement record for the return
+              insertMovementStmt.run(
+                item.productId,
+                item.productName,
+                item.quantity,
+                'IN',
+                'invoice_cancellation',
+                currentInvoice.saleId,
+                `SALE-${currentInvoice.saleId}`, 
+                'Vente annulée'
+              );
             }
+            
+            // Note: Sale status field was removed from the sales table
+            notifyDataChange("sales", "update", { id: currentInvoice.saleId });
           }
         } catch (error) {
           console.error("Error handling associated sale:", error);
@@ -306,9 +333,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         );
       }
       
-      // Update the sale status to "Facturée"
-      const updateSaleStmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
-      updateSaleStmt.run("Facturée", saleId);
+      // Note: Sale status field was removed from the sales table
       
       const newInvoice = {
         id: invoiceId,
@@ -323,7 +348,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       };
       
       notifyDataChange("invoices", "create", newInvoice);
-      notifyDataChange("sales", "update", { id: saleId, status: "Facturée" });
+      notifyDataChange("sales", "update", { id: saleId });
       
       return newInvoice;
     } catch (error) {

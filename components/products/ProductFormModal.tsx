@@ -77,7 +77,6 @@ export default function ProductFormModal({
         sellingPriceHT: formData.sellingPriceHT,
         sellingPriceTTC: formData.sellingPriceTTC,
         purchasePriceHT: formData.purchasePriceHT,
-        weightedAverageCostHT: formData.weightedAverageCostHT,
       };
 
       productSchema.parse(productData);
@@ -270,39 +269,6 @@ export default function ProductFormModal({
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="weightedAverageCostHT">
-                Coût unitaire moyen pondéré HT (DNT)
-              </Label>
-              <Input
-                id="weightedAverageCostHT"
-                type="number"
-                step="0.001"
-                value={formData.weightedAverageCostHT?.toString() || ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "" || value === null) {
-                    setFormData({
-                      ...formData,
-                      weightedAverageCostHT: undefined,
-                    });
-                  } else {
-                    const numValue = Number.parseFloat(value);
-                    setFormData({
-                      ...formData,
-                      weightedAverageCostHT: isNaN(numValue)
-                        ? undefined
-                        : numValue,
-                    });
-                  }
-                }}
-              />
-              {errors.weightedAverageCostHT && (
-                <div className="text-xs text-red-600">
-                  {errors.weightedAverageCostHT}
-                </div>
-              )}
-            </div>
           </div>
           <div className="flex items-center space-x-2">
             <input
@@ -316,6 +282,19 @@ export default function ProductFormModal({
               disabled={saving}
             />
             <Label htmlFor="isActive">Produit actif</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="fodecApplicable"
+              checked={formData.fodecApplicable || false}
+              onChange={(e) =>
+                setFormData({ ...formData, fodecApplicable: e.target.checked })
+              }
+              className="h-4 w-4 rounded border-gray-300"
+              disabled={saving}
+            />
+            <Label htmlFor="fodecApplicable">Éligible FODEC</Label>
           </div>
           <div className="flex justify-end gap-2">
             <Button
