@@ -72,7 +72,6 @@ function createTables(db) {
       taxAmount REAL NOT NULL,
       discountAmount REAL DEFAULT 0,
       fodecAmount REAL DEFAULT 0, -- New FODEC tax amount column
-      status TEXT DEFAULT 'En attente',
       saleDate DATETIME DEFAULT CURRENT_TIMESTAMP,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (clientId) REFERENCES clients(id)
@@ -519,6 +518,53 @@ function createIndexes(db) {
       console.log("Adding fodecAmount column to invoices table...");
       db.exec("ALTER TABLE invoices ADD COLUMN fodecAmount REAL DEFAULT 0");
       console.log("fodecAmount column added successfully");
+    }
+
+    // Remove status column from sales table if it exists (SQLite 3.35.0+)
+    const salesTableInfo = db.prepare("PRAGMA table_info(sales)").all();
+    const hasStatus = salesTableInfo.some(col => col.name === 'status');
+    
+    if (hasStatus) {
+      try {
+        console.log("Removing status column from sales table...");
+        db.exec("ALTER TABLE sales DROP COLUMN status");
+        console.log("Status column removed successfully from sales table");
+      } catch (dropError) {
+        // If DROP COLUMN is not supported, recreate the table without status
+        console.log("DROP COLUMN not supported, recreating sales table...");
+        
+        // Disable foreign key constraints temporarily
+        db.exec("PRAGMA foreign_keys = OFF");
+        
+        try {
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS sales_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              clientId INTEGER NOT NULL,
+              totalAmount REAL NOT NULL,
+              taxAmount REAL NOT NULL,
+              discountAmount REAL DEFAULT 0,
+              fodecAmount REAL DEFAULT 0,
+              saleDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (clientId) REFERENCES clients(id)
+            )
+          `);
+          
+          db.exec(`
+            INSERT INTO sales_new (id, clientId, totalAmount, taxAmount, discountAmount, fodecAmount, saleDate, createdAt)
+            SELECT id, clientId, totalAmount, taxAmount, discountAmount, fodecAmount, saleDate, createdAt
+            FROM sales
+          `);
+          
+          db.exec("DROP TABLE sales");
+          db.exec("ALTER TABLE sales_new RENAME TO sales");
+          console.log("Sales table recreated without status column");
+        } finally {
+          // Re-enable foreign key constraints
+          db.exec("PRAGMA foreign_keys = ON");
+        }
+      }
     }
   } catch (error) {
     console.error("Error running migrations:", error);

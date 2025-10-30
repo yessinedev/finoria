@@ -214,7 +214,12 @@ export interface Quote {
 
 export interface DashboardStats {
   todayRevenue: number;
+  yesterdayRevenue?: number;
   monthlyRevenue: number;
+  previousMonthRevenue?: number;
+  monthlyGoal?: number;
+  avgSaleAmount?: number;
+  monthOverMonth?: number;
   totalClients: number;
   activeClients: number;
   totalProducts: number;
@@ -227,7 +232,6 @@ export interface DashboardStats {
     client: string;
     amount: number;
     date: string;
-    // Removed status field
   }>;
   salesByMonth: Array<{
     month: string;

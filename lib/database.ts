@@ -49,7 +49,6 @@ interface ElectronAPI {
   getSalesWithItems: () => Promise<any[]>;
   getSale: (id: number) => Promise<any>;
   getSaleItems: (saleId: number) => Promise<any[]>;
-  updateSaleStatus: (id: number, status: string) => Promise<any>;
   deleteSale: (id: number) => Promise<boolean>;
 
   // Dashboard
@@ -425,15 +424,10 @@ class DatabaseService {
         () => window.electronAPI?.getSale(id) || Promise.resolve(null),
         "getSale"
       ),
-    getItems: (saleId: number) =>
+      getItems: (saleId: number) =>
       this.handle(
         () => window.electronAPI?.getSaleItems(saleId) || Promise.resolve([]),
         "getSaleItems"
-      ),
-    updateStatus: (id: number, status: string) =>
-      this.handle(
-        () => window.electronAPI?.updateSaleStatus(id, status),
-        "updateSaleStatus"
       ),
     delete: (id: number) =>
       this.handle(

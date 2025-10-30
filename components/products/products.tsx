@@ -139,7 +139,9 @@ export default function Products() {
       key: "stock" as keyof Product,
       label: "Stock",
       sortable: true,
-      render: (value: number) => (value > 0 ? value.toString() : "Service"),
+      render: (value: number, product: Product) => (
+        product.category?.toLowerCase() === "service" ? "Service" : value.toString()
+      ),
     },
     {
       key: "isActive" as keyof Product,

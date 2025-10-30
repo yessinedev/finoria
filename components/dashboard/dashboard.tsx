@@ -29,7 +29,12 @@ import type { DashboardStats } from "@/types/types"
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     todayRevenue: 0,
+    yesterdayRevenue: 0,
     monthlyRevenue: 0,
+    previousMonthRevenue: 0,
+    monthlyGoal: 0,
+    avgSaleAmount: 0,
+    monthOverMonth: 0,
     totalClients: 0,
     activeClients: 0,
     totalProducts: 0,
@@ -78,23 +83,6 @@ export default function Dashboard() {
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
     },
-    {
-      key: "status" as keyof (typeof stats.recentSales)[0],
-      label: "Statut",
-      sortable: true,
-      filterable: true,
-      filterType: "select" as const,
-      filterOptions: [
-        { label: "Payée", value: "Payée" },
-        { label: "En attente", value: "En attente" },
-        { label: "En retard", value: "En retard" },
-      ],
-      render: (value: string) => (
-        <Badge variant={value === "Payée" ? "default" : value === "En retard" ? "destructive" : "secondary"}>
-          {value || "Inconnu"}
-        </Badge>
-      ),
-    },
   ]
 
   useEffect(() => {
@@ -130,9 +118,14 @@ export default function Dashboard() {
         // Ensure all required fields have default values
         const enhancedStats: DashboardStats = {
           todayRevenue: baseStats.todayRevenue || 0,
+          yesterdayRevenue: baseStats.yesterdayRevenue || 0,
           monthlyRevenue: baseStats.monthlyRevenue || 0,
+          previousMonthRevenue: baseStats.previousMonthRevenue || 0,
+          monthlyGoal: baseStats.monthlyGoal || 0,
+          avgSaleAmount: baseStats.avgSaleAmount || 0,
+          monthOverMonth: baseStats.monthOverMonth || 0,
           totalClients: baseStats.totalClients || 0,
-          activeClients: baseStats.activeClients || Math.floor((baseStats.totalClients || 0) * 0.7),
+          activeClients: baseStats.activeClients || 0,
           totalProducts: baseStats.totalProducts || 0,
           lowStockProducts: baseStats.lowStockProducts || 0,
           totalSales: baseStats.totalSales || 0,
@@ -230,10 +223,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{(stats.todayRevenue || 0).toFixed(3)} DNT</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-              +12.5% vs hier
-            </div>
+            {stats.yesterdayRevenue !== undefined && stats.yesterdayRevenue > 0 && (
+              <div className="flex items-center text-xs text-muted-foreground">
+                {(() => {
+                  const growth = ((stats.todayRevenue - stats.yesterdayRevenue) / stats.yesterdayRevenue) * 100;
+                  const Icon = growth >= 0 ? TrendingUp : TrendingDown;
+                  return (
+                    <>
+                      <Icon className={`h-3 w-3 mr-1 ${growth >= 0 ? "text-green-500" : "text-red-500"}`} />
+                      {growth >= 0 ? "+" : ""}{growth.toFixed(1)}% vs hier
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -260,15 +263,12 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventes en cours</CardTitle>
+            <CardTitle className="text-sm font-medium">Panier moyen</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSales || 0}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <Clock className="h-3 w-3 mr-1" />
-              {stats.pendingInvoices || 0} en attente
-            </div>
+            <div className="text-2xl font-bold">{(stats.avgSaleAmount || 0).toFixed(3)} DNT</div>
+            <div className="text-xs text-muted-foreground">Sur la période sélectionnée</div>
           </CardContent>
         </Card>
       </div>
@@ -324,27 +324,25 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taux de conversion</CardTitle>
+            <CardTitle className="text-sm font-medium">Croissance mensuelle</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.totalSales ? Math.round((stats.totalSales - stats.pendingInvoices) / stats.totalSales * 100) : 0}%
+              {stats.monthOverMonth !== undefined ? `${Math.round(stats.monthOverMonth)}%` : "N/A"}
             </div>
-            <p className="text-xs text-muted-foreground">Ventes converties</p>
+            <p className="text-xs text-muted-foreground">CA vs mois précédent</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Croissance</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Ventes (période)</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              +{Math.round(((stats.monthlyRevenue || 0) / 50000) * 100) || 0}%
-            </div>
-            <p className="text-xs text-muted-foreground">Par rapport à l'objectif mensuel</p>
+            <div className="text-2xl font-bold">{stats.totalSales || 0}</div>
+            <p className="text-xs text-muted-foreground">Nombre de ventes dans la période</p>
           </CardContent>
         </Card>
       </div>
