@@ -943,6 +943,7 @@ export default function UnifiedInvoiceGenerator({
                         <Label>Notes (optionnel)</Label>
                         <FormField
                           id="notes"
+                          label="Notes (optionnel)"
                           value={formData.notes}
                           onChange={(e) =>
                             setFormData({ ...formData, notes: e.target.value })
