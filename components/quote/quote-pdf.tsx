@@ -39,6 +39,20 @@ const styles = StyleSheet.create({
     height: '100%',
     objectFit: 'contain',
   },
+  companyNameBox: {
+    backgroundColor: '#eef2ff',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    minWidth: 120,
+    justifyContent: 'center',
+  },
+  companyNameText: {
+    fontSize: 16,
+    color: '#6366f1',
+    fontWeight: 700,
+    textAlign: 'center',
+  },
   title: {
     fontSize: 24,
     color: '#6366f1',
@@ -221,9 +235,8 @@ export function QuotePDFDocument({ quote, companySettings, products }: { quote: 
                 <Image style={styles.logoImage} src={companySettings.logo} />
               </View>
             ) : (
-              <View style={styles.logoBox}>
-                <Text style={styles.title}>Finoria</Text>
-                <Text style={styles.subtitle}>Gestion & Facturation</Text>
+              <View style={styles.companyNameBox}>
+                <Text style={styles.companyNameText}>{companySettings?.name || 'Votre Entreprise'}</Text>
               </View>
             )}
           </View>

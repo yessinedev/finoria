@@ -2,7 +2,7 @@
 
 import { LicenseForm } from "@/components/license-form";
 import { db } from "@/lib/database";
-import { verifyLicense } from "@/lib/license";
+import { verifyLicenseWithOffline } from "@/lib/license";
 import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,8 +19,8 @@ export default function LicensePage() {
     (async () => {
       const fingerprint = await db.device.getFingerprint();
       const licenseKey = localStorage.getItem("licenseKey");
-      const valid = await verifyLicense(licenseKey, fingerprint.data);
-      if (valid) {
+      const result = await verifyLicenseWithOffline(licenseKey, fingerprint.data);
+      if (result.valid) {
         router.push("/dashboard");
       } else {
         setChecking(false); // show form

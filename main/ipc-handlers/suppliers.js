@@ -441,6 +441,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           }
         }
 
+        // Recalculate the total amount: HT + recalculated tax (no timbre fiscal in database total)
+        // The timbre fiscal is added in the UI display but not stored in the totalAmount
+        const recalculatedTotalAmount = invoiceData.amount + totalTaxAmount;
+
         // Insert invoice
         const insertInvoice = db.prepare(`
           INSERT INTO supplier_invoices (
@@ -455,7 +459,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           invoiceData.invoiceNumber,
           invoiceData.amount,
           totalTaxAmount,
-          invoiceData.totalAmount,
+          recalculatedTotalAmount,
           invoiceData.status,
           invoiceData.issueDate,
           invoiceData.dueDate,

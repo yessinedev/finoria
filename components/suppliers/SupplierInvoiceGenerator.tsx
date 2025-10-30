@@ -173,10 +173,24 @@ export default function SupplierInvoiceGenerator({
     if (supplier) {
       // Load orders for this supplier
       try {
-        const ordersResult = await db.supplierOrders.getAll();
+        const [ordersResult, invoicesResult] = await Promise.all([
+          db.supplierOrders.getAll(),
+          db.supplierInvoices.getAll()
+        ]);
+        
         if (ordersResult.success) {
+          // Get all order IDs that have been invoiced
+          const invoicedOrderIds = new Set(
+            (invoicesResult.data || [])
+              .filter((inv: any) => inv.orderId != null)
+              .map((inv: any) => inv.orderId)
+          );
+          
+          // Filter orders: only for this supplier and not yet invoiced
           const supplierOrders = (ordersResult.data || []).filter(
-            (order: SupplierOrder) => order.supplierId === supplier.id
+            (order: SupplierOrder) => 
+              order.supplierId === supplier.id && 
+              !invoicedOrderIds.has(order.id)
           );
           setSupplierOrders(supplierOrders);
         }
@@ -373,10 +387,11 @@ export default function SupplierInvoiceGenerator({
           ? formData.customNumber.trim()
           : generatePreviewInvoiceNumber();
           
-        // Calculate amounts with timbre fiscal
-        const htAmount = selectedOrder.totalAmount;
+        // Calculate amounts correctly
+        // Note: selectedOrder.totalAmount is TTC (includes tax), not HT
         const tvaAmount = selectedOrder.taxAmount;
-        const ttcAmount = htAmount + tvaAmount;
+        const htAmount = selectedOrder.totalAmount - tvaAmount; // HT = TTC - TVA
+        const ttcAmount = selectedOrder.totalAmount; // This is already TTC
         const timbreFiscal = companySettings?.timbreFiscal || 1.000;
         const finalAmount = ttcAmount + timbreFiscal;
           
@@ -620,9 +635,10 @@ export default function SupplierInvoiceGenerator({
     if (activeTab === "from-order") {
       // Preview for classic workflow
       if (!selectedOrder) return;
-      const htAmount = selectedOrder.totalAmount;
+      // Note: selectedOrder.totalAmount is TTC (includes tax), not HT
       const tvaAmount = selectedOrder.taxAmount;
-      const ttcAmount = htAmount + tvaAmount;
+      const htAmount = selectedOrder.totalAmount - tvaAmount; // HT = TTC - TVA
+      const ttcAmount = selectedOrder.totalAmount; // This is already TTC
       const finalAmount = ttcAmount + timbreFiscal;
       
       previewData = {
@@ -829,7 +845,7 @@ export default function SupplierInvoiceGenerator({
                               `Commande #${order.id} - ${new Date(
                                 order.orderDate
                               ).toLocaleDateString("fr-FR")} - ${formatCurrency(
-                                order.totalAmount + (order.taxAmount || 0)
+                                order.totalAmount
                               )}`
                             }
                             getOptionValue={(order) => order.id.toString()}
@@ -885,10 +901,7 @@ export default function SupplierInvoiceGenerator({
                                     Montant TTC:
                                   </p>
                                   <p className="font-medium text-primary">
-                                    {formatCurrency(
-                                      selectedOrder.totalAmount +
-                                        selectedOrder.taxAmount
-                                    )}
+                                    {formatCurrency(selectedOrder.totalAmount)}
                                   </p>
                                 </div>
                               </div>
@@ -1086,11 +1099,9 @@ export default function SupplierInvoiceGenerator({
                     // Classic workflow - Just show financial summary
                     selectedOrder && (
                       <FinancialSummaryCard
-                        subtotal={selectedOrder.totalAmount}
+                        subtotal={selectedOrder.totalAmount - selectedOrder.taxAmount}
                         tax={selectedOrder.taxAmount}
-                        total={
-                          selectedOrder.totalAmount + selectedOrder.taxAmount
-                        }
+                        total={selectedOrder.totalAmount}
                         dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
                         paymentTerms={formData.paymentTerms}
                         currency="DNT"

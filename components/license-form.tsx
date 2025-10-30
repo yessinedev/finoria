@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Key } from "lucide-react";
+import { CheckCircle, XCircle, Key, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormInput } from "./ui/form-input";
 import { db } from "@/lib/database";
@@ -25,24 +25,42 @@ interface LicenseFormProps {
 
 export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
   const [licenseKey, setLicenseKey] = useState("");
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "success" | "error" | "offline">("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
 
     try {
       const result = await db.device.getFingerprint();
       const fingerprint = result.data;
-      const verified = await verifyLicense(licenseKey, fingerprint);
+      
+      try {
+        const verified = await verifyLicense(licenseKey, fingerprint);
 
-      if (verified) {
-        localStorage.setItem("licenseKey", licenseKey);
-        onSuccess?.();
-        return;
+        if (verified) {
+          // Mark as activated for offline use
+          localStorage.setItem("licenseKey", licenseKey);
+          localStorage.setItem("licenseActivated", "true");
+          localStorage.setItem("licenseFingerprint", fingerprint);
+          setStatus("success");
+          setTimeout(() => onSuccess?.(), 1000);
+          return;
+        }
+      } catch (verifyErr) {
+        // If verification throws offline error, try activation
+        if (verifyErr instanceof Error && verifyErr.message === "OFFLINE") {
+          setStatus("offline");
+          setErrorMessage("Vous devez être connecté à Internet pour activer votre licence pour la première fois.");
+          setIsLoading(false);
+          return;
+        }
       }
+      
       const res = await fetch("https://license.etudionet.life/api/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,15 +74,19 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
 
       if (res.ok && data.status === "activated") {
         setStatus("success");
-        // after successful activation
+        // Mark as activated for offline use
         window.localStorage.setItem("licenseKey", licenseKey);
-        onSuccess?.();
+        window.localStorage.setItem("licenseActivated", "true");
+        window.localStorage.setItem("licenseFingerprint", fingerprint);
+        setTimeout(() => onSuccess?.(), 1000);
       } else {
         setStatus("error");
+        setErrorMessage("Clé de licence invalide");
       }
     } catch (err) {
       console.error(err);
-      setStatus("error");
+      setStatus("offline");
+      setErrorMessage("Impossible de se connecter au serveur de licence. Vérifiez votre connexion Internet.");
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +95,7 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
   const resetForm = () => {
     setLicenseKey("");
     setStatus("idle");
+    setErrorMessage("");
   };
 
   return (
@@ -109,7 +132,7 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
                   Clé de licence invalide
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Veuillez vérifier votre clé de licence et réessayer
+                  {errorMessage || "Veuillez vérifier votre clé de licence et réessayer"}
                 </p>
               </div>
             </div>
@@ -123,7 +146,7 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
                 placeholder="Entrez votre clé de licence"
                 required
                 error={
-                  status === "error" ? "Clé de licence invalide" : undefined
+                  status === "error" ? errorMessage || "Clé de licence invalide" : undefined
                 }
               />
 
@@ -141,6 +164,50 @@ export function LicenseForm({ onSuccess, className }: LicenseFormProps) {
                 </Button>
               </div>
             </form>
+          </div>
+        ) : status === "offline" ? (
+          <div className="space-y-4">
+            <div className="text-center space-y-2">
+              <WifiOff className="h-12 w-12 text-orange-500 mx-auto" />
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Connexion Internet requise
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {errorMessage}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <FormInput
+                label="Clé de licence"
+                id="licenseKey"
+                value={licenseKey}
+                onChange={setLicenseKey}
+                placeholder="Entrez votre clé de licence"
+                required
+              />
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={resetForm}
+                  className="flex-1 bg-transparent"
+                >
+                  Effacer
+                </Button>
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? "Validation..." : "Réessayer"}
+                </Button>
+              </div>
+            </form>
+
+            <div className="text-xs text-muted-foreground text-center bg-muted p-3 rounded-md">
+              💡 Astuce: Une fois la licence activée avec une connexion Internet, 
+              vous pourrez utiliser l'application hors ligne.
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
