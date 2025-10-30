@@ -38,8 +38,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       `);
       
       const insertItem = db.prepare(`
-        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice, fodecApplicable)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       // Calculate total tax amount for the invoice based on individual product TVA rates
@@ -109,7 +109,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.quantity,
             item.unitPrice,
             item.discount || 0,
-            item.totalPrice
+            item.totalPrice,
+            item.fodecApplicable ? 1 : 0
           );
         }
       } else if (invoice.items && Array.isArray(invoice.items)) {
@@ -122,7 +123,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             item.quantity,
             item.unitPrice,
             item.discount || 0,
-            item.totalPrice
+            item.totalPrice,
+            item.fodecApplicable ? 1 : 0
           );
         }
       }
@@ -287,8 +289,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       
       // Insert invoice items based on sale items
       const insertItem = db.prepare(`
-        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO invoice_items (invoiceId, productId, productName, quantity, unitPrice, discount, totalPrice, fodecApplicable)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       for (const item of items) {
@@ -299,7 +301,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           item.quantity,
           item.unitPrice,
           item.discount || 0,
-          item.totalPrice
+          item.totalPrice,
+          item.fodecApplicable ? 1 : 0
         );
       }
       
