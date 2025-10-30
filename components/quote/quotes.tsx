@@ -132,6 +132,24 @@ export default function Quotes() {
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
     },
+    {
+      key: "status" as keyof Quote,
+      label: "Statut",
+      sortable: true,
+      filterable: true,
+      render: (value: string, quote: Quote) => (
+        <StatusDropdown
+          currentValue={quote.status}
+          options={[
+            { value: "Brouillon", label: "Brouillon", variant: "outline" },
+            { value: "Envoyé", label: "Envoyé", variant: "secondary" },
+            { value: "Accepté", label: "Accepté", variant: "default" },
+            { value: "Refusé", label: "Refusé", variant: "destructive" },
+          ]}
+          onStatusChange={(newStatus) => handleStatusChange(quote.id, newStatus)}
+        />
+      ),
+    },
   ];
 
   useEffect(() => {
@@ -513,49 +531,37 @@ export default function Quotes() {
             loading={loading}
             emptyMessage="Aucun devis trouvé"
             actions={(quote) => (
-              <div className="flex justify-end gap-2 items-center">
-                <StatusDropdown
-                  currentValue={quote.status}
-                  options={[
-                    { value: "Brouillon", label: "Brouillon", variant: "outline" },
-                    { value: "Envoyé", label: "Envoyé", variant: "secondary" },
-                    { value: "Accepté", label: "Accepté", variant: "default" },
-                    { value: "Refusé", label: "Refusé", variant: "destructive" },
-                  ]}
-                  onStatusChange={(newStatus) => handleStatusChange(quote.id, newStatus)}
-                />
-                <ActionsDropdown
-                  actions={[
-                    {
-                      label: "Voir",
-                      icon: <Eye className="h-4 w-4" />,
-                      onClick: () => handleViewQuote(quote),
-                    },
-                    {
-                      label: "Télécharger PDF",
-                      icon: <Download className="h-4 w-4" />,
-                      onClick: () => handleDownloadQuote(quote),
-                    },
-                    {
-                      label: "Imprimer",
-                      icon: <Printer className="h-4 w-4" />,
-                      onClick: () => handlePrintQuote(quote),
-                    },
-                    {
-                      label: "Convertir en facture",
-                      icon: <FileText className="h-4 w-4" />,
-                      onClick: () => handleConvertToInvoice(quote),
-                      disabled: isConverting || quote.status === "Accepté",
-                    },
-                    {
-                      label: "Supprimer",
-                      icon: <Trash2 className="h-4 w-4" />,
-                      onClick: () => handleDeleteQuote(quote),
-                      className: "text-red-600",
-                    },
-                  ]}
-                />
-              </div>
+              <ActionsDropdown
+                actions={[
+                  {
+                    label: "Voir",
+                    icon: <Eye className="h-4 w-4" />,
+                    onClick: () => handleViewQuote(quote),
+                  },
+                  {
+                    label: "Télécharger PDF",
+                    icon: <Download className="h-4 w-4" />,
+                    onClick: () => handleDownloadQuote(quote),
+                  },
+                  {
+                    label: "Imprimer",
+                    icon: <Printer className="h-4 w-4" />,
+                    onClick: () => handlePrintQuote(quote),
+                  },
+                  {
+                    label: "Convertir en facture",
+                    icon: <FileText className="h-4 w-4" />,
+                    onClick: () => handleConvertToInvoice(quote),
+                    disabled: isConverting || quote.status === "Accepté",
+                  },
+                  {
+                    label: "Supprimer",
+                    icon: <Trash2 className="h-4 w-4" />,
+                    onClick: () => handleDeleteQuote(quote),
+                    className: "text-red-600",
+                  },
+                ]}
+              />
             )}
           />
         </CardContent>

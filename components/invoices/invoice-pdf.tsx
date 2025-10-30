@@ -196,14 +196,6 @@ const styles = StyleSheet.create({
 })
 
 export function InvoicePDFDocument({ invoice, companySettings, products }: { invoice: Invoice; companySettings?: any; products?: any[] }) {
-  // Calculate HT (before tax) correctly
-  const htAmount = invoice.amount; // This is the correct HT amount from the database
-  const fodecAmount = invoice.fodecAmount || 0; // FODEC amount
-  const tvaAmount = invoice.taxAmount; // This is the correct TVA amount from the database
-  const ttcAmount = invoice.totalAmount; // This is the correct TTC amount from the database
-  const timbreFiscal = companySettings?.timbreFiscal || 1.000;
-  const finalAmount = ttcAmount + timbreFiscal;
-
   // Calculate total remise (discounts) from items
   let totalRemise = 0;
   if (Array.isArray(invoice.items)) {
@@ -214,8 +206,16 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
     }, 0);
   }
 
-  // Calculate TVA breakdown by rate
-  const tvaBreakdown: Record<number, { baseAmount: number; tvaAmount: number }> = {};
+  // Calculate Total HT (sum of all item totals after discount)
+  const totalHT = Array.isArray(invoice.items) 
+    ? invoice.items.reduce((sum, item) => sum + item.totalPrice, 0)
+    : invoice.amount;
+
+  // Get FODEC amount from invoice (already calculated) or calculate if missing
+  const fodecAmount = invoice.fodecAmount || 0;
+
+  // Calculate TVA breakdown by rate with correct formula: TVA = (Total HT + FODEC) × taux_TVA
+  const tvaBreakdown: Record<number, { baseAmount: number; tvaAmount: number; fodecPortion: number }> = {};
   
   if (Array.isArray(invoice.items) && Array.isArray(products)) {
     invoice.items.forEach((item: InvoiceItem) => {
@@ -223,17 +223,31 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
       const tvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
       
       if (!tvaBreakdown[tvaRate]) {
-        tvaBreakdown[tvaRate] = { baseAmount: 0, tvaAmount: 0 };
+        tvaBreakdown[tvaRate] = { baseAmount: 0, tvaAmount: 0, fodecPortion: 0 };
       }
       
       tvaBreakdown[tvaRate].baseAmount += item.totalPrice;
-      tvaBreakdown[tvaRate].tvaAmount += (item.totalPrice * tvaRate) / 100;
+    });
+
+    // Calculate proportional FODEC for each TVA rate group
+    Object.keys(tvaBreakdown).forEach(rateStr => {
+      const rate = Number(rateStr);
+      const proportion = totalHT > 0 ? tvaBreakdown[rate].baseAmount / totalHT : 0;
+      tvaBreakdown[rate].fodecPortion = fodecAmount * proportion;
+      
+      // Calculate TVA: (Total HT + FODEC) × taux_TVA for this rate group
+      const taxableBase = tvaBreakdown[rate].baseAmount + tvaBreakdown[rate].fodecPortion;
+      tvaBreakdown[rate].tvaAmount = (taxableBase * rate) / 100;
     });
   }
   
-  // Calculate total base HT from breakdown (sum of all baseAmounts)
-  const totalBaseHT = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.baseAmount, 0);
+  // Calculate totals
+  const totalBaseHT = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.baseAmount, 0) || totalHT;
   const totalTVA = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.tvaAmount, 0);
+  const timbreFiscal = companySettings?.timbreFiscal || 1.000;
+
+  // Calculate Total TTC: Total HT + FODEC + TVA + Timbre Fiscal
+  const finalAmount = totalHT + fodecAmount + totalTVA + timbreFiscal;
 
   return (
     <Document>
@@ -254,7 +268,7 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
           <View>
             <Text style={{ fontSize: 16, fontWeight: 700, color: '#6366f1' }}>{invoice.number}</Text>
             <Text style={styles.subtitle}>Date: {formatDate(invoice.issueDate)}</Text>
-            <Text style={styles.subtitle}>Échéance: {formatDate(invoice.dueDate)}</Text>
+            {/* Removed dueDate/paymentTerms from header */}
           </View>
         </View>
 
@@ -288,14 +302,6 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
             <View style={{ flex: 1 }}>
               <Text style={styles.totalsLabel}>Date d'émission</Text>
               <Text style={styles.cardContent}>{formatDate(invoice.issueDate)}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.totalsLabel}>Date d'échéance</Text>
-              <Text style={styles.cardContent}>{formatDate(invoice.dueDate)}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.totalsLabel}>Conditions de paiement</Text>
-              <Text style={styles.cardContent}>{invoice.paymentTerms || '30 jours net'}</Text>
             </View>
           </View>
         </View>
@@ -346,15 +352,15 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
               ) : (
                 <View style={styles.tvaBreakdownRow}>
                   <Text style={styles.tvaBreakdownCell}>0%</Text>
-                  <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(htAmount)}</Text>
+                  <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(totalHT)}</Text>
                   <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(0)}</Text>
                 </View>
               )}
               {/* Total Row */}
               <View style={[styles.tvaBreakdownRow, { backgroundColor: '#eef2ff', fontWeight: 700 }]}>
                 <Text style={[styles.tvaBreakdownCell, { fontWeight: 700 }]}>Total</Text>
-                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalBaseHT || htAmount)}</Text>
-                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalTVA || tvaAmount)}</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalHT)}</Text>
+                <Text style={[styles.tvaBreakdownCellRight, { fontWeight: 700 }]}>{formatCurrency(totalTVA)}</Text>
               </View>
             </View>
           </View>
@@ -363,7 +369,7 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
           <View style={styles.totalsBox}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(totalBaseHT || htAmount)}</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(totalHT)}</Text>
             </View>
             {totalRemise > 0 && (
               <View style={styles.totalsRow}>
@@ -379,7 +385,7 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
             )}
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>TVA:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(tvaAmount)}</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(totalTVA)}</Text>
             </View>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>

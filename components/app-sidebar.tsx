@@ -16,8 +16,8 @@ import {
   FileText,
   Building2,
   Package,
-  ChevronDown,
-  Truck,
+  ChevronRight,
+  Settings,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -43,6 +43,7 @@ const navigationItems = [
     label: "Gestion de ventes",
     icon: ShoppingCart,
     children: [
+      { id: "clients", label: "Clients", icon: Users },
       { id: "quotes", label: "Devis" },
       { id: "sales", label: "Commande client" },
       { id: "invoices", label: "Facture" },
@@ -56,6 +57,7 @@ const navigationItems = [
     label: "Gestion d'achats",
     icon: ShoppingCart,
     children: [
+      { id: "suppliers", label: "Fournisseurs", icon: Building2 },
       { id: "purchase-order", label: "Commande fournisseur" },
       { id: "supplier-invoice", label: "Facture fournisseur" },
       { id: "reception-notes", label: "Bon de réception" },
@@ -67,19 +69,15 @@ const navigationItems = [
     label: "Gestion de stock",
     icon: Package,
     children: [
-      { id: "inventory", label: "Inventaire" },
+      { id: "products", label: "Produits" },
       { id: "stock-movements", label: "Mouvements de stock" },
       { id: "categories", label: "Catégories" },
     ],
   },
-  { id: "clients", label: "Clients", icon: Users },
-  { id: "suppliers", label: "Fournisseurs", icon: Building2 },
 ];
 
 // Settings item moved to footer
-const footerItems = [
-  { id: "settings", label: "Paramètres", icon: FileText },
-];
+const footerItems = [{ id: "settings", label: "Paramètres", icon: Settings }];
 
 export interface AppSidebarProps {
   activeView: NavigationItem;
@@ -89,8 +87,8 @@ export interface AppSidebarProps {
 export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({
     "sales-management": true,
-    "purchases": true,
-    "stock": true,
+    purchases: true,
+    stock: true,
   });
 
   useEffect(() => {
@@ -135,7 +133,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/suppliers/reception-notes";
       case "suppliers":
         return "/suppliers";
-      case "inventory":
+      case "products":
         return "/inventory";
       case "stock-movements":
         return "/movements";
@@ -153,64 +151,70 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar className="border-r" collapsible="offcanvas" variant="inset">
-      <SidebarHeader className="border-b px-6 py-4 flex items-start gap-2">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-6 w-6 text-primary" />
-          <h1 className="font-semibold text-lg">Finoria</h1>
+    <Sidebar className="border-r border-border/40" collapsible="offcanvas" variant="inset">
+      <SidebarHeader className="border-b border-border/40 px-6 py-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Building2 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="font-bold text-lg tracking-tight">Finoria</h1>
+            <p className="text-xs text-muted-foreground font-medium">Gestion & Facturation</p>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">Gestion & Facturation</p>
       </SidebarHeader>
 
-      <SidebarContent className="py-4 px-4">
-        <SidebarMenu>
+      <SidebarContent className="py-4 px-3">
+        <SidebarMenu className="space-y-1">
           {navigationItems.map((item) => (
             <SidebarMenuItem key={item.id}>
               {item.children ? (
-                <>
+                <div className="space-y-1">
                   <SidebarMenuButton
                     onClick={() => handleToggle(item.id)}
                     isActive={activeView === item.id}
-                    className="w-full justify-start gap-3 px-3 py-2.5 flex items-center hover:cursor-pointer font-semibold"
+                    className="w-full justify-start gap-3 px-3 py-2.5 flex items-center hover:cursor-pointer font-medium hover:bg-primary/10 hover:text-primary transition-colors rounded-lg"
                   >
                     <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                    <ChevronDown
-                      className={`ml-auto transition-transform ${
-                        openGroups[item.id] ? "rotate-180" : ""
+                    <span className="text-sm">{item.label}</span>
+                    <ChevronRight
+                      className={`ml-auto h-4 w-4 transition-transform duration-200 ${
+                        openGroups[item.id] ? "rotate-90" : ""
                       }`}
                     />
                   </SidebarMenuButton>
 
                   {openGroups[item.id] && (
-                    <SidebarMenu className="ml-4 border-muted-foreground/10 pl-2 mt-1">
+                    <SidebarMenu className="ml-3 space-y-0.5 mt-1">
                       {item.children.map((sub) => (
                         <SidebarMenuItem key={sub.id}>
-                          <Link href={getRoute(sub.id)} passHref>
+                          <Link href={getRoute(sub.id)} passHref className="block">
                             <SidebarMenuButton
                               onClick={() =>
                                 setActiveView(sub.id as NavigationItem)
                               }
                               isActive={activeView === sub.id}
-                              className="w-full justify-start gap-3 px-3 py-2.5 hover:cursor-pointer"
+                              className="w-full justify-start gap-3 px-3 py-2 hover:cursor-pointer text-sm hover:bg-primary/10 hover:text-primary transition-colors rounded-lg data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:font-medium"
                             >
-                              <span>{sub.label}</span>
+                              <span className="ml-4 relative before:absolute before:left-[-12px] before:top-1/2 before:-translate-y-1/2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-muted-foreground/40">
+                                {sub.label}
+                              </span>
                             </SidebarMenuButton>
                           </Link>
                         </SidebarMenuItem>
                       ))}
                     </SidebarMenu>
                   )}
-                </>
+                </div>
               ) : (
-                <Link href={getRoute(item.id)} passHref>
+                <Link href={getRoute(item.id)} passHref className="block">
                   <SidebarMenuButton
                     onClick={() => setActiveView(item.id as NavigationItem)}
                     isActive={activeView === item.id}
-                    className="w-full justify-start gap-3 px-3 py-2.5"
+                    className="w-full justify-start gap-3 px-3 py-2.5 font-medium hover:bg-primary/10 hover:text-primary transition-colors rounded-lg data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
                   >
                     <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span className="text-sm">{item.label}</span>
                   </SidebarMenuButton>
                 </Link>
               )}
@@ -219,18 +223,18 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="border-t px-4 py-3">
+      <SidebarFooter className="border-t border-border/40 px-3 py-4">
         <SidebarMenu>
           {footerItems.map((item) => (
             <SidebarMenuItem key={item.id}>
-              <Link href={getRoute(item.id)} passHref>
+              <Link href={getRoute(item.id)} passHref className="block">
                 <SidebarMenuButton
                   onClick={() => setActiveView(item.id as NavigationItem)}
                   isActive={activeView === item.id}
-                  className="w-full justify-start gap-3 px-3 py-2.5"
+                  className="w-full justify-start gap-3 px-3 py-2.5 font-medium hover:bg-primary/10 hover:text-primary transition-colors rounded-lg data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
                 >
                   <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
+                  <span className="text-sm">{item.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>

@@ -10,10 +10,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex gap-2 h-screen w-full overflow-auto">
+      <div className="flex gap-2 h-screen w-full overflow-hidden">
         <AppSidebar activeView={activeView} setActiveView={setActiveView} />
-        <SidebarInset className="flex-1">
-          <main className="h-full min-w-0 bg-background">
+        <SidebarInset className="flex-1 overflow-auto">
+          <main className="min-w-0 bg-background">
             <SidebarTrigger />
             {children}
             <Toaster /> {/* Add the Toaster component */}

@@ -78,8 +78,6 @@ export default function UnifiedInvoiceGenerator({
   const [selectedClientForSale, setSelectedClientForSale] = useState<Client | null>(null); // Client selection for from-sale tab
   const [clientSales, setClientSales] = useState<Sale[]>([]); // Filtered sales for selected client
   const [formData, setFormData] = useState({
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    paymentTerms: "30 jours net",
     notes: "",
     customNumber: "",
   });
@@ -207,15 +205,6 @@ export default function UnifiedInvoiceGenerator({
       maximumFractionDigits: 3,
     }).format(amount);
   };
-
-  const paymentTermsOptions = [
-    { value: "15 jours net", label: "15 jours net" },
-    { value: "30 jours net", label: "30 jours net" },
-    { value: "45 jours net", label: "45 jours net" },
-    { value: "60 jours net", label: "60 jours net" },
-    { value: "Paiement comptant", label: "Paiement comptant" },
-    { value: "Paiement à réception", label: "Paiement à réception" },
-  ];
 
   const validateForm = () => {
     try {
@@ -364,7 +353,7 @@ export default function UnifiedInvoiceGenerator({
         const invoiceData = {
           number: invoiceNumber,
           saleId: selectedSale.id,
-          dueDate: formData.dueDate.toISOString(),
+          dueDate: new Date().toISOString(), // Issue date is now
           amount: selectedSale.totalAmount - selectedSale.taxAmount, // HT amount
           taxAmount: selectedSale.taxAmount, // TVA amount
           totalAmount: selectedSale.totalAmount, // TTC amount
@@ -380,8 +369,6 @@ export default function UnifiedInvoiceGenerator({
           // Reset form
           setSelectedSale(null);
           setFormData({
-            dueDate: new Date(Date.now()),
-            paymentTerms: "30 jours net",
             notes: "",
             customNumber: "",
           });
@@ -498,7 +485,7 @@ export default function UnifiedInvoiceGenerator({
           taxAmount: taxAmount,
           totalAmount: totalWithTax,
           status: "En attente",
-          dueDate: formData.dueDate.toISOString(),
+          dueDate: new Date().toISOString(), // Issue date is now
           items: allItems,
         };
 
@@ -539,8 +526,6 @@ export default function UnifiedInvoiceGenerator({
     setLineItems([]);
     setSelectedSale(null);
     setFormData({
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      paymentTerms: "30 jours net",
       notes: "",
       customNumber: "",
     });
@@ -575,7 +560,7 @@ export default function UnifiedInvoiceGenerator({
       previewData = {
         number: invoiceNumber,
         saleId: selectedSale.id,
-        dueDate: formData.dueDate.toISOString(),
+        dueDate: new Date().toISOString(), // Issue date is now
         amount: selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0), // HT amount
         taxAmount: selectedSale.taxAmount,
         fodecAmount: selectedSale.fodecAmount || 0,
@@ -607,7 +592,7 @@ export default function UnifiedInvoiceGenerator({
         totalAmount: finalTotal,
         status: "En attente",
         issueDate: new Date().toISOString(),
-        dueDate: formData.dueDate.toISOString(),
+        dueDate: new Date().toISOString(), // Issue date is now
         notes: formData.notes,
         items: lineItems,
       };
@@ -640,7 +625,7 @@ export default function UnifiedInvoiceGenerator({
         totalAmount: totalWithTax,
         status: "En attente",
         issueDate: new Date().toISOString(),
-        dueDate: formData.dueDate.toISOString(),
+        dueDate: new Date().toISOString(), // Issue date is now
         notes: formData.notes,
         items: allItems,
       };
@@ -955,63 +940,16 @@ export default function UnifiedInvoiceGenerator({
                       />
 
                       <div className="flex flex-col gap-2">
-                        <Label>Date d’échéance *</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formData.dueDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {formData.dueDate ? (
-                                format(formData.dueDate, "PPP", { locale: fr })
-                              ) : (
-                                <span>Sélectionner une date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={formData.dueDate}
-                              onSelect={(date) =>
-                                date &&
-                                setFormData({ ...formData, dueDate: date })
-                              }
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        {formErrors.dueDate && (
-                          <p className="text-sm text-red-500 mt-1">
-                            {formErrors.dueDate}
-                          </p>
-                        )}
+                        <Label>Notes (optionnel)</Label>
+                        <FormField
+                          id="notes"
+                          value={formData.notes}
+                          onChange={(e) =>
+                            setFormData({ ...formData, notes: e.target.value })
+                          }
+                          textarea
+                        />
                       </div>
-
-                      <EntitySelect
-                        label="Conditions de paiement"
-                        id="paymentTerms"
-                        value={formData.paymentTerms}
-                        onChange={(value) =>
-                          setFormData({ ...formData, paymentTerms: value })
-                        }
-                        options={paymentTermsOptions}
-                        getOptionLabel={(opt) => opt.label}
-                        getOptionValue={(opt) => opt.value}
-                      />
-
-                      <FormField
-                        label="Notes (optionnel)"
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) =>
-                          setFormData({ ...formData, notes: e.target.value })
-                        }
-                        textarea
-                      />
                     </CardContent>
                   </Card>
                 </div>
@@ -1025,8 +963,8 @@ export default function UnifiedInvoiceGenerator({
                         subtotal={selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0)}
                         tax={selectedSale.taxAmount}
                         total={selectedSale.totalAmount}
-                        dueDate={formData.dueDate.toLocaleDateString("fr-FR")}
-                        paymentTerms={formData.paymentTerms}
+                        dueDate={new Date().toLocaleDateString("fr-FR")}
+                        paymentTerms="30 jours net"
                         currency="DNT"
                       />
                     )
@@ -1398,10 +1336,10 @@ export default function UnifiedInvoiceGenerator({
                                   (sum, po) => sum + po.totalAmount,
                                   0
                                 )}
-                                dueDate={formData.dueDate.toLocaleDateString(
+                                dueDate={new Date().toLocaleDateString(
                                   "fr-FR"
                                 )}
-                                paymentTerms={formData.paymentTerms}
+                                paymentTerms="30 jours net"
                                 currency="DNT"
                               />
                             </div>
