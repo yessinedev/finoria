@@ -25,12 +25,13 @@ import {
   Calendar,
   DollarSign,
   MoreVertical,
+  Printer,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { useDataTable } from "@/hooks/use-data-table";
 import { db } from "@/lib/database";
-import type { CreditNote, Invoice } from "@/types/types";
-import { PDFViewer, pdf, PDFDownloadLink } from "@react-pdf/renderer";
+import type { CreditNote, Invoice, Client } from "@/types/types";
+import { PDFViewer, pdf, PDFDownloadLink, BlobProvider } from "@react-pdf/renderer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
@@ -45,10 +46,12 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { ActionsDropdown } from "@/components/common/actions-dropdown";
+import { SearchableEntitySelect } from "@/components/common/SearchableEntitySelect";
 
 export default function CreditNotes() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,7 @@ export default function CreditNotes() {
   const itemsPerPage = 5;
 
   // Form state for creating credit notes
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [reason, setReason] = useState("");
@@ -197,9 +201,10 @@ export default function CreditNotes() {
     setError(null);
 
     try {
-      const [creditNotesResult, invoicesResult, productsResult] = await Promise.all([
+      const [creditNotesResult, invoicesResult, clientsResult, productsResult] = await Promise.all([
         db.creditNotes.getAll(),
         db.invoices.getAll(),
+        db.clients.getAll(),
         db.products.getAll()
       ]);
 
@@ -211,6 +216,10 @@ export default function CreditNotes() {
 
       if (invoicesResult.success) {
         setInvoices(invoicesResult.data || []);
+      }
+
+      if (clientsResult.success) {
+        setClients(clientsResult.data || []);
       }
 
       if (productsResult.success) {
@@ -473,6 +482,36 @@ export default function CreditNotes() {
   const confirmedAmount = 0;
   const pendingAmount = 0;
 
+  const handlePrintCreditNote = async (creditNote: CreditNote) => {
+    try {
+      const blob = await pdf(
+        <CreditNotePDFDocument 
+          creditNote={creditNote} 
+          companySettings={companySettings}
+          products={products}
+        />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      const printWindow = window.open(url);
+      if (printWindow) {
+        printWindow.addEventListener('load', () => {
+          printWindow.print();
+        });
+      }
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (error) {
+      console.error("Error printing credit note:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de l'impression de la facture d'avoir",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderActions = (creditNote: CreditNote) => (
     <ActionsDropdown
       actions={[
@@ -485,6 +524,11 @@ export default function CreditNotes() {
           label: "Télécharger PDF",
           icon: <Download className="h-4 w-4" />,
           onClick: () => handleDownloadCreditNote(creditNote),
+        },
+        {
+          label: "Imprimer",
+          icon: <Printer className="h-4 w-4" />,
+          onClick: () => handlePrintCreditNote(creditNote),
         },
         ...(creditNote.status !== "Confirmée" ? [
           {
@@ -686,6 +730,7 @@ export default function CreditNotes() {
       <Dialog open={isCreating} onOpenChange={(open) => {
         setIsCreating(open);
         if (!open) {
+          setSelectedClientId(null);
           setSelectedInvoiceId(null);
           setSelectedInvoice(null);
           setCreditItems({});
@@ -700,23 +745,56 @@ export default function CreditNotes() {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-auto py-4 space-y-4">
+            {/* Step 1: Search and Select Client */}
             <div>
-              <Label htmlFor="invoice">Facture d'origine *</Label>
-              <select
-                id="invoice"
-                value={selectedInvoiceId || ""}
-                onChange={(e) => handleInvoiceSelect(Number(e.target.value) || null)}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={creating}
-              >
-                <option value="">Sélectionnez une facture</option>
-                {invoices.map((invoice) => (
-                    <option key={invoice.id} value={invoice.id}>
-                      {invoice.number} - {invoice.clientName} ({formatCurrency(invoice.totalAmount)})
-                    </option>
-                  ))}
-              </select>
+              <SearchableEntitySelect
+                label="1. Rechercher et sélectionner le client *"
+                id="client"
+                value={selectedClientId?.toString() || ""}
+                onChange={(value) => {
+                  const clientId = value ? Number(value) : null;
+                  setSelectedClientId(clientId);
+                  // Reset invoice selection when client changes
+                  setSelectedInvoiceId(null);
+                  setSelectedInvoice(null);
+                  setCreditItems({});
+                }}
+                options={clients}
+                getOptionLabel={(client) => 
+                  `${client.name}${client.company ? ` (${client.company})` : ''}`
+                }
+                getOptionValue={(client) => client.id.toString()}
+                placeholder="Rechercher un client..."
+                required
+              />
             </div>
+
+            {/* Step 2: Search and Select Invoice (only show if client is selected) */}
+            {selectedClientId && (
+              <div>
+                <SearchableEntitySelect
+                  label="2. Rechercher et sélectionner la facture d'origine *"
+                  id="invoice"
+                  value={selectedInvoiceId?.toString() || ""}
+                  onChange={(value) => handleInvoiceSelect(value ? Number(value) : null)}
+                  options={invoices.filter((invoice) => invoice.clientId === selectedClientId)}
+                  getOptionLabel={(invoice) => 
+                    `${invoice.number} - ${formatCurrency(invoice.totalAmount)} - ${new Date(invoice.issueDate).toLocaleDateString("fr-FR")}`
+                  }
+                  getOptionValue={(invoice) => invoice.id.toString()}
+                  placeholder="Rechercher une facture..."
+                  required
+                />
+                {invoices.filter((invoice) => invoice.clientId === selectedClientId).length === 0 && (
+                  <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Aucune facture trouvée pour ce client
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {selectedInvoice && (
               <div className="space-y-4">
@@ -849,96 +927,70 @@ export default function CreditNotes() {
               Aperçu de la facture d'avoir
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-auto border rounded bg-white p-4">
+          <div className="flex-1 overflow-hidden">
             {selectedCreditNote && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-2xl font-bold">Facture d'avoir #{selectedCreditNote.number}</h2>
-                    <p className="text-muted-foreground">Date d'émission: {new Date(selectedCreditNote.issueDate).toLocaleDateString("fr-FR")}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Client</h3>
-                    <p>{selectedCreditNote.clientName}</p>
-                    {selectedCreditNote.clientCompany && <p>{selectedCreditNote.clientCompany}</p>}
-                    {selectedCreditNote.clientAddress && <p>{selectedCreditNote.clientAddress}</p>}
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold mb-2">Facture d'origine</h3>
-                    <p>#{selectedCreditNote.originalInvoiceId}</p>
-                    <p className="mt-2">
-                      <span className="font-semibold">Motif:</span> {selectedCreditNote.reason}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold mb-2">Articles</h3>
-                  <div className="border rounded">
-                    <table className="w-full">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="text-left p-2">Produit</th>
-                          <th className="text-right p-2">Quantité</th>
-                          <th className="text-right p-2">Prix unitaire</th>
-                          <th className="text-right p-2">Remise</th>
-                          <th className="text-right p-2">Total HT</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedCreditNote.items.map((item) => (
-                          <tr key={item.id} className="border-t">
-                            <td className="p-2">{item.productName}</td>
-                            <td className="p-2 text-right">{item.quantity}</td>
-                            <td className="p-2 text-right">{formatCurrency(item.unitPrice)}</td>
-                            <td className="p-2 text-right">{item.discount ? `${item.discount}%` : '-'}</td>
-                            <td className="p-2 text-right">{formatCurrency(item.totalPrice)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <div className="w-64">
-                    <div className="flex justify-between py-1">
-                      <span>Sous-total HT:</span>
-                      <span>{formatCurrency(
-                        selectedCreditNote.items.reduce((sum, item) => sum + item.totalPrice, 0)
-                      )}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>TVA:</span>
-                      <span>{formatCurrency(
-                        selectedCreditNote.items.reduce((sum, item) => {
-                          const product = products.find(p => p.id === item.productId);
-                          const tvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
-                          return sum + (item.totalPrice * tvaRate / 100);
-                        }, 0)
-                      )}</span>
-                    </div>
-                    <div className="flex justify-between py-1 font-bold border-t text-red-600">
-                      <span>Avoir TTC:</span>
-                      <span>-{formatCurrency(
-                        selectedCreditNote.items.reduce((sum, item) => {
-                          const product = products.find(p => p.id === item.productId);
-                          const tvaRate = (product && 'tvaRate' in product) ? product.tvaRate : 0;
-                          const htAmount = item.totalPrice;
-                          const tvaAmount = (htAmount * tvaRate) / 100;
-                          return sum + htAmount + tvaAmount;
-                        }, 0)
-                      )}</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="h-full border rounded-lg overflow-hidden">
+                <PDFViewer className="w-full h-full min-h-[500px]">
+                  <CreditNotePDFDocument 
+                    creditNote={selectedCreditNote} 
+                    companySettings={companySettings}
+                    products={products}
+                  />
+                </PDFViewer>
               </div>
             )}
           </div>
+          <DialogFooter className="gap-2">
+            {selectedCreditNote && (
+              <>
+                <PDFDownloadLink
+                  document={
+                    <CreditNotePDFDocument 
+                      creditNote={selectedCreditNote} 
+                      companySettings={companySettings}
+                      products={products}
+                    />
+                  }
+                  fileName={`avoir-${selectedCreditNote.number}.pdf`}
+                >
+                  {({ loading }) => (
+                    <Button variant="outline" disabled={loading}>
+                      <Download className="h-4 w-4 mr-2" />
+                      {loading ? "Préparation..." : "Télécharger"}
+                    </Button>
+                  )}
+                </PDFDownloadLink>
+                <BlobProvider
+                  document={
+                    <CreditNotePDFDocument 
+                      creditNote={selectedCreditNote} 
+                      companySettings={companySettings}
+                      products={products}
+                    />
+                  }
+                >
+                  {({ url, loading }) => (
+                    <Button
+                      disabled={loading || !url}
+                      onClick={() => {
+                        if (url) {
+                          const printWindow = window.open(url);
+                          if (printWindow) {
+                            printWindow.addEventListener('load', () => {
+                              printWindow.print();
+                            });
+                          }
+                        }
+                      }}
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      {loading ? "Préparation..." : "Imprimer"}
+                    </Button>
+                  )}
+                </BlobProvider>
+              </>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Wand2,
   MoreVertical,
+  Printer,
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
@@ -379,9 +380,43 @@ export default function Invoices() {
     }
   }
 
-  const handlePrintInvoice = (invoice: Invoice) => {
-    // In a real app, this would trigger the print dialog
-    window.print()
+  const handlePrintInvoice = async (invoice: Invoice) => {
+    try {
+      const invoiceWithItems = {
+        ...invoice,
+        items: invoice.items || [
+          {
+            id: 1,
+            productId: 1,
+            productName: "Consultation technique",
+            description: "Consultation technique d'une heure",
+            quantity: 1,
+            unitPrice: invoice.amount,
+            discount: 0,
+            totalPrice: invoice.amount,
+          },
+        ],
+      };
+      
+      const blob = await pdf(<InvoicePDFDocument invoice={invoiceWithItems} companySettings={companySettings} products={products} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const printWindow = window.open(url);
+      if (printWindow) {
+        printWindow.addEventListener('load', () => {
+          printWindow.print();
+        });
+      }
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (error) {
+      console.error("Error printing invoice:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de l'impression de la facture",
+        variant: "destructive",
+      });
+    }
   }
 
   const handleStatusChange = async (invoiceId: number, newStatus: string) => {
@@ -445,6 +480,11 @@ export default function Invoices() {
             label: "Télécharger PDF",
             icon: <Download className="h-4 w-4" />,
             onClick: () => handleDownloadPDF(invoice),
+          },
+          {
+            label: "Imprimer",
+            icon: <Printer className="h-4 w-4" />,
+            onClick: () => handlePrintInvoice(invoice),
           },
         ]}
       />
