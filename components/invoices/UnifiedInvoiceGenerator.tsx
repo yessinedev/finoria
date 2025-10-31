@@ -1391,40 +1391,21 @@ export default function UnifiedInvoiceGenerator({
                 Annuler
               </Button>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleShowPreview}
-                  disabled={
-                    isGenerating ||
-                    (activeTab === "from-sale"
-                      ? !selectedSale
-                      : !selectedClient ||
-                        (activeTab === "new-sale"
-                          ? lineItems.length === 0
-                          : selectedPurchaseOrders.length === 0))
-                  }
-                  className="border-primary text-primary hover:bg-primary/10"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Aperçu
-                </Button>
-                <Button
-                  onClick={handleGenerateInvoice}
-                  disabled={
-                    isGenerating ||
-                    (activeTab === "from-sale"
-                      ? !selectedSale
-                      : !selectedClient ||
-                        (activeTab === "new-sale"
-                          ? lineItems.length === 0
-                          : selectedPurchaseOrders.length === 0))
-                  }
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isGenerating ? "Génération..." : "Générer la facture"}
-                </Button>
-              </div>
+              <Button
+                onClick={handleGenerateInvoice}
+                disabled={
+                  isGenerating ||
+                  (activeTab === "from-sale"
+                    ? !selectedSale
+                    : !selectedClient ||
+                      (activeTab === "new-sale"
+                        ? lineItems.length === 0
+                        : selectedPurchaseOrders.length === 0))
+                }
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isGenerating ? "Génération..." : "Générer la facture"}
+              </Button>
             </div>
           </div>
         </DialogContent>
