@@ -209,9 +209,75 @@ app.whenReady().then(async () => {
   });
 });
 
+// Auto backup function with clear date/time format
+async function performAutoBackup() {
+  if (!db) {
+    console.log("No database connection, skipping auto backup");
+    return;
+  }
+
+  try {
+    const backupDir = path.join(app.getPath("documents"), "Finoria", "Backups");
+    await fs.mkdir(backupDir, { recursive: true });
+
+    // Generate clear filename with date and time: YYYY-MM-DD_HH-MM-SS
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+    
+    const backupFileName = `backup_${year}-${month}-${day}_${hours}-${minutes}-${seconds}.db`;
+    const backupPath = path.join(backupDir, backupFileName);
+
+    // Use better-sqlite3 backup method if available
+    if (db && typeof db.backup === "function") {
+      await db.backup(backupPath);
+      console.log(`✅ Auto backup created: ${backupFileName}`);
+    } else {
+      // Fallback to file copy
+      const dbPath = getDatabasePath();
+      await fs.copyFile(dbPath, backupPath);
+      console.log(`✅ Auto backup created: ${backupFileName}`);
+    }
+  } catch (error) {
+    console.error("❌ Failed to create auto backup:", error);
+    // Don't throw - we don't want to prevent app from closing
+  }
+}
+
+// Perform auto backup before app quits
+app.on("before-quit", async (event) => {
+  if (restartScheduled) {
+    // Don't backup if we're restarting for an import
+    return;
+  }
+  
+  // Prevent default quit to allow async backup
+  event.preventDefault();
+  
+  try {
+    await performAutoBackup();
+  } catch (error) {
+    console.error("Error during auto backup:", error);
+  } finally {
+    // Close database and quit
+    if (db) {
+      try {
+        db.close();
+      } catch (error) {
+        console.error("Error closing database:", error);
+      }
+    }
+    if (nextProcess) nextProcess.kill();
+    app.exit(0);
+  }
+});
+
 app.on("window-all-closed", () => {
-  if (db) db.close();
-  if (nextProcess) nextProcess.kill();
+  // Auto backup is handled in before-quit
   if (process.platform !== "darwin") app.quit();
 });
 
