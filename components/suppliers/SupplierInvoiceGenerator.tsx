@@ -74,6 +74,7 @@ export default function SupplierInvoiceGenerator({
   const [formData, setFormData] = useState({
     notes: "",
     customNumber: "",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +156,7 @@ export default function SupplierInvoiceGenerator({
     setFormData({
       notes: invoice.notes || "",
       customNumber: invoice.invoiceNumber || "",
+      dueDate: invoice.dueDate ? new Date(invoice.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
     setLineItems(invoice.items || []);
   };
@@ -397,6 +399,7 @@ export default function SupplierInvoiceGenerator({
           taxAmount: tvaAmount,
           totalAmount: finalAmount, // Include timbre fiscal
           issueDate: new Date().toISOString(),
+          dueDate: formData.dueDate.toISOString(),
           status: "En attente",
           notes: formData.notes,
           skipStockUpdate: true, // Skip stock update - supplier order already updated stock
@@ -414,6 +417,7 @@ export default function SupplierInvoiceGenerator({
           setFormData({
             notes: "",
             customNumber: "",
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
           });
           setFormErrors({});
           toast({
@@ -450,6 +454,7 @@ export default function SupplierInvoiceGenerator({
           taxAmount: tvaAmount,
           totalAmount: finalAmount, // Include timbre fiscal
           issueDate: new Date().toISOString(),
+          dueDate: formData.dueDate.toISOString(),
           status: "En attente",
           notes: formData.notes,
           items: lineItems,
@@ -534,6 +539,7 @@ export default function SupplierInvoiceGenerator({
           taxAmount: taxAmountRN,
           totalAmount: finalAmount, // Include timbre fiscal
           issueDate: new Date().toISOString(),
+          dueDate: formData.dueDate.toISOString(),
           status: "En attente",
           notes: formData.notes,
           skipStockUpdate: true, // Skip stock update - reception notes already updated stock
@@ -593,6 +599,7 @@ export default function SupplierInvoiceGenerator({
     setFormData({
       notes: "",
       customNumber: "",
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
     });
     setActiveTab("from-order");
     setFormErrors({});
@@ -663,6 +670,7 @@ export default function SupplierInvoiceGenerator({
         totalAmount: finalAmount, // Include timbre fiscal
         status: "En attente",
         issueDate: new Date().toISOString(),
+        dueDate: formData.dueDate.toISOString(),
         notes: formData.notes,
         items: lineItems,
       };
@@ -703,6 +711,7 @@ export default function SupplierInvoiceGenerator({
         totalAmount: finalAmount, // Include timbre fiscal
         status: "En attente",
         issueDate: new Date().toISOString(),
+        dueDate: formData.dueDate.toISOString(),
         notes: formData.notes,
         items: allItems.map((item) => ({
           productId: item.productId,
@@ -1014,6 +1023,36 @@ export default function SupplierInvoiceGenerator({
                         placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
                         error={formErrors.number}
                       />
+
+                      <div className="space-y-2">
+                        <Label htmlFor="dueDate">Date d'échéance *</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.dueDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.dueDate ? (
+                                format(formData.dueDate, "PPP", { locale: fr })
+                              ) : (
+                                <span>Sélectionner une date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.dueDate}
+                              onSelect={(date) => date && setFormData({ ...formData, dueDate: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
 
                       <FormField
                         label="Notes (optionnel)"

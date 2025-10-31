@@ -158,7 +158,7 @@ export interface SupplierInvoiceItem {
   totalPrice: number;
 }
 
-export type InvoiceStatus = "Payée" | "En attente" | "En retard" | "Annulée";
+export type InvoiceStatus = "Payée" | "Partiellement payée" | "En attente" | "En retard" | "Annulée";
 
 export interface Invoice {
   id: number;

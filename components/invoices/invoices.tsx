@@ -28,11 +28,13 @@ import {
   Wand2,
   MoreVertical,
   Printer,
+  CreditCard,
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import UnifiedInvoiceGenerator from "@/components/invoices/UnifiedInvoiceGenerator"
 import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
+import PaymentDialog from "@/components/payments/PaymentDialog"
 import { db } from "@/lib/database"
 import type { Invoice, Sale } from "@/types/types"
 import { pdf } from "@react-pdf/renderer"
@@ -61,6 +63,9 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
   const [companySettings, setCompanySettings] = useState<any>(null)
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null)
+  const [clients, setClients] = useState<any[]>([])
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -143,6 +148,29 @@ export default function Invoices() {
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
     },
     {
+      key: "dueDate" as keyof Invoice,
+      label: "Date d'échéance",
+      sortable: true,
+      render: (value: string, invoice: Invoice) => {
+        if (!invoice.dueDate) return <span className="text-muted-foreground">-</span>;
+        const dueDate = new Date(invoice.dueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        const isOverdue = dueDate < today && invoice.status !== "Payée" && invoice.status !== "Annulée";
+        return (
+          <div className="flex items-center gap-2">
+            <span className={isOverdue ? "text-red-600 font-medium" : ""}>
+              {new Date(invoice.dueDate).toLocaleDateString("fr-FR")}
+            </span>
+            {isOverdue && (
+              <span className="text-xs text-red-600">(Échue)</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: "status" as keyof Invoice,
       label: "Statut",
       sortable: true,
@@ -152,6 +180,7 @@ export default function Invoices() {
           currentValue={invoice.status}
           options={[
             { value: "En attente", label: "En attente", variant: "secondary" },
+            { value: "Partiellement payée", label: "Partiellement payée", variant: "default" },
             { value: "Payée", label: "Payée", variant: "default" },
             { value: "En retard", label: "En retard", variant: "destructive" },
             { value: "Annulée", label: "Annulée", variant: "outline" },
@@ -165,15 +194,18 @@ export default function Invoices() {
   useEffect((): (() => void) => {
     loadData()
     loadCompanySettings()
+    loadClients()
 
     // Subscribe to real-time updates
     const unsubscribe = db.subscribe((table, action, data) => {
-      if (["invoices", "sales"].includes(table)) {
+      if (["invoices", "sales", "client_payments"].includes(table)) {
         loadData()
       }
     })
 
-    return unsubscribe
+    return () => {
+      unsubscribe();
+    };
   }, [])
 
   const loadData = async () => {
@@ -181,6 +213,9 @@ export default function Invoices() {
     setError(null)
 
     try {
+      // Check and update invoice statuses based on due dates
+      await window.electronAPI?.checkInvoiceDueDates?.();
+
       const [invoicesResult, salesResult, productsResult] = await Promise.all([
         db.invoices.getAll(), 
         db.sales.getAllWithItems(),
@@ -276,9 +311,22 @@ export default function Invoices() {
     }
   }
 
+  const loadClients = async () => {
+    try {
+      const result = await db.clients.getAll()
+      if (result.success) {
+        setClients(result.data || [])
+      }
+    } catch (error) {
+      console.error("Error loading clients:", error)
+    }
+  }
+
   const getStatusVariant = (status: Invoice["status"]) => {
     switch (status) {
       case "Payée":
+        return "default"
+      case "Partiellement payée":
         return "default"
       case "En attente":
         return "secondary"
@@ -294,6 +342,8 @@ export default function Invoices() {
   const getStatusIcon = (status: Invoice["status"]) => {
     switch (status) {
       case "Payée":
+        return <CheckCircle className="h-3 w-3" />
+      case "Partiellement payée":
         return <CheckCircle className="h-3 w-3" />
       case "En attente":
         return <Clock className="h-3 w-3" />
@@ -447,9 +497,19 @@ export default function Invoices() {
     (sale) => !invoices.some((invoice) => invoice.saleId === sale.id),
   )
 
+  const handleRecordPayment = (invoice: Invoice) => {
+    setSelectedInvoiceForPayment(invoice)
+    setIsPaymentDialogOpen(true)
+  }
+
   const renderActions = (invoice: Invoice) => (
     <ActionsDropdown
       actions={[
+        {
+          label: "Régler",
+          icon: <CreditCard className="h-4 w-4" />,
+          onClick: () => handleRecordPayment(invoice),
+        },
         {
           label: "Voir",
           icon: <Eye className="h-4 w-4" />,
@@ -608,6 +668,7 @@ export default function Invoices() {
                 options={[
                   { label: "Tous les statuts", value: "all" },
                   { label: "En attente", value: "En attente" },
+                  { label: "Partiellement payée", value: "Partiellement payée" },
                   { label: "Payée", value: "Payée" },
                   { label: "En retard", value: "En retard" },
                   { label: "Annulée", value: "Annulée" },
@@ -754,6 +815,25 @@ export default function Invoices() {
         onStatusChange={handleStatusChange}
         companySettings={companySettings}
         products={products}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={() => {
+          setIsPaymentDialogOpen(false)
+          setSelectedInvoiceForPayment(null)
+        }}
+        onSuccess={() => {
+          loadData()
+          setIsPaymentDialogOpen(false)
+          setSelectedInvoiceForPayment(null)
+        }}
+        payment={null}
+        invoice={selectedInvoiceForPayment}
+        type="client"
+        clients={clients}
+        invoices={invoices}
       />
     </div>
   )

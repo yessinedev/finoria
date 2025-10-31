@@ -366,4 +366,58 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       throw new Error("Erreur lors de la récupération des articles de facture");
     }
   });
+
+  // Check and update invoice statuses based on due dates
+  ipcMain.handle("check-invoice-due-dates", async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Get all invoices that are not paid or cancelled
+      const invoices = db.prepare(`
+        SELECT id, status, dueDate 
+        FROM invoices 
+        WHERE status NOT IN ('Payée', 'Annulée') AND dueDate IS NOT NULL
+      `).all();
+
+      let updatedCount = 0;
+
+      for (const invoice of invoices) {
+        const dueDate = new Date(invoice.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+
+        // Check if overdue
+        if (dueDate < today && invoice.status !== 'En retard') {
+          // Get total paid amount
+          const totalPaid = db.prepare(`
+            SELECT COALESCE(SUM(amount), 0) as totalPaid
+            FROM client_payments
+            WHERE invoiceId = ?
+          `).get(invoice.id);
+
+          const invoiceTotal = db.prepare(`
+            SELECT totalAmount FROM invoices WHERE id = ?
+          `).get(invoice.id);
+
+          if (invoiceTotal) {
+            const remainingAmount = invoiceTotal.totalAmount - (totalPaid?.totalPaid || 0);
+            
+            // Only update to "En retard" if there's still an amount due
+            if (remainingAmount > 0) {
+              db.prepare(`
+                UPDATE invoices SET status = ? WHERE id = ?
+              `).run('En retard', invoice.id);
+              notifyDataChange("invoices", "update", { id: invoice.id });
+              updatedCount++;
+            }
+          }
+        }
+      }
+
+      return { updated: updatedCount };
+    } catch (error) {
+      console.error("Error checking invoice due dates:", error);
+      throw new Error("Erreur lors de la vérification des dates d'échéance");
+    }
+  });
 };

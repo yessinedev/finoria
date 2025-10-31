@@ -18,6 +18,7 @@ import {
   Package,
   ChevronRight,
   Settings,
+  CreditCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -34,6 +35,8 @@ export type NavigationItem =
   | "reception-notes"
   | "inventory"
   | "stock-movements"
+  | "client-payments"
+  | "supplier-payments"
   | "settings";
 
 const navigationItems = [
@@ -74,6 +77,15 @@ const navigationItems = [
       { id: "categories", label: "Catégories" },
     ],
   },
+  {
+    id: "payments",
+    label: "Paiements",
+    icon: CreditCard,
+    children: [
+      { id: "client-payments", label: "Paiements clients" },
+      { id: "supplier-payments", label: "Paiements fournisseurs" },
+    ],
+  },
 ];
 
 // Settings item moved to footer
@@ -89,6 +101,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
     "sales-management": true,
     purchases: true,
     stock: true,
+    payments: true,
   });
 
   useEffect(() => {

@@ -54,8 +54,10 @@ import { fr } from "date-fns/locale";
 import { pdf } from "@react-pdf/renderer";
 import { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
 import { ActionsDropdown } from "@/components/common/actions-dropdown";
+import { StatusDropdown } from "@/components/common/StatusDropdown";
 import SupplierInvoicePreview from "./supplier-invoice-preview";
 import SupplierInvoiceGenerator from "./SupplierInvoiceGenerator";
+import PaymentDialog from "@/components/payments/PaymentDialog";
 
 import { supplierInvoiceSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
@@ -81,6 +83,8 @@ export default function SupplierInvoices() {
     direction: 'desc' 
   });
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<SupplierInvoice | null>(null);
   
   
   // Inline editing state
@@ -116,6 +120,15 @@ export default function SupplierInvoices() {
     loadOrders();
     loadProducts();
     loadCompanySettings();
+
+    // Subscribe to real-time updates
+    const unsubscribe = db.subscribe((table, action, data) => {
+      if (["supplier_invoices", "supplier_payments"].includes(table)) {
+        loadInvoices();
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -153,6 +166,9 @@ export default function SupplierInvoices() {
   const loadInvoices = async () => {
     try {
       setIsLoading(true);
+      // Check and update supplier invoice statuses based on due dates
+      await window.electronAPI?.checkSupplierInvoiceDueDates?.();
+      
       const response = await db.supplierInvoices.getAll();
       if (response.success && response.data) {
         setInvoices(response.data);
@@ -165,6 +181,31 @@ export default function SupplierInvoices() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (invoiceId: number, newStatus: string) => {
+    try {
+      const result = await db.supplierInvoices.updateStatus(invoiceId, newStatus);
+      if (result.success) {
+        toast({
+          title: "Succès",
+          description: "Statut mis à jour avec succès",
+        });
+        loadInvoices();
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de la mise à jour du statut",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
     }
   };
 
@@ -373,6 +414,11 @@ export default function SupplierInvoices() {
   const handleViewInvoice = (invoice: SupplierInvoice) => {
     setSelectedInvoice(invoice);
     setIsPreviewOpen(true);
+  };
+
+  const handleRecordPayment = (invoice: SupplierInvoice) => {
+    setSelectedInvoiceForPayment(invoice);
+    setIsPaymentDialogOpen(true);
   };
 
   const handleDownloadPDF = async (invoice: SupplierInvoice) => {
@@ -660,7 +706,14 @@ Commande #{order.id} - {order.supplierName}
               <TableHead className="cursor-pointer" onClick={() => requestSort('issueDate')}>
                 <div className="flex items-center gap-1">
                   <FileText className="h-4 w-4" />
-                  <span>Date</span>
+                  <span>Date d'émission</span>
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </div>
+              </TableHead>
+              <TableHead className="cursor-pointer" onClick={() => requestSort('dueDate')}>
+                <div className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  <span>Date d'échéance</span>
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </div>
               </TableHead>
@@ -668,6 +721,13 @@ Commande #{order.id} - {order.supplierName}
                 <div className="flex items-center gap-1">
                   <FileText className="h-4 w-4" />
                   <span>Montant</span>
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </div>
+              </TableHead>
+              <TableHead className="cursor-pointer" onClick={() => requestSort('status')}>
+                <div className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  <span>Statut</span>
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </div>
               </TableHead>
@@ -682,13 +742,13 @@ Commande #{order.id} - {order.supplierName}
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   Chargement...
                 </TableCell>
               </TableRow>
             ) : currentInvoices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   Aucune facture trouvée
                 </TableCell>
               </TableRow>
@@ -736,11 +796,68 @@ Commande #{order.id} - {order.supplierName}
                     )}
                   </TableCell>
                   <TableCell>
+                    {editingInvoiceId === invoice.id && editingField === 'dueDate' ? (
+                      <Input
+                        type="date"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={saveEditing}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+                        autoFocus
+                      />
+                    ) : (
+                      <div 
+                        onClick={() => startEditing(invoice.id, 'dueDate', invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '')}
+                        className="cursor-pointer hover:underline"
+                      >
+                        {invoice.dueDate ? (
+                          (() => {
+                            const dueDate = new Date(invoice.dueDate);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            dueDate.setHours(0, 0, 0, 0);
+                            const isOverdue = dueDate < today && invoice.status !== "Payée" && invoice.status !== "Annulée";
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className={isOverdue ? "text-red-600 font-medium" : ""}>
+                                  {format(dueDate, "dd/MM/yyyy", { locale: fr })}
+                                </span>
+                                {isOverdue && (
+                                  <span className="text-xs text-red-600">(Échue)</span>
+                                )}
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {invoice.totalAmount.toFixed(3)} DNT
+                  </TableCell>
+                  <TableCell>
+                    <StatusDropdown
+                      currentValue={invoice.status}
+                      options={[
+                        { value: "En attente", label: "En attente", variant: "secondary" },
+                        { value: "Partiellement payée", label: "Partiellement payée", variant: "default" },
+                        { value: "Payée", label: "Payée", variant: "default" },
+                        { value: "En retard", label: "En retard", variant: "destructive" },
+                        { value: "Annulée", label: "Annulée", variant: "outline" },
+                      ]}
+                      onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
+                    />
                   </TableCell>
                   <TableCell>
                     <ActionsDropdown
                       actions={[
+                        {
+                          label: "Régler",
+                          icon: <FileText className="h-4 w-4" />,
+                          onClick: () => handleRecordPayment(invoice),
+                        },
                         {
                           label: "Modifier",
                           icon: <Edit className="h-4 w-4" />,
@@ -894,6 +1011,25 @@ Commande #{order.id} - {order.supplierName}
           companySettings={companySettings}
         />
       )}
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={() => {
+          setIsPaymentDialogOpen(false);
+          setSelectedInvoiceForPayment(null);
+        }}
+        onSuccess={() => {
+          loadInvoices();
+          setIsPaymentDialogOpen(false);
+          setSelectedInvoiceForPayment(null);
+        }}
+        payment={null}
+        invoice={selectedInvoiceForPayment}
+        type="supplier"
+        suppliers={suppliers}
+        supplierInvoices={invoices}
+      />
     </div>
   );
 }

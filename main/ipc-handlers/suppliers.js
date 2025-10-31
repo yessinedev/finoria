@@ -783,4 +783,58 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       );
     }
   });
+
+  // Check and update supplier invoice statuses based on due dates
+  ipcMain.handle("check-supplier-invoice-due-dates", async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Get all supplier invoices that are not paid or cancelled
+      const invoices = db.prepare(`
+        SELECT id, status, dueDate 
+        FROM supplier_invoices 
+        WHERE status NOT IN ('Payée', 'Annulée') AND dueDate IS NOT NULL
+      `).all();
+
+      let updatedCount = 0;
+
+      for (const invoice of invoices) {
+        const dueDate = new Date(invoice.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+
+        // Check if overdue
+        if (dueDate < today && invoice.status !== 'En retard') {
+          // Get total paid amount
+          const totalPaid = db.prepare(`
+            SELECT COALESCE(SUM(amount), 0) as totalPaid
+            FROM supplier_payments
+            WHERE invoiceId = ?
+          `).get(invoice.id);
+
+          const invoiceTotal = db.prepare(`
+            SELECT totalAmount FROM supplier_invoices WHERE id = ?
+          `).get(invoice.id);
+
+          if (invoiceTotal) {
+            const remainingAmount = invoiceTotal.totalAmount - (totalPaid?.totalPaid || 0);
+            
+            // Only update to "En retard" if there's still an amount due
+            if (remainingAmount > 0) {
+              db.prepare(`
+                UPDATE supplier_invoices SET status = ? WHERE id = ?
+              `).run('En retard', invoice.id);
+              notifyDataChange("supplier_invoices", "update", { id: invoice.id });
+              updatedCount++;
+            }
+          }
+        }
+      }
+
+      return { updated: updatedCount };
+    } catch (error) {
+      console.error("Error checking supplier invoice due dates:", error);
+      throw new Error("Erreur lors de la vérification des dates d'échéance des factures fournisseurs");
+    }
+  });
 };

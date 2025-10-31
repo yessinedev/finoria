@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   generateInvoiceFromQuote: (quoteId) =>
     ipcRenderer.invoke("generate-invoice-from-quote", quoteId),
   getInvoiceItems: (invoiceId) => ipcRenderer.invoke("get-invoice-items", invoiceId),
+  checkInvoiceDueDates: () => ipcRenderer.invoke("check-invoice-due-dates"),
+  checkSupplierInvoiceDueDates: () => ipcRenderer.invoke("check-supplier-invoice-due-dates"),
 
   // --- Quotes API ---
   getQuotes: () => ipcRenderer.invoke("get-quotes"),
@@ -121,6 +123,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getReceptionNoteByOrder: (supplierOrderId) => ipcRenderer.invoke("get-reception-note-by-order", supplierOrderId),
   updateReceptionNote: (id, receptionNote) => ipcRenderer.invoke("update-reception-note", id, receptionNote),
   deleteReceptionNote: (id) => ipcRenderer.invoke("delete-reception-note", id),
+
+  // --- Payments API ---
+  // Client Payments
+  getClientPayments: () => ipcRenderer.invoke("get-client-payments"),
+  getInvoicePayments: (invoiceId) => ipcRenderer.invoke("get-invoice-payments", invoiceId),
+  createClientPayment: (payment) => ipcRenderer.invoke("create-client-payment", payment),
+  updateClientPayment: (id, payment) => ipcRenderer.invoke("update-client-payment", id, payment),
+  deleteClientPayment: (id) => ipcRenderer.invoke("delete-client-payment", id),
+  // Supplier Payments
+  getSupplierPayments: () => ipcRenderer.invoke("get-supplier-payments"),
+  getSupplierInvoicePayments: (invoiceId) => ipcRenderer.invoke("get-supplier-invoice-payments", invoiceId),
+  createSupplierPayment: (payment) => ipcRenderer.invoke("create-supplier-payment", payment),
+  updateSupplierPayment: (id, payment) => ipcRenderer.invoke("update-supplier-payment", id, payment),
+  deleteSupplierPayment: (id) => ipcRenderer.invoke("delete-supplier-payment", id),
 
   // --- Enterprise Settings API ---
   getEnterpriseSettings: () => ipcRenderer.invoke("get-enterprise-settings"),
