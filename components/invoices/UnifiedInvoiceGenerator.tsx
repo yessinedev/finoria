@@ -821,10 +821,7 @@ export default function UnifiedInvoiceGenerator({
                                     Montant TTC:
                                   </p>
                                   <p className="font-medium text-primary">
-                                    {formatCurrency(
-                                      selectedSale.totalAmount +
-                                        selectedSale.taxAmount
-                                    )}
+                                    {formatCurrency(selectedSale.totalAmount)}
                                   </p>
                                 </div>
                               </div>
@@ -976,16 +973,35 @@ export default function UnifiedInvoiceGenerator({
                 <div className="lg:col-span-2 flex flex-col gap-2">
                   {activeTab === "from-sale" ? (
                     // Classic workflow - Just show financial summary
-                    selectedSale && (
-                      <FinancialSummaryCard
-                        subtotal={selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0)}
-                        tax={selectedSale.taxAmount}
-                        total={selectedSale.totalAmount}
-                        dueDate={new Date().toLocaleDateString("fr-FR")}
-                        paymentTerms="30 jours net"
-                        currency="DNT"
-                      />
-                    )
+                    selectedSale && (() => {
+                      // Calculate HT subtotal from sale items (totalPrice represents HT per item after discount)
+                      // HT subtotal includes FODEC amount
+                      const itemsTotal = selectedSale.items?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || 0;
+                      const htSubtotal = itemsTotal + (selectedSale.fodecAmount || 0);
+                      
+                      // Recalculate TVA correctly: TVA is calculated on (itemTotal + itemFodec) for each item
+                      const recalculatedTVA = selectedSale.items?.reduce((sum, item) => {
+                        const product = products.find((p) => p.id === item.productId);
+                        const itemTvaRate = product && "tvaRate" in product ? (product.tvaRate as number) : 0;
+                        const itemTotal = item.totalPrice || 0; // HT after discount
+                        // Calculate FODEC portion for this item (only if FODEC eligible)
+                        let itemFodec = 0;
+                        if (item.fodecApplicable && fodecTax > 0) {
+                          itemFodec = (itemTotal * fodecTax) / 100;
+                        }
+                        // TVA = (itemTotal + itemFodec) * tvaRate / 100
+                        return sum + ((itemTotal + itemFodec) * itemTvaRate) / 100;
+                      }, 0) || 0;
+                      
+                      return (
+                        <FinancialSummaryCard
+                          subtotal={htSubtotal}
+                          tax={recalculatedTVA}
+                          total={selectedSale.totalAmount}
+                          currency="DNT"
+                        />
+                      );
+                    })()
                   ) : activeTab === "new-sale" ? (
                     // New Sale Workflow
                     <Card className="flex-1 flex flex-col">
@@ -998,7 +1014,6 @@ export default function UnifiedInvoiceGenerator({
                       <CardContent className="flex-1 flex flex-col">
                         <div className="grid grid-cols-12 gap-2 items-end mb-4">
                           <div className="col-span-5">
-                            <Label>Produit</Label>
                             <EntitySelect
                               label="Produit"
                               id="product"
