@@ -47,6 +47,44 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-client-payment", async (event, payment) => {
     const transaction = db.transaction((paymentData) => {
       try {
+        // Validate that invoiceId is provided (required)
+        if (!paymentData.invoiceId) {
+          throw new Error("Une facture doit être sélectionnée pour créer un paiement");
+        }
+
+        // Get invoice to validate payment amount
+        const invoice = db.prepare(`
+          SELECT totalAmount, status, dueDate FROM invoices WHERE id = ?
+        `).get(paymentData.invoiceId);
+
+        if (!invoice) {
+          throw new Error("La facture sélectionnée n'existe pas");
+        }
+
+        // Calculate existing payments total (excluding current payment if updating)
+        const existingPaymentsTotal = db.prepare(`
+          SELECT COALESCE(SUM(amount), 0) as totalPaid
+          FROM client_payments
+          WHERE invoiceId = ?
+        `).get(paymentData.invoiceId);
+
+        const currentTotalPaid = existingPaymentsTotal.totalPaid || 0;
+        const remainingAmount = invoice.totalAmount - currentTotalPaid;
+
+        // Validate that the payment amount doesn't exceed the remaining balance
+        if (paymentData.amount > remainingAmount) {
+          throw new Error(
+            `Le montant du paiement (${paymentData.amount.toFixed(3)}) dépasse le solde restant (${remainingAmount.toFixed(3)}). ` +
+            `Montant total de la facture: ${invoice.totalAmount.toFixed(3)}, ` +
+            `Montant déjà payé: ${currentTotalPaid.toFixed(3)}`
+          );
+        }
+
+        // Validate that the payment amount is positive
+        if (paymentData.amount <= 0) {
+          throw new Error("Le montant du paiement doit être supérieur à 0");
+        }
+
         // Insert payment
         const insertPayment = db.prepare(`
           INSERT INTO client_payments (
@@ -56,7 +94,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         const result = insertPayment.run(
           paymentData.clientId,
-          paymentData.invoiceId || null,
+          paymentData.invoiceId,
           paymentData.amount,
           paymentData.paymentDate || new Date().toISOString(),
           paymentData.paymentMethod || null,
@@ -66,50 +104,52 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
         const paymentId = result.lastInsertRowid;
 
-        // Update invoice status if invoiceId is provided
-        if (paymentData.invoiceId) {
-          // Calculate total paid amount for this invoice
-          const totalPaid = db.prepare(`
-            SELECT COALESCE(SUM(amount), 0) as totalPaid
-            FROM client_payments
-            WHERE invoiceId = ?
-          `).get(paymentData.invoiceId);
+        // Recalculate total paid amount after inserting the new payment
+        const totalPaid = db.prepare(`
+          SELECT COALESCE(SUM(amount), 0) as totalPaid
+          FROM client_payments
+          WHERE invoiceId = ?
+        `).get(paymentData.invoiceId);
 
-          // Get invoice total amount
-          const invoice = db.prepare(`
-            SELECT totalAmount FROM invoices WHERE id = ?
-          `).get(paymentData.invoiceId);
-
-          if (invoice) {
-            let newStatus = 'En attente';
-            const remainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+        // Calculate new status based on total paid
+        let newStatus = 'En attente';
+        const newRemainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+        
+        if (newRemainingAmount <= 0) {
+          newStatus = 'Payée';
+        } else if (totalPaid.totalPaid > 0) {
+          // Partially paid
+          newStatus = 'Partiellement payée';
+          
+          // Check if overdue
+          if (invoice.dueDate) {
+            const dueDate = new Date(invoice.dueDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
             
-            if (remainingAmount <= 0) {
-              newStatus = 'Payée';
-            } else {
-              // Check if overdue
-              const invoiceInfo = db.prepare(`
-                SELECT dueDate FROM invoices WHERE id = ?
-              `).get(paymentData.invoiceId);
-              
-              if (invoiceInfo && invoiceInfo.dueDate) {
-                const dueDate = new Date(invoiceInfo.dueDate);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                dueDate.setHours(0, 0, 0, 0);
-                
-                if (dueDate < today) {
-                  newStatus = 'En retard';
-                }
-              }
+            if (dueDate < today) {
+              newStatus = 'En retard';
             }
-
-            // Update invoice status
-            db.prepare(`
-              UPDATE invoices SET status = ? WHERE id = ?
-            `).run(newStatus, paymentData.invoiceId);
+          }
+        } else {
+          // Not paid yet, check if overdue
+          if (invoice.dueDate) {
+            const dueDate = new Date(invoice.dueDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
+            
+            if (dueDate < today) {
+              newStatus = 'En retard';
+            }
           }
         }
+
+        // Update invoice status
+        db.prepare(`
+          UPDATE invoices SET status = ? WHERE id = ?
+        `).run(newStatus, paymentData.invoiceId);
 
         // Fetch the created payment with joined data
         const createdPayment = db.prepare(`
@@ -148,10 +188,48 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("update-client-payment", async (event, id, payment) => {
     const transaction = db.transaction((paymentId, paymentData) => {
       try {
+        // Validate that invoiceId is provided (required)
+        if (!paymentData.invoiceId) {
+          throw new Error("Une facture doit être sélectionnée pour mettre à jour un paiement");
+        }
+
         // Get old payment to check if invoice changed
         const oldPayment = db.prepare(`
-          SELECT invoiceId FROM client_payments WHERE id = ?
+          SELECT invoiceId, amount FROM client_payments WHERE id = ?
         `).get(paymentId);
+
+        // Get invoice to validate payment amount
+        const invoice = db.prepare(`
+          SELECT totalAmount, status, dueDate FROM invoices WHERE id = ?
+        `).get(paymentData.invoiceId);
+
+        if (!invoice) {
+          throw new Error("La facture sélectionnée n'existe pas");
+        }
+
+        // Calculate existing payments total excluding the current payment being updated
+        const existingPaymentsTotal = db.prepare(`
+          SELECT COALESCE(SUM(amount), 0) as totalPaid
+          FROM client_payments
+          WHERE invoiceId = ? AND id != ?
+        `).get(paymentData.invoiceId, paymentId);
+
+        const currentTotalPaid = existingPaymentsTotal.totalPaid || 0;
+        const remainingAmount = invoice.totalAmount - currentTotalPaid;
+
+        // Validate that the payment amount doesn't exceed the remaining balance
+        if (paymentData.amount > remainingAmount) {
+          throw new Error(
+            `Le montant du paiement (${paymentData.amount.toFixed(3)}) dépasse le solde restant (${remainingAmount.toFixed(3)}). ` +
+            `Montant total de la facture: ${invoice.totalAmount.toFixed(3)}, ` +
+            `Montant déjà payé (hors ce paiement): ${currentTotalPaid.toFixed(3)}`
+          );
+        }
+
+        // Validate that the payment amount is positive
+        if (paymentData.amount <= 0) {
+          throw new Error("Le montant du paiement doit être supérieur à 0");
+        }
 
         // Update payment
         const updatePayment = db.prepare(`
@@ -163,7 +241,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         updatePayment.run(
           paymentData.clientId,
-          paymentData.invoiceId || null,
+          paymentData.invoiceId,
           paymentData.amount,
           paymentData.paymentDate,
           paymentData.paymentMethod || null,
@@ -184,19 +262,35 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             WHERE invoiceId = ?
           `).get(invoiceId);
 
-          const invoice = db.prepare(`
+          const invoiceInfo = db.prepare(`
             SELECT totalAmount, dueDate FROM invoices WHERE id = ?
           `).get(invoiceId);
 
-          if (invoice) {
+          if (invoiceInfo) {
             let newStatus = 'En attente';
-            const remainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+            const newRemainingAmount = invoiceInfo.totalAmount - (totalPaid.totalPaid || 0);
             
-            if (remainingAmount <= 0) {
+            if (newRemainingAmount <= 0) {
               newStatus = 'Payée';
+            } else if (totalPaid.totalPaid > 0) {
+              // Partially paid
+              newStatus = 'Partiellement payée';
+              
+              // Check if overdue
+              if (invoiceInfo.dueDate) {
+                const dueDate = new Date(invoiceInfo.dueDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                dueDate.setHours(0, 0, 0, 0);
+                
+                if (dueDate < today) {
+                  newStatus = 'En retard';
+                }
+              }
             } else {
-              if (invoice.dueDate) {
-                const dueDate = new Date(invoice.dueDate);
+              // Not paid yet, check if overdue
+              if (invoiceInfo.dueDate) {
+                const dueDate = new Date(invoiceInfo.dueDate);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 dueDate.setHours(0, 0, 0, 0);
@@ -269,11 +363,27 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
           if (invoice) {
             let newStatus = 'En attente';
-            const remainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+            const newRemainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
             
-            if (remainingAmount <= 0) {
+            if (newRemainingAmount <= 0) {
               newStatus = 'Payée';
+            } else if (totalPaid.totalPaid > 0) {
+              // Partially paid
+              newStatus = 'Partiellement payée';
+              
+              // Check if overdue
+              if (invoice.dueDate) {
+                const dueDate = new Date(invoice.dueDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                dueDate.setHours(0, 0, 0, 0);
+                
+                if (dueDate < today) {
+                  newStatus = 'En retard';
+                }
+              }
             } else {
+              // Not paid yet, check if overdue
               if (invoice.dueDate) {
                 const dueDate = new Date(invoice.dueDate);
                 const today = new Date();
@@ -356,6 +466,44 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-supplier-payment", async (event, payment) => {
     const transaction = db.transaction((paymentData) => {
       try {
+        // Validate that invoiceId is provided (required)
+        if (!paymentData.invoiceId) {
+          throw new Error("Une facture doit être sélectionnée pour créer un paiement");
+        }
+
+        // Get invoice to validate payment amount
+        const invoice = db.prepare(`
+          SELECT totalAmount, status, dueDate FROM supplier_invoices WHERE id = ?
+        `).get(paymentData.invoiceId);
+
+        if (!invoice) {
+          throw new Error("La facture sélectionnée n'existe pas");
+        }
+
+        // Calculate existing payments total
+        const existingPaymentsTotal = db.prepare(`
+          SELECT COALESCE(SUM(amount), 0) as totalPaid
+          FROM supplier_payments
+          WHERE invoiceId = ?
+        `).get(paymentData.invoiceId);
+
+        const currentTotalPaid = existingPaymentsTotal.totalPaid || 0;
+        const remainingAmount = invoice.totalAmount - currentTotalPaid;
+
+        // Validate that the payment amount doesn't exceed the remaining balance
+        if (paymentData.amount > remainingAmount) {
+          throw new Error(
+            `Le montant du paiement (${paymentData.amount.toFixed(3)}) dépasse le solde restant (${remainingAmount.toFixed(3)}). ` +
+            `Montant total de la facture: ${invoice.totalAmount.toFixed(3)}, ` +
+            `Montant déjà payé: ${currentTotalPaid.toFixed(3)}`
+          );
+        }
+
+        // Validate that the payment amount is positive
+        if (paymentData.amount <= 0) {
+          throw new Error("Le montant du paiement doit être supérieur à 0");
+        }
+
         // Insert payment
         const insertPayment = db.prepare(`
           INSERT INTO supplier_payments (
@@ -365,7 +513,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         const result = insertPayment.run(
           paymentData.supplierId,
-          paymentData.invoiceId || null,
+          paymentData.invoiceId,
           paymentData.amount,
           paymentData.paymentDate || new Date().toISOString(),
           paymentData.paymentMethod || null,
@@ -375,46 +523,52 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
         const paymentId = result.lastInsertRowid;
 
-        // Update supplier invoice status if invoiceId is provided
-        if (paymentData.invoiceId) {
-          const totalPaid = db.prepare(`
-            SELECT COALESCE(SUM(amount), 0) as totalPaid
-            FROM supplier_payments
-            WHERE invoiceId = ?
-          `).get(paymentData.invoiceId);
+        // Recalculate total paid amount after inserting the new payment
+        const totalPaid = db.prepare(`
+          SELECT COALESCE(SUM(amount), 0) as totalPaid
+          FROM supplier_payments
+          WHERE invoiceId = ?
+        `).get(paymentData.invoiceId);
 
-          const invoice = db.prepare(`
-            SELECT totalAmount FROM supplier_invoices WHERE id = ?
-          `).get(paymentData.invoiceId);
-
-          if (invoice) {
-            let newStatus = 'En attente';
-            const remainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+        // Calculate new status based on total paid
+        let newStatus = 'En attente';
+        const newRemainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+        
+        if (newRemainingAmount <= 0) {
+          newStatus = 'Payée';
+        } else if (totalPaid.totalPaid > 0) {
+          // Partially paid
+          newStatus = 'Partiellement payée';
+          
+          // Check if overdue
+          if (invoice.dueDate) {
+            const dueDate = new Date(invoice.dueDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
             
-            if (remainingAmount <= 0) {
-              newStatus = 'Payée';
-            } else {
-              const invoiceInfo = db.prepare(`
-                SELECT dueDate FROM supplier_invoices WHERE id = ?
-              `).get(paymentData.invoiceId);
-              
-              if (invoiceInfo && invoiceInfo.dueDate) {
-                const dueDate = new Date(invoiceInfo.dueDate);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                dueDate.setHours(0, 0, 0, 0);
-                
-                if (dueDate < today) {
-                  newStatus = 'En retard';
-                }
-              }
+            if (dueDate < today) {
+              newStatus = 'En retard';
             }
-
-            db.prepare(`
-              UPDATE supplier_invoices SET status = ? WHERE id = ?
-            `).run(newStatus, paymentData.invoiceId);
+          }
+        } else {
+          // Not paid yet, check if overdue
+          if (invoice.dueDate) {
+            const dueDate = new Date(invoice.dueDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
+            
+            if (dueDate < today) {
+              newStatus = 'En retard';
+            }
           }
         }
+
+        // Update supplier invoice status
+        db.prepare(`
+          UPDATE supplier_invoices SET status = ? WHERE id = ?
+        `).run(newStatus, paymentData.invoiceId);
 
         // Fetch the created payment
         const createdPayment = db.prepare(`
@@ -453,9 +607,48 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("update-supplier-payment", async (event, id, payment) => {
     const transaction = db.transaction((paymentId, paymentData) => {
       try {
+        // Validate that invoiceId is provided (required)
+        if (!paymentData.invoiceId) {
+          throw new Error("Une facture doit être sélectionnée pour mettre à jour un paiement");
+        }
+
+        // Get old payment to check if invoice changed
         const oldPayment = db.prepare(`
-          SELECT invoiceId FROM supplier_payments WHERE id = ?
+          SELECT invoiceId, amount FROM supplier_payments WHERE id = ?
         `).get(paymentId);
+
+        // Get invoice to validate payment amount
+        const invoice = db.prepare(`
+          SELECT totalAmount, status, dueDate FROM supplier_invoices WHERE id = ?
+        `).get(paymentData.invoiceId);
+
+        if (!invoice) {
+          throw new Error("La facture sélectionnée n'existe pas");
+        }
+
+        // Calculate existing payments total excluding the current payment being updated
+        const existingPaymentsTotal = db.prepare(`
+          SELECT COALESCE(SUM(amount), 0) as totalPaid
+          FROM supplier_payments
+          WHERE invoiceId = ? AND id != ?
+        `).get(paymentData.invoiceId, paymentId);
+
+        const currentTotalPaid = existingPaymentsTotal.totalPaid || 0;
+        const remainingAmount = invoice.totalAmount - currentTotalPaid;
+
+        // Validate that the payment amount doesn't exceed the remaining balance
+        if (paymentData.amount > remainingAmount) {
+          throw new Error(
+            `Le montant du paiement (${paymentData.amount.toFixed(3)}) dépasse le solde restant (${remainingAmount.toFixed(3)}). ` +
+            `Montant total de la facture: ${invoice.totalAmount.toFixed(3)}, ` +
+            `Montant déjà payé (hors ce paiement): ${currentTotalPaid.toFixed(3)}`
+          );
+        }
+
+        // Validate that the payment amount is positive
+        if (paymentData.amount <= 0) {
+          throw new Error("Le montant du paiement doit être supérieur à 0");
+        }
 
         const updatePayment = db.prepare(`
           UPDATE supplier_payments
@@ -466,7 +659,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         
         updatePayment.run(
           paymentData.supplierId,
-          paymentData.invoiceId || null,
+          paymentData.invoiceId,
           paymentData.amount,
           paymentData.paymentDate,
           paymentData.paymentMethod || null,
@@ -475,7 +668,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
           paymentId
         );
 
-        // Update invoice statuses
+        // Update invoice statuses (old and new if changed)
         const invoiceIds = new Set();
         if (oldPayment?.invoiceId) invoiceIds.add(oldPayment.invoiceId);
         if (paymentData.invoiceId) invoiceIds.add(paymentData.invoiceId);
@@ -487,19 +680,35 @@ module.exports = (ipcMain, db, notifyDataChange) => {
             WHERE invoiceId = ?
           `).get(invoiceId);
 
-          const invoice = db.prepare(`
+          const invoiceInfo = db.prepare(`
             SELECT totalAmount, dueDate FROM supplier_invoices WHERE id = ?
           `).get(invoiceId);
 
-          if (invoice) {
+          if (invoiceInfo) {
             let newStatus = 'En attente';
-            const remainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+            const newRemainingAmount = invoiceInfo.totalAmount - (totalPaid.totalPaid || 0);
             
-            if (remainingAmount <= 0) {
+            if (newRemainingAmount <= 0) {
               newStatus = 'Payée';
+            } else if (totalPaid.totalPaid > 0) {
+              // Partially paid
+              newStatus = 'Partiellement payée';
+              
+              // Check if overdue
+              if (invoiceInfo.dueDate) {
+                const dueDate = new Date(invoiceInfo.dueDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                dueDate.setHours(0, 0, 0, 0);
+                
+                if (dueDate < today) {
+                  newStatus = 'En retard';
+                }
+              }
             } else {
-              if (invoice.dueDate) {
-                const dueDate = new Date(invoice.dueDate);
+              // Not paid yet, check if overdue
+              if (invoiceInfo.dueDate) {
+                const dueDate = new Date(invoiceInfo.dueDate);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 dueDate.setHours(0, 0, 0, 0);
@@ -568,11 +777,27 @@ module.exports = (ipcMain, db, notifyDataChange) => {
 
           if (invoice) {
             let newStatus = 'En attente';
-            const remainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
+            const newRemainingAmount = invoice.totalAmount - (totalPaid.totalPaid || 0);
             
-            if (remainingAmount <= 0) {
+            if (newRemainingAmount <= 0) {
               newStatus = 'Payée';
+            } else if (totalPaid.totalPaid > 0) {
+              // Partially paid
+              newStatus = 'Partiellement payée';
+              
+              // Check if overdue
+              if (invoice.dueDate) {
+                const dueDate = new Date(invoice.dueDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                dueDate.setHours(0, 0, 0, 0);
+                
+                if (dueDate < today) {
+                  newStatus = 'En retard';
+                }
+              }
             } else {
+              // Not paid yet, check if overdue
               if (invoice.dueDate) {
                 const dueDate = new Date(invoice.dueDate);
                 const today = new Date();

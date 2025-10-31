@@ -362,7 +362,11 @@ class DatabaseService {
           Promise.resolve(false),
         "deleteSupplierInvoice"
       ),
-    // Removed updateStatus function
+    updateStatus: (id: number, status: string) =>
+      this.handle(
+        () => window.electronAPI?.updateSupplierInvoiceStatus(id, status),
+        "updateSupplierInvoiceStatus"
+      ),
   };
 
   // --- Products API ---

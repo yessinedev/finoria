@@ -148,6 +148,29 @@ export default function Invoices() {
       render: (value: string) => new Date(value).toLocaleDateString("fr-FR"),
     },
     {
+      key: "dueDate" as keyof Invoice,
+      label: "Date d'échéance",
+      sortable: true,
+      render: (value: string, invoice: Invoice) => {
+        if (!invoice.dueDate) return <span className="text-muted-foreground">-</span>;
+        const dueDate = new Date(invoice.dueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        const isOverdue = dueDate < today && invoice.status !== "Payée" && invoice.status !== "Annulée";
+        return (
+          <div className="flex items-center gap-2">
+            <span className={isOverdue ? "text-red-600 font-medium" : ""}>
+              {new Date(invoice.dueDate).toLocaleDateString("fr-FR")}
+            </span>
+            {isOverdue && (
+              <span className="text-xs text-red-600">(Échue)</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: "status" as keyof Invoice,
       label: "Statut",
       sortable: true,
@@ -157,6 +180,7 @@ export default function Invoices() {
           currentValue={invoice.status}
           options={[
             { value: "En attente", label: "En attente", variant: "secondary" },
+            { value: "Partiellement payée", label: "Partiellement payée", variant: "default" },
             { value: "Payée", label: "Payée", variant: "default" },
             { value: "En retard", label: "En retard", variant: "destructive" },
             { value: "Annulée", label: "Annulée", variant: "outline" },
@@ -174,7 +198,7 @@ export default function Invoices() {
 
     // Subscribe to real-time updates
     const unsubscribe = db.subscribe((table, action, data) => {
-      if (["invoices", "sales"].includes(table)) {
+      if (["invoices", "sales", "client_payments"].includes(table)) {
         loadData()
       }
     })
@@ -189,6 +213,9 @@ export default function Invoices() {
     setError(null)
 
     try {
+      // Check and update invoice statuses based on due dates
+      await window.electronAPI?.checkInvoiceDueDates?.();
+
       const [invoicesResult, salesResult, productsResult] = await Promise.all([
         db.invoices.getAll(), 
         db.sales.getAllWithItems(),
@@ -299,6 +326,8 @@ export default function Invoices() {
     switch (status) {
       case "Payée":
         return "default"
+      case "Partiellement payée":
+        return "default"
       case "En attente":
         return "secondary"
       case "En retard":
@@ -313,6 +342,8 @@ export default function Invoices() {
   const getStatusIcon = (status: Invoice["status"]) => {
     switch (status) {
       case "Payée":
+        return <CheckCircle className="h-3 w-3" />
+      case "Partiellement payée":
         return <CheckCircle className="h-3 w-3" />
       case "En attente":
         return <Clock className="h-3 w-3" />
@@ -637,6 +668,7 @@ export default function Invoices() {
                 options={[
                   { label: "Tous les statuts", value: "all" },
                   { label: "En attente", value: "En attente" },
+                  { label: "Partiellement payée", value: "Partiellement payée" },
                   { label: "Payée", value: "Payée" },
                   { label: "En retard", value: "En retard" },
                   { label: "Annulée", value: "Annulée" },

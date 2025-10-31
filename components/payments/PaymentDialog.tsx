@@ -114,6 +114,9 @@ export default function PaymentDialog({
     reference: "",
     notes: "",
   });
+  const [existingPayments, setExistingPayments] = useState<any[]>([]);
+  const [totalPaid, setTotalPaid] = useState(0);
+  const [remainingBalance, setRemainingBalance] = useState(0);
 
   // Update form data when dialog opens or invoice/payment changes
   useEffect(() => {
@@ -168,6 +171,37 @@ export default function PaymentDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate that invoice is selected
+    if (!formData.invoiceId) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une facture",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate payment amount
+    const paymentAmount = Number(formData.amount);
+    if (paymentAmount <= 0) {
+      toast({
+        title: "Erreur",
+        description: "Le montant du paiement doit être supérieur à 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedInvoice && paymentAmount > remainingBalance) {
+      toast({
+        title: "Erreur",
+        description: `Le montant du paiement (${paymentAmount.toFixed(3)}) dépasse le solde restant (${remainingBalance.toFixed(3)})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -176,8 +210,8 @@ export default function PaymentDialog({
         paymentDate: paymentDate.toISOString(),
         clientId: type === "client" ? Number(formData.clientId) : undefined,
         supplierId: type === "supplier" ? Number(formData.supplierId) : undefined,
-        invoiceId: formData.invoiceId ? Number(formData.invoiceId) : undefined,
-        amount: Number(formData.amount),
+        invoiceId: Number(formData.invoiceId),
+        amount: paymentAmount,
       };
 
       let result;
@@ -238,10 +272,52 @@ export default function PaymentDialog({
         (inv) => formData.supplierId && inv.supplierId === Number(formData.supplierId)
       );
 
-  // Get max payable amount for selected invoice
+  // Get selected invoice
   const selectedInvoice = type === "client"
     ? invoices.find((inv) => inv.id === Number(formData.invoiceId))
     : supplierInvoices.find((inv) => inv.id === Number(formData.invoiceId));
+
+  // Load existing payments when invoice is selected
+  useEffect(() => {
+    const loadInvoicePayments = async () => {
+      if (formData.invoiceId && selectedInvoice) {
+        try {
+          const paymentsResult = type === "client"
+            ? await window.electronAPI?.getInvoicePayments(Number(formData.invoiceId))
+            : await window.electronAPI?.getSupplierInvoicePayments(Number(formData.invoiceId));
+          
+          const payments = paymentsResult || [];
+          // Exclude current payment if updating
+          const filteredPayments = payment 
+            ? payments.filter((p: any) => p.id !== payment.id)
+            : payments;
+          
+          setExistingPayments(filteredPayments);
+          
+          // Calculate total paid (excluding current payment if updating)
+          const paid = filteredPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+          setTotalPaid(paid);
+          
+          // Calculate remaining balance
+          const remaining = selectedInvoice.totalAmount - paid;
+          setRemainingBalance(Math.max(0, remaining));
+          
+          // Auto-set amount to remaining balance if it's the full amount
+          if (!payment && remaining > 0 && remaining < selectedInvoice.totalAmount) {
+            setFormData(prev => ({ ...prev, amount: remaining }));
+          }
+        } catch (error) {
+          console.error("Error loading invoice payments:", error);
+        }
+      } else {
+        setExistingPayments([]);
+        setTotalPaid(0);
+        setRemainingBalance(0);
+      }
+    };
+
+    loadInvoicePayments();
+  }, [formData.invoiceId, selectedInvoice, payment, type]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -273,7 +349,6 @@ export default function PaymentDialog({
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="supplierId">Fournisseur *</Label>
               <EntitySelect
                 label="Fournisseur"
                 id="supplierId"
@@ -293,9 +368,6 @@ export default function PaymentDialog({
 
           {/* Invoice Selection */}
           <div className="space-y-2">
-            <Label htmlFor="invoiceId">
-              Facture {invoice ? "(pré-sélectionnée)" : "(optionnel)"}
-            </Label>
             {invoice && (
               <div className="text-sm text-muted-foreground mb-2">
                 Facture pré-sélectionnée
@@ -325,6 +397,7 @@ export default function PaymentDialog({
                 }}
                 getOptionValue={(inv: Invoice) => inv.id.toString()}
                 placeholder={formData.clientId ? "Sélectionner une facture" : "Sélectionnez d'abord un client"}
+                required
               />
             ) : (
               <EntitySelect
@@ -345,12 +418,36 @@ export default function PaymentDialog({
                 }}
                 getOptionValue={(inv: SupplierInvoice) => inv.id.toString()}
                 placeholder={formData.supplierId ? "Sélectionner une facture" : "Sélectionnez d'abord un fournisseur"}
+                required
               />
             )}
             {selectedInvoice && (
-              <p className="text-sm text-muted-foreground">
-                Montant de la facture: {selectedInvoice.totalAmount.toFixed(3)} DNT
-              </p>
+              <div className="space-y-1 text-sm">
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Montant total:</span> {selectedInvoice.totalAmount.toFixed(3)} DNT
+                </p>
+                {totalPaid > 0 && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Montant payé:</span> {totalPaid.toFixed(3)} DNT
+                  </p>
+                )}
+                <p className={remainingBalance > 0 ? "text-orange-600 font-medium" : "text-green-600 font-medium"}>
+                  <span className="font-medium">Solde restant:</span> {remainingBalance.toFixed(3)} DNT
+                </p>
+              </div>
+            )}
+            {existingPayments.length > 0 && (
+              <div className="mt-2 p-2 bg-muted rounded text-sm">
+                <p className="font-medium mb-1">Paiements existants ({existingPayments.length}):</p>
+                <ul className="space-y-1 max-h-24 overflow-y-auto">
+                  {existingPayments.map((p: any) => (
+                    <li key={p.id} className="flex justify-between text-xs">
+                      <span>{new Date(p.paymentDate).toLocaleDateString("fr-FR")} - {p.paymentMethod || "Non spécifié"}</span>
+                      <span className="font-medium">{p.amount.toFixed(3)} DNT</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -393,12 +490,20 @@ export default function PaymentDialog({
               type="number"
               step="0.001"
               min="0"
+              max={selectedInvoice ? remainingBalance : undefined}
               value={formData.amount}
-              onChange={(e) =>
-                setFormData({ ...formData, amount: Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                const maxAmount = selectedInvoice ? remainingBalance : Infinity;
+                setFormData({ ...formData, amount: Math.min(value, maxAmount) });
+              }}
               required
             />
+            {selectedInvoice && (
+              <p className="text-xs text-muted-foreground">
+                Maximum: {remainingBalance.toFixed(3)} DNT (solde restant)
+              </p>
+            )}
           </div>
 
           {/* Payment Method */}

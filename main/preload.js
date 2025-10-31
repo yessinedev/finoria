@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   generateInvoiceFromQuote: (quoteId) =>
     ipcRenderer.invoke("generate-invoice-from-quote", quoteId),
   getInvoiceItems: (invoiceId) => ipcRenderer.invoke("get-invoice-items", invoiceId),
+  checkInvoiceDueDates: () => ipcRenderer.invoke("check-invoice-due-dates"),
+  checkSupplierInvoiceDueDates: () => ipcRenderer.invoke("check-supplier-invoice-due-dates"),
 
   // --- Quotes API ---
   getQuotes: () => ipcRenderer.invoke("get-quotes"),

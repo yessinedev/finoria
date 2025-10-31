@@ -80,6 +80,7 @@ export default function UnifiedInvoiceGenerator({
   const [formData, setFormData] = useState({
     notes: "",
     customNumber: "",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -370,7 +371,7 @@ export default function UnifiedInvoiceGenerator({
         const invoiceData = {
           number: invoiceNumber,
           saleId: selectedSale.id,
-          dueDate: new Date().toISOString(), // Issue date is now
+          dueDate: formData.dueDate.toISOString(),
           amount: selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0), // HT amount
           taxAmount: selectedSale.taxAmount, // TVA amount
           fodecAmount: selectedSale.fodecAmount || 0, // FODEC amount
@@ -502,7 +503,7 @@ export default function UnifiedInvoiceGenerator({
           taxAmount: taxAmount,
           totalAmount: totalWithTax,
           status: "En attente",
-          dueDate: new Date().toISOString(), // Issue date is now
+          dueDate: formData.dueDate.toISOString(),
           items: allItems,
         };
 
@@ -545,6 +546,7 @@ export default function UnifiedInvoiceGenerator({
     setFormData({
       notes: "",
       customNumber: "",
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
     });
     setActiveTab("from-sale");
     setFormErrors({});
@@ -577,7 +579,7 @@ export default function UnifiedInvoiceGenerator({
       previewData = {
         number: invoiceNumber,
         saleId: selectedSale.id,
-        dueDate: new Date().toISOString(), // Issue date is now
+        dueDate: formData.dueDate.toISOString(),
         amount: selectedSale.totalAmount - selectedSale.taxAmount - (selectedSale.fodecAmount || 0), // HT amount
         taxAmount: selectedSale.taxAmount,
         fodecAmount: selectedSale.fodecAmount || 0,
@@ -609,7 +611,7 @@ export default function UnifiedInvoiceGenerator({
         totalAmount: finalTotal,
         status: "En attente",
         issueDate: new Date().toISOString(),
-        dueDate: new Date().toISOString(), // Issue date is now
+        dueDate: formData.dueDate.toISOString(),
         notes: formData.notes,
         items: lineItems,
       };
@@ -642,7 +644,7 @@ export default function UnifiedInvoiceGenerator({
         totalAmount: totalWithTax,
         status: "En attente",
         issueDate: new Date().toISOString(),
-        dueDate: new Date().toISOString(), // Issue date is now
+        dueDate: formData.dueDate.toISOString(),
         notes: formData.notes,
         items: allItems,
       };
@@ -952,6 +954,36 @@ export default function UnifiedInvoiceGenerator({
                         placeholder={`Auto: ${generatePreviewInvoiceNumber()}`}
                         error={formErrors.number}
                       />
+
+                      <div className="space-y-2">
+                        <Label htmlFor="dueDate">Date d'échéance *</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.dueDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.dueDate ? (
+                                format(formData.dueDate, "PPP", { locale: fr })
+                              ) : (
+                                <span>Sélectionner une date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.dueDate}
+                              onSelect={(date) => date && setFormData({ ...formData, dueDate: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
 
                       <div className="flex flex-col gap-2">
                         <Label>Notes (optionnel)</Label>
