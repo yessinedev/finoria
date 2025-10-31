@@ -190,6 +190,7 @@ app.whenReady().then(async () => {
     "tva",
     "delivery-receipts",
     "reception-notes",
+    "payments",
   ];
 
   handlerModules.forEach((name) => {

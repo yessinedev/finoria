@@ -127,6 +127,18 @@ interface ElectronAPI {
   downloadUpdate: () => Promise<{ success: boolean; data?: { version: string }; error?: string }>;
   quitAndInstall: () => Promise<void>;
 
+  // Payments
+  getClientPayments: () => Promise<any[]>;
+  getInvoicePayments: (invoiceId: number) => Promise<any[]>;
+  createClientPayment: (payment: any) => Promise<any>;
+  updateClientPayment: (id: number, payment: any) => Promise<any>;
+  deleteClientPayment: (id: number) => Promise<boolean>;
+  getSupplierPayments: () => Promise<any[]>;
+  getSupplierInvoicePayments: (invoiceId: number) => Promise<any[]>;
+  createSupplierPayment: (payment: any) => Promise<any>;
+  updateSupplierPayment: (id: number, payment: any) => Promise<any>;
+  deleteSupplierPayment: (id: number) => Promise<boolean>;
+
   // Data listeners for real-time updates
   onDataChange: (
     callback: (table: string, action: string, data: any) => void
@@ -684,6 +696,66 @@ class DatabaseService {
         () => window.electronAPI?.deleteReceptionNote(id) || Promise.resolve(false),
         "deleteReceptionNote"
       ),
+  };
+
+  // --- Payments API ---
+  payments = {
+    // Client Payments
+    clientPayments: {
+      getAll: () =>
+        this.handle(
+          () => window.electronAPI?.getClientPayments() || Promise.resolve([]),
+          "getClientPayments"
+        ),
+      getByInvoice: (invoiceId: number) =>
+        this.handle(
+          () => window.electronAPI?.getInvoicePayments(invoiceId) || Promise.resolve([]),
+          "getInvoicePayments"
+        ),
+      create: (payment: any) =>
+        this.handle(
+          () => window.electronAPI?.createClientPayment(payment) || Promise.resolve(null),
+          "createClientPayment"
+        ),
+      update: (id: number, payment: any) =>
+        this.handle(
+          () => window.electronAPI?.updateClientPayment(id, payment) || Promise.resolve(null),
+          "updateClientPayment"
+        ),
+      delete: (id: number) =>
+        this.handle(
+          () => window.electronAPI?.deleteClientPayment(id) || Promise.resolve(false),
+          "deleteClientPayment"
+        ),
+    },
+    // Supplier Payments
+    supplierPayments: {
+      getAll: () =>
+        this.handle(
+          () => window.electronAPI?.getSupplierPayments() || Promise.resolve([]),
+          "getSupplierPayments"
+        ),
+      getByInvoice: (invoiceId: number) =>
+        this.handle(
+          () => window.electronAPI?.getSupplierInvoicePayments(invoiceId) || Promise.resolve([]),
+          "getSupplierInvoicePayments"
+        ),
+      create: (payment: any) =>
+        this.handle(
+          () => window.electronAPI?.createSupplierPayment(payment) || Promise.resolve(null),
+          "createSupplierPayment"
+        ),
+      update: (id: number, payment: any) =>
+        this.handle(
+          () => window.electronAPI?.updateSupplierPayment(id, payment) || Promise.resolve(null),
+          "updateSupplierPayment"
+        ),
+      delete: (id: number) =>
+        this.handle(
+          () => window.electronAPI?.deleteSupplierPayment(id) || Promise.resolve(false),
+          "deleteSupplierPayment"
+        ),
+    },
   };
 
   // --- Stock Movements API ---

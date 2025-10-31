@@ -56,6 +56,7 @@ import { SupplierInvoicePDFDocument } from "./supplier-invoice-pdf";
 import { ActionsDropdown } from "@/components/common/actions-dropdown";
 import SupplierInvoicePreview from "./supplier-invoice-preview";
 import SupplierInvoiceGenerator from "./SupplierInvoiceGenerator";
+import PaymentDialog from "@/components/payments/PaymentDialog";
 
 import { supplierInvoiceSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
@@ -81,6 +82,8 @@ export default function SupplierInvoices() {
     direction: 'desc' 
   });
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<SupplierInvoice | null>(null);
   
   
   // Inline editing state
@@ -116,6 +119,15 @@ export default function SupplierInvoices() {
     loadOrders();
     loadProducts();
     loadCompanySettings();
+
+    // Subscribe to real-time updates
+    const unsubscribe = db.subscribe((table, action, data) => {
+      if (["supplier_invoices", "supplier_payments"].includes(table)) {
+        loadInvoices();
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -373,6 +385,11 @@ export default function SupplierInvoices() {
   const handleViewInvoice = (invoice: SupplierInvoice) => {
     setSelectedInvoice(invoice);
     setIsPreviewOpen(true);
+  };
+
+  const handleRecordPayment = (invoice: SupplierInvoice) => {
+    setSelectedInvoiceForPayment(invoice);
+    setIsPaymentDialogOpen(true);
   };
 
   const handleDownloadPDF = async (invoice: SupplierInvoice) => {
@@ -742,6 +759,11 @@ Commande #{order.id} - {order.supplierName}
                     <ActionsDropdown
                       actions={[
                         {
+                          label: "Régler",
+                          icon: <FileText className="h-4 w-4" />,
+                          onClick: () => handleRecordPayment(invoice),
+                        },
+                        {
                           label: "Modifier",
                           icon: <Edit className="h-4 w-4" />,
                           onClick: () => openEditDialog(invoice),
@@ -894,6 +916,25 @@ Commande #{order.id} - {order.supplierName}
           companySettings={companySettings}
         />
       )}
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={() => {
+          setIsPaymentDialogOpen(false);
+          setSelectedInvoiceForPayment(null);
+        }}
+        onSuccess={() => {
+          loadInvoices();
+          setIsPaymentDialogOpen(false);
+          setSelectedInvoiceForPayment(null);
+        }}
+        payment={null}
+        invoice={selectedInvoiceForPayment}
+        type="supplier"
+        suppliers={suppliers}
+        supplierInvoices={invoices}
+      />
     </div>
   );
 }

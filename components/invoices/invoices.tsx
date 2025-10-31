@@ -28,11 +28,13 @@ import {
   Wand2,
   MoreVertical,
   Printer,
+  CreditCard,
 } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import UnifiedInvoiceGenerator from "@/components/invoices/UnifiedInvoiceGenerator"
 import InvoicePreviewModal from "@/components/invoices/InvoicePreviewModal"
+import PaymentDialog from "@/components/payments/PaymentDialog"
 import { db } from "@/lib/database"
 import type { Invoice, Sale } from "@/types/types"
 import { pdf } from "@react-pdf/renderer"
@@ -61,6 +63,9 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
   const [companySettings, setCompanySettings] = useState<any>(null)
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null)
+  const [clients, setClients] = useState<any[]>([])
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -165,6 +170,7 @@ export default function Invoices() {
   useEffect((): (() => void) => {
     loadData()
     loadCompanySettings()
+    loadClients()
 
     // Subscribe to real-time updates
     const unsubscribe = db.subscribe((table, action, data) => {
@@ -173,7 +179,9 @@ export default function Invoices() {
       }
     })
 
-    return unsubscribe
+    return () => {
+      unsubscribe();
+    };
   }, [])
 
   const loadData = async () => {
@@ -273,6 +281,17 @@ export default function Invoices() {
       }
     } catch (error) {
       console.error("Error loading company settings:", error)
+    }
+  }
+
+  const loadClients = async () => {
+    try {
+      const result = await db.clients.getAll()
+      if (result.success) {
+        setClients(result.data || [])
+      }
+    } catch (error) {
+      console.error("Error loading clients:", error)
     }
   }
 
@@ -447,9 +466,19 @@ export default function Invoices() {
     (sale) => !invoices.some((invoice) => invoice.saleId === sale.id),
   )
 
+  const handleRecordPayment = (invoice: Invoice) => {
+    setSelectedInvoiceForPayment(invoice)
+    setIsPaymentDialogOpen(true)
+  }
+
   const renderActions = (invoice: Invoice) => (
     <ActionsDropdown
       actions={[
+        {
+          label: "Régler",
+          icon: <CreditCard className="h-4 w-4" />,
+          onClick: () => handleRecordPayment(invoice),
+        },
         {
           label: "Voir",
           icon: <Eye className="h-4 w-4" />,
@@ -754,6 +783,25 @@ export default function Invoices() {
         onStatusChange={handleStatusChange}
         companySettings={companySettings}
         products={products}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={() => {
+          setIsPaymentDialogOpen(false)
+          setSelectedInvoiceForPayment(null)
+        }}
+        onSuccess={() => {
+          loadData()
+          setIsPaymentDialogOpen(false)
+          setSelectedInvoiceForPayment(null)
+        }}
+        payment={null}
+        invoice={selectedInvoiceForPayment}
+        type="client"
+        clients={clients}
+        invoices={invoices}
       />
     </div>
   )
