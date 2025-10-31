@@ -1,4 +1,4 @@
-import type { Category } from "@/types/types";
+import type { Category, Unit } from "@/types/types";
 
 interface ElectronAPI {
   // Categories
@@ -6,6 +6,13 @@ interface ElectronAPI {
   createCategory: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<any>;
   updateCategory: (id: number, category: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<any>;
   deleteCategory: (id: number) => Promise<boolean>;
+
+  // Units
+  getUnits: () => Promise<any[]>;
+  getUnitById: (id: number) => Promise<any>;
+  createUnit: (unit: Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>) => Promise<any>;
+  updateUnit: (id: number, unit: Partial<Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<any>;
+  deleteUnit: (id: number) => Promise<boolean>;
 
   // Clients
   getClients: () => Promise<any[]>;
@@ -240,6 +247,38 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.deleteCategory(id) || Promise.resolve(false),
         "deleteCategory"
+      ),
+  };
+
+  // --- Units API ---
+  units = {
+    getAll: () =>
+      this.handle(
+        () => window.electronAPI?.getUnits() || Promise.resolve([]),
+        "getUnits"
+      ),
+    getOne: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.getUnitById(id) || Promise.resolve(null),
+        "getUnit"
+      ),
+    create: (unit: Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>) =>
+      this.handle(
+        () =>
+          window.electronAPI?.createUnit(unit) || Promise.resolve(null),
+        "createUnit"
+      ),
+    update: (id: number, unit: Partial<Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>>) =>
+      this.handle(
+        () =>
+          window.electronAPI?.updateUnit(id, unit) ||
+          Promise.resolve(null),
+        "updateUnit"
+      ),
+    delete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.deleteUnit(id) || Promise.resolve(false),
+        "deleteUnit"
       ),
   };
 

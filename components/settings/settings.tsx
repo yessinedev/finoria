@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Save, Shield, Download, Upload, RefreshCw, CheckCircle, Percent, Image as ImageIcon } from "lucide-react";
 import { db } from "@/lib/database";
 import { CompanyData } from "@/types/types";
@@ -513,18 +514,36 @@ export default function SettingsPage() {
             )}
           </div>
 
-          {/* Company Information */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                <CardTitle>Informations sur l'entreprise</CardTitle>
-              </div>
-              <CardDescription>
-                Mettez à jour les informations de votre entreprise
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Tabs for Settings */}
+          <Tabs defaultValue="company" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="company" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Entreprise
+              </TabsTrigger>
+              <TabsTrigger value="tax" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Fiscal
+              </TabsTrigger>
+              <TabsTrigger value="taxes" className="flex items-center gap-2">
+                <Percent className="h-4 w-4" />
+                Taux de TVA
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Company Tab */}
+            <TabsContent value="company" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <CardTitle>Informations sur l'entreprise</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Mettez à jour les informations de votre entreprise
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
                   label="Nom de l'entreprise"
@@ -633,23 +652,38 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+                <div className="flex justify-end pt-4">
+                  <Button
+                    onClick={handleSaveSettings}
+                    disabled={isSubmitting}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSubmitting
+                      ? "Enregistrement..."
+                      : "Enregistrer les modifications"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            </TabsContent>
 
-          {/* Tax Information */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                <CardTitle>Informations fiscales</CardTitle>
-              </div>
-              <CardDescription>
-                Configurez vos paramètres fiscaux pour la conformité et les
-                rapports
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            {/* Tax Tab */}
+            <TabsContent value="tax" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" />
+                    <CardTitle>Informations fiscales</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Configurez vos paramètres fiscaux pour la conformité et les
+                    rapports
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
                   label="Numéro fiscal / EIN"
@@ -774,7 +808,7 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end pt-4">
                 <Button
                   onClick={handleSaveSettings}
                   disabled={isSubmitting}
@@ -783,17 +817,19 @@ export default function SettingsPage() {
                 >
                   <Save className="h-4 w-4" />
                   {isSubmitting
-                    ? "Enregistrement des modifications..."
-                    : "Enregistrer toutes les modifications"}
+                    ? "Enregistrement..."
+                    : "Enregistrer les modifications"}
                 </Button>
               </div>
             </CardContent>
           </Card>
+            </TabsContent>
 
-          {/* VAT Management */}
-          <VatManagement />
-
-          {/* Save Button */}
+            {/* Taxes Tab */}
+            <TabsContent value="taxes" className="space-y-6">
+              <VatManagement />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

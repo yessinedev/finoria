@@ -7,6 +7,16 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface Unit {
+  id: number;
+  name: string;
+  symbol?: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TVA {
   id: number;
   rate: number;
@@ -25,6 +35,9 @@ export interface Product {
   reference?: string;
   tvaId?: number;
   tvaRate?: number; // TVA rate fetched from the tva table (joined)
+  unitId?: number;
+  unitName?: string; // Unit name fetched from the units table (joined)
+  unitSymbol?: string; // Unit symbol fetched from the units table (joined)
   sellingPriceHT?: number;
   sellingPriceTTC?: number;
   purchasePriceHT?: number;

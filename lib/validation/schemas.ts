@@ -60,6 +60,7 @@ export const productSchema = z.object({
   stock: z.number().min(0, "Le stock doit être positif ou nul"),
   reference: z.string().optional(),
   tvaId: z.number().optional(),
+  unitId: z.number().optional(),
   sellingPriceHT: z.number().min(0, "Le prix de vente HT doit être positif").optional(),
   sellingPriceTTC: z.number().min(0, "Le prix de vente TTC doit être positif").optional(),
   purchasePriceHT: z.number().min(0, "Le prix d'achat HT doit être positif").optional(),

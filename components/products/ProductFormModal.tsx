@@ -11,7 +11,7 @@ import { FormField } from "@/components/common/FormField";
 import { EntitySelect } from "@/components/common/EntitySelect";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import type { Category, Product, TVA } from "@/types/types";
+import type { Category, Product, TVA, Unit } from "@/types/types";
 import { productSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
 
@@ -22,6 +22,7 @@ interface ProductFormModalProps {
   editingProduct: Product | null;
   categories: Category[];
   tvaRates: TVA[];
+  units: Unit[];
   saving: boolean;
   error: string | null;
   formData: any;
@@ -36,6 +37,7 @@ export default function ProductFormModal({
   editingProduct,
   categories,
   tvaRates,
+  units,
   saving,
   error,
   formData,
@@ -44,6 +46,7 @@ export default function ProductFormModal({
 }: ProductFormModalProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const activeCategories = categories.filter((cat) => cat.isActive);
+  const activeUnits = units.filter((unit) => unit.isActive);
 
   // Clear error when form fields change
   useEffect(() => {
@@ -74,6 +77,7 @@ export default function ProductFormModal({
         isActive: formData.isActive,
         reference: formData.reference,
         tvaId: formData.tvaId,
+        unitId: formData.unitId,
         sellingPriceHT: formData.sellingPriceHT,
         sellingPriceTTC: formData.sellingPriceTTC,
         purchasePriceHT: formData.purchasePriceHT,
@@ -195,6 +199,24 @@ export default function ProductFormModal({
               getOptionLabel={(tva) => `${tva.rate}%`}
               getOptionValue={(tva) => tva.id.toString()}
               error={errors.tvaId}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <EntitySelect
+              label="Unité"
+              id="unitId"
+              value={formData.unitId ? formData.unitId.toString() : ""}
+              onChange={(value) =>
+                setFormData({
+                  ...formData,
+                  unitId: value ? Number(value) : undefined,
+                })
+              }
+              options={activeUnits}
+              getOptionLabel={(unit) => `${unit.name}${unit.symbol ? ` (${unit.symbol})` : ""}`}
+              getOptionValue={(unit) => unit.id.toString()}
+              error={errors.unitId}
             />
           </div>
 

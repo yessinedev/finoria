@@ -41,6 +41,38 @@ function createTables(db) {
     )
   `);
 
+  // Units table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS units (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      symbol TEXT,
+      description TEXT,
+      isActive BOOLEAN DEFAULT 1,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Insert default units if they don't exist
+  const defaultUnits = [
+    { name: "Kilogramme", symbol: "kg", description: "Unité de masse" },
+    { name: "Mètre", symbol: "m", description: "Unité de longueur" },
+    { name: "Pièce", symbol: "pce", description: "Unité par pièce" },
+    { name: "Litre", symbol: "L", description: "Unité de volume" },
+    { name: "Heure", symbol: "h", description: "Unité de temps" },
+  ];
+  
+  const checkUnit = db.prepare("SELECT COUNT(*) as count FROM units WHERE name = ?");
+  const insertUnit = db.prepare("INSERT OR IGNORE INTO units (name, symbol, description) VALUES (?, ?, ?)");
+  
+  for (const unit of defaultUnits) {
+    const result = checkUnit.get(unit.name);
+    if (result.count === 0) {
+      insertUnit.run(unit.name, unit.symbol, unit.description);
+    }
+  }
+
   // Products table
   db.exec(`
     CREATE TABLE IF NOT EXISTS products (
@@ -52,6 +84,7 @@ function createTables(db) {
       isActive BOOLEAN DEFAULT 1,
       reference TEXT,
       tvaId INTEGER,
+      unitId INTEGER,
       sellingPriceHT REAL,
       sellingPriceTTC REAL,
       purchasePriceHT REAL,
@@ -59,9 +92,17 @@ function createTables(db) {
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (category) REFERENCES categories(name),
-      FOREIGN KEY (tvaId) REFERENCES tva(id)
+      FOREIGN KEY (tvaId) REFERENCES tva(id),
+      FOREIGN KEY (unitId) REFERENCES units(id)
     )
   `);
+
+  // Add unitId column to existing products table if it doesn't exist
+  try {
+    db.exec(`ALTER TABLE products ADD COLUMN unitId INTEGER REFERENCES units(id)`);
+  } catch (error) {
+    // Column already exists, ignore
+  }
 
   // Sales table
   db.exec(`

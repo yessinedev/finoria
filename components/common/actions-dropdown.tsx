@@ -32,7 +32,10 @@ export function ActionsDropdown({ actions }: ActionsDropdownProps) {
         {actions.map((action, index) => (
           <DropdownMenuItem
             key={index}
-            onClick={action.onClick}
+            onSelect={(e) => {
+              e.preventDefault();
+              action.onClick();
+            }}
             className={action.className}
             disabled={action.disabled}
           >

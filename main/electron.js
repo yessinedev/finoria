@@ -191,6 +191,7 @@ app.whenReady().then(async () => {
     "delivery-receipts",
     "reception-notes",
     "payments",
+    "units",
   ];
 
   handlerModules.forEach((name) => {

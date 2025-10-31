@@ -9,6 +9,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-category", id, category),
   deleteCategory: (id) => ipcRenderer.invoke("delete-category", id),
 
+  // --- Units API ---
+  getUnits: () => ipcRenderer.invoke("get-units"),
+  getUnitById: (id) => ipcRenderer.invoke("get-unit-by-id", id),
+  createUnit: (unit) => ipcRenderer.invoke("create-unit", unit),
+  updateUnit: (id, unit) => ipcRenderer.invoke("update-unit", id, unit),
+  deleteUnit: (id) => ipcRenderer.invoke("delete-unit", id),
+
   // --- Clients API ---
   getClients: () => ipcRenderer.invoke("get-clients"),
   createClient: (client) => ipcRenderer.invoke("create-client", client),

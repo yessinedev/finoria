@@ -3,9 +3,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("get-products", async () => {
     try {
       const products = db.prepare(`
-        SELECT p.*, t.rate as tvaRate 
+        SELECT p.*, t.rate as tvaRate, u.name as unitName, u.symbol as unitSymbol
         FROM products p 
         LEFT JOIN tva t ON p.tvaId = t.id 
+        LEFT JOIN units u ON p.unitId = u.id
         ORDER BY p.name
       `).all();
       return products;
@@ -18,9 +19,10 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("get-product-by-id", async (event, id) => {
     try {
       const product = db.prepare(`
-        SELECT p.*, t.rate as tvaRate 
+        SELECT p.*, t.rate as tvaRate, u.name as unitName, u.symbol as unitSymbol
         FROM products p 
         LEFT JOIN tva t ON p.tvaId = t.id 
+        LEFT JOIN units u ON p.unitId = u.id
         WHERE p.id = ?
       `).get(id);
       if (!product) {
@@ -36,8 +38,8 @@ module.exports = (ipcMain, db, notifyDataChange) => {
   ipcMain.handle("create-product", async (event, product) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO products (name, description, category, stock, isActive, reference, tvaId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, fodecApplicable) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (name, description, category, stock, isActive, reference, tvaId, unitId, sellingPriceHT, sellingPriceTTC, purchasePriceHT, fodecApplicable) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         product.name,
@@ -47,6 +49,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         product.isActive ? 1 : 0,
         product.reference || null,
         product.tvaId || null,
+        product.unitId || null,
         product.sellingPriceHT || null,
         product.sellingPriceTTC || null,
         product.purchasePriceHT || null,
@@ -118,7 +121,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     try {
       const stmt = db.prepare(`
         UPDATE products 
-        SET name = ?, description = ?, category = ?, stock = ?, isActive = ?, reference = ?, tvaId = ?, sellingPriceHT = ?, sellingPriceTTC = ?, purchasePriceHT = ?, fodecApplicable = ?, updatedAt = CURRENT_TIMESTAMP 
+        SET name = ?, description = ?, category = ?, stock = ?, isActive = ?, reference = ?, tvaId = ?, unitId = ?, sellingPriceHT = ?, sellingPriceTTC = ?, purchasePriceHT = ?, fodecApplicable = ?, updatedAt = CURRENT_TIMESTAMP 
         WHERE id = ?
       `);
       stmt.run(
@@ -129,6 +132,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
         product.isActive ? 1 : 0,
         product.reference || null,
         product.tvaId || null,
+        product.unitId || null,
         product.sellingPriceHT || null,
         product.sellingPriceTTC || null,
         product.purchasePriceHT || null,

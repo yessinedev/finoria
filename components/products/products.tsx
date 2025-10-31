@@ -9,9 +9,8 @@ import { Plus, Edit, Trash2, Package, AlertCircle, AlertTriangle, Tag, Percent, 
 import { DataTable } from "@/components/ui/data-table"
 import { useDataTable } from "@/hooks/use-data-table"
 import ProductFormModal from "@/components/products/ProductFormModal"
-import CategoryManagerModal from "@/components/category/CategoryManagerModal"
 import { db } from "@/lib/database"
-import type { Product, Category, TVA } from "@/types/types"
+import type { Product, Category, TVA, Unit } from "@/types/types"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -37,8 +36,8 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [tvaRates, setTvaRates] = useState<TVA[]>([])
+  const [units, setUnits] = useState<Unit[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -59,6 +58,7 @@ export default function Products() {
     isActive: true,
     reference: "",
     tvaId: undefined,
+    unitId: undefined,
     sellingPriceHT: undefined,
     sellingPriceTTC: undefined,
     purchasePriceHT: undefined,
@@ -177,10 +177,11 @@ export default function Products() {
     setError(null)
 
     try {
-      const [productsResult, categoriesResult, tvaResult] = await Promise.all([
+      const [productsResult, categoriesResult, tvaResult, unitsResult] = await Promise.all([
         db.products.getAll(), 
         db.categories.getAll(),
-        db.tva.getAll()
+        db.tva.getAll(),
+        db.units.getAll()
       ])
 
       if (productsResult.success) {
@@ -199,6 +200,12 @@ export default function Products() {
         setTvaRates(tvaResult.data || [])
       } else {
         setError(tvaResult.error || "Erreur lors du chargement des taux de TVA")
+      }
+
+      if (unitsResult.success) {
+        setUnits(unitsResult.data || [])
+      } else {
+        setError(unitsResult.error || "Erreur lors du chargement des unités")
       }
     } catch (error) {
       setError("Erreur inattendue lors du chargement")
@@ -255,6 +262,7 @@ export default function Products() {
       isActive: true,
       reference: "",
       tvaId: undefined,
+      unitId: undefined,
       sellingPriceHT: undefined,
       sellingPriceTTC: undefined,
       purchasePriceHT: undefined,
@@ -276,6 +284,7 @@ export default function Products() {
       isActive: product.isActive,
       reference: product.reference || "",
       tvaId: product.tvaId,
+      unitId: product.unitId,
       sellingPriceHT: product.sellingPriceHT,
       sellingPriceTTC: product.sellingPriceTTC,
       purchasePriceHT: product.purchasePriceHT,
@@ -374,12 +383,12 @@ export default function Products() {
               Catégories
             </Button>
           </Link>
-          <CategoryManagerModal
-            open={isCategoryManagerOpen}
-            onOpenChange={setIsCategoryManagerOpen}
-            categories={categories}
-            onCategoriesChange={setCategories}
-          />
+          <Link href="/units">
+            <Button variant="outline">
+              <Package className="h-4 w-4 mr-2" />
+              Gérer unités
+            </Button>
+          </Link>
           <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Nouveau produit
@@ -391,6 +400,7 @@ export default function Products() {
             editingProduct={editingProduct}
             categories={categories}
             tvaRates={tvaRates}
+            units={units}
             saving={saving}
             error={error}
             formData={formData}

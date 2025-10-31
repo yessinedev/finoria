@@ -37,7 +37,9 @@ export type NavigationItem =
   | "stock-movements"
   | "client-payments"
   | "supplier-payments"
-  | "settings";
+  | "settings"
+  | "units"
+  | "categories";
 
 const navigationItems = [
   { id: "dashboard", label: "Tableau de bord", icon: BarChart3 },
@@ -75,6 +77,7 @@ const navigationItems = [
       { id: "products", label: "Produits" },
       { id: "stock-movements", label: "Mouvements de stock" },
       { id: "categories", label: "Catégories" },
+      { id: "units", label: "Unités" },
     ],
   },
   {
@@ -158,6 +161,8 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         return "/settings";
       case "categories":
         return "/categories";
+      case "units":
+        return "/units";
       default:
         return "#";
     }
