@@ -258,25 +258,25 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
           </View>
         </View>
 
-        {/* Company & Supplier Info */}
+        {/* Supplier & Company Info */}
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-          <View style={[styles.card, { flex: 1 }]}> {/* Company */}
-            <Text style={styles.cardTitle}>Émetteur</Text>
-            <Text style={styles.cardContent}>{companySettings?.name}</Text>
-            <Text style={styles.cardContent}>{companySettings?.address}</Text>
-            <Text style={styles.cardContent}>Tél: {companySettings?.phone}</Text>
-            <Text style={styles.cardContent}>{companySettings?.email}</Text>
-            {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
-            {companySettings?.tvaNumber && <Text style={styles.cardContent}>N° TVA: {companySettings.tvaNumber}</Text>}
-          </View>
           <View style={[styles.card, { flex: 1 }]}> {/* Supplier */}
-            <Text style={styles.cardTitle}>Fournisseur</Text>
+            <Text style={styles.cardTitle}>Émetteur</Text>
             <Text style={styles.cardContent}>{invoice.supplierName}</Text>
             {invoice.supplierCompany && <Text style={styles.cardContent}>{invoice.supplierCompany}</Text>}
             {invoice.supplierAddress && <Text style={styles.cardContent}>{invoice.supplierAddress}</Text>}
             {invoice.supplierPhone && <Text style={styles.cardContent}>Tél: {invoice.supplierPhone}</Text>}
             {invoice.supplierEmail && <Text style={styles.cardContent}>{invoice.supplierEmail}</Text>}
             {invoice.supplierTaxId && <Text style={styles.cardContent}>N° fiscal: {invoice.supplierTaxId}</Text>}
+          </View>
+          <View style={[styles.card, { flex: 1 }]}> {/* Company */}
+            <Text style={styles.cardTitle}>Récepteur</Text>
+            <Text style={styles.cardContent}>{companySettings?.name}</Text>
+            <Text style={styles.cardContent}>{companySettings?.address}</Text>
+            <Text style={styles.cardContent}>Tél: {companySettings?.phone}</Text>
+            <Text style={styles.cardContent}>{companySettings?.email}</Text>
+            {companySettings?.taxId && <Text style={styles.cardContent}>SIRET: {companySettings.taxId}</Text>}
+            {companySettings?.tvaNumber && <Text style={styles.cardContent}>N° TVA: {companySettings.tvaNumber}</Text>}
           </View>
         </View>
 
