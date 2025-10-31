@@ -84,7 +84,6 @@ function createTables(db) {
       isActive BOOLEAN DEFAULT 1,
       reference TEXT,
       tvaId INTEGER,
-      unitId INTEGER,
       sellingPriceHT REAL,
       sellingPriceTTC REAL,
       purchasePriceHT REAL,
@@ -92,8 +91,7 @@ function createTables(db) {
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (category) REFERENCES categories(name),
-      FOREIGN KEY (tvaId) REFERENCES tva(id),
-      FOREIGN KEY (unitId) REFERENCES units(id)
+      FOREIGN KEY (tvaId) REFERENCES tva(id)
     )
   `);
 
