@@ -71,18 +71,26 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Helper function to check if TVA rate can be deleted
+  const canDeleteTvaRate = (id) => {
+    const productCount = db
+      .prepare("SELECT COUNT(*) as count FROM products WHERE tvaId = ?")
+      .get(id).count;
+    return productCount === 0;
+  };
+
+  ipcMain.handle("can-delete-tva-rate", async (event, id) => {
+    try {
+      return canDeleteTvaRate(id);
+    } catch (error) {
+      console.error("Error checking if TVA rate can be deleted:", error);
+      return false;
+    }
+  });
+
   // Delete a TVA rate
   ipcMain.handle("delete-tva-rate", async (event, id) => {
     try {
-      // Check if the TVA rate is used by any products
-      const productCount = db
-        .prepare("SELECT COUNT(*) as count FROM products WHERE tvaId = ?")
-        .get(id).count;
-
-      if (productCount > 0) {
-        throw new Error("Impossible de supprimer ce taux de TVA car il est utilisé par des produits");
-      }
-
       const stmt = db.prepare("DELETE FROM tva WHERE id = ?");
       const result = stmt.run(id);
 
@@ -94,7 +102,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return { success: true };
     } catch (error) {
       console.error("Error deleting TVA rate:", error);
-      throw new Error(error.message || "Erreur lors de la suppression du taux de TVA");
+      throw error;
     }
   });
 

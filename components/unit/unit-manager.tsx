@@ -41,6 +41,7 @@ export default function UnitManager({
   const [error, setError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
+  const [canDeleteMap, setCanDeleteMap] = useState<Record<number, boolean>>({});
   const [formData, setFormData] = useState({
     name: "",
     symbol: "",
@@ -148,6 +149,18 @@ export default function UnitManager({
       if (result.success) {
         setLocalUnits(result.data || []);
         onUnitsChange(result.data || []);
+        // Check which units can be deleted
+        const deleteChecks = await Promise.all(
+          (result.data || []).map(async (unit) => {
+            const checkResult = await db.units.canDelete(unit.id);
+            return { id: unit.id, canDelete: checkResult.success && checkResult.data };
+          })
+        );
+        const newCanDeleteMap: Record<number, boolean> = {};
+        deleteChecks.forEach(({ id, canDelete }) => {
+          newCanDeleteMap[id] = canDelete;
+        });
+        setCanDeleteMap(newCanDeleteMap);
       } else {
         setError(result.error || "Erreur lors du chargement des unités");
       }
@@ -305,6 +318,7 @@ export default function UnitManager({
           icon: <MoreVertical className="h-4 w-4" />,
           onClick: () => handleDelete(unit),
           className: "text-red-600",
+          disabled: !canDeleteMap[unit.id],
         },
       ]}
     />

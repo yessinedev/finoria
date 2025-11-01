@@ -204,8 +204,22 @@ const styles = StyleSheet.create({
 })
 
 export function SupplierInvoicePDFDocument({ invoice, companySettings, products }: { invoice: SupplierInvoice; companySettings?: any; products?: any[] }) {
+  // Calculate total remise (discounts) from items
+  let totalRemise = 0;
+  if (Array.isArray(invoice.items)) {
+    totalRemise = invoice.items.reduce((sum, item) => {
+      const itemBeforeDiscount = item.quantity * item.unitPrice;
+      const discountAmount = (itemBeforeDiscount * (item.discount || 0)) / 100;
+      return sum + discountAmount;
+    }, 0);
+  }
+
+  // Calculate subtotal HT before discount
+  const subtotalBeforeDiscount = Array.isArray(invoice.items) 
+    ? invoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+    : invoice.amount;
+
   // Calculate Total HT (sum of all item totals after discount)
-  // For supplier invoices: Total HT = sum of item totals
   const totalHT = Array.isArray(invoice.items) 
     ? invoice.items.reduce((sum, item) => sum + item.totalPrice, 0)
     : invoice.amount;
@@ -235,6 +249,9 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
 
   // Calculate Total TTC: Total HT + TVA + Timbre Fiscal (no FODEC for supplier invoices)
   const finalAmount = totalHT + totalTVA + timbreFiscal;
+  
+  // Calculate discount percentage
+  const discountPercentage = subtotalBeforeDiscount > 0 ? (totalRemise / subtotalBeforeDiscount) * 100 : 0;
 
   return (
     <Document>
@@ -354,12 +371,29 @@ export function SupplierInvoicePDFDocument({ invoice, companySettings, products 
           <View style={styles.totalsBox}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Sous-total HT:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(subtotalBeforeDiscount)}</Text>
+            </View>
+            {totalRemise > 0 && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Remise ({discountPercentage.toFixed(2)}%):</Text>
+                <Text style={styles.totalsValue}>-{formatCurrency(totalRemise)}</Text>
+              </View>
+            )}
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Total HT:</Text>
               <Text style={styles.totalsValue}>{formatCurrency(totalHT)}</Text>
             </View>
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>TVA:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(totalTVA)}</Text>
-            </View>
+            {Object.keys(tvaBreakdown).length > 0 && Object.entries(tvaBreakdown)
+              .sort(([a], [b]) => Number(b) - Number(a))
+              .map(([rate]) => {
+                const values = tvaBreakdown[Number(rate)];
+                return (
+                  <View style={styles.totalsRow} key={rate}>
+                    <Text style={styles.totalsLabel}>TVA ({Number(rate).toFixed(0)}%):</Text>
+                    <Text style={styles.totalsValue}>{formatCurrency(values.tvaAmount)}</Text>
+                  </View>
+                );
+              })}
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>
               <Text style={styles.totalsValue}>{formatCurrency(timbreFiscal)}</Text>

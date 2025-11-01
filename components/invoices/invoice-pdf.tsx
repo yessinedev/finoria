@@ -206,15 +206,22 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
     }, 0);
   }
 
-  // Calculate Total HT (sum of all item totals after discount)
-  const totalHT = Array.isArray(invoice.items) 
+  // Calculate Total HT (sum of all item totals after discount) before FODEC
+  const totalHTBeforeFodec = Array.isArray(invoice.items) 
     ? invoice.items.reduce((sum, item) => sum + item.totalPrice, 0)
     : invoice.amount;
 
   // Get FODEC amount from invoice (already calculated) or calculate if missing
   const fodecAmount = invoice.fodecAmount || 0;
+  
+  // Get FODEC rate from company settings
+  const fodecRate = companySettings?.fodecRate || 1.0;
 
-  // Calculate TVA breakdown by rate with correct formula: TVA = (Total HT + FODEC) × taux_TVA
+  // Base HT now includes FODEC (as per requirements)
+  const totalHT = totalHTBeforeFodec + fodecAmount;
+
+  // Calculate TVA breakdown by rate with correct formula: TVA = (Base HT) × taux_TVA
+  // Base HT already includes FODEC
   const tvaBreakdown: Record<number, { baseAmount: number; tvaAmount: number; fodecPortion: number }> = {};
   
   if (Array.isArray(invoice.items) && Array.isArray(products)) {
@@ -232,22 +239,27 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
     // Calculate proportional FODEC for each TVA rate group
     Object.keys(tvaBreakdown).forEach(rateStr => {
       const rate = Number(rateStr);
-      const proportion = totalHT > 0 ? tvaBreakdown[rate].baseAmount / totalHT : 0;
+      const proportion = totalHTBeforeFodec > 0 ? tvaBreakdown[rate].baseAmount / totalHTBeforeFodec : 0;
       tvaBreakdown[rate].fodecPortion = fodecAmount * proportion;
       
-      // Calculate TVA: (Total HT + FODEC) × taux_TVA for this rate group
+      // Calculate TVA: Base HT × taux_TVA for this rate group
+      // Base HT = itemTotal + FODEC portion
       const taxableBase = tvaBreakdown[rate].baseAmount + tvaBreakdown[rate].fodecPortion;
       tvaBreakdown[rate].tvaAmount = (taxableBase * rate) / 100;
     });
   }
   
   // Calculate totals
-  const totalBaseHT = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.baseAmount, 0) || totalHT;
+  const totalBaseHT = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.baseAmount, 0) || totalHTBeforeFodec;
   const totalTVA = Object.values(tvaBreakdown).reduce((sum, values) => sum + values.tvaAmount, 0);
   const timbreFiscal = companySettings?.timbreFiscal || 1.000;
 
-  // Calculate Total TTC: Total HT + FODEC + TVA + Timbre Fiscal
-  const finalAmount = totalHT + fodecAmount + totalTVA + timbreFiscal;
+  // Calculate Total TTC: Total HT (with FODEC) + TVA + Timbre Fiscal
+  const finalAmount = totalHT + totalTVA + timbreFiscal;
+  
+  // Calculate discount percentage
+  const beforeDiscount = totalHTBeforeFodec + totalRemise;
+  const discountPercentage = beforeDiscount > 0 ? (totalRemise / beforeDiscount) * 100 : 0;
 
   return (
     <Document>
@@ -342,13 +354,17 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
               {Object.keys(tvaBreakdown).length > 0 ? (
                 Object.entries(tvaBreakdown)
                   .sort(([a], [b]) => Number(b) - Number(a)) // Sort by rate descending
-                  .map(([rate, values]) => (
-                    <View style={styles.tvaBreakdownRow} key={rate}>
-                      <Text style={styles.tvaBreakdownCell}>{Number(rate).toFixed(0)}%</Text>
-                      <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(values.baseAmount)}</Text>
-                      <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(values.tvaAmount)}</Text>
-                    </View>
-                  ))
+                  .map(([rate, values]) => {
+                    // Base HT includes FODEC for this rate group
+                    const baseHTWithFodec = values.baseAmount + values.fodecPortion;
+                    return (
+                      <View style={styles.tvaBreakdownRow} key={rate}>
+                        <Text style={styles.tvaBreakdownCell}>{Number(rate).toFixed(0)}%</Text>
+                        <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(baseHTWithFodec)}</Text>
+                        <Text style={styles.tvaBreakdownCellRight}>{formatCurrency(values.tvaAmount)}</Text>
+                      </View>
+                    );
+                  })
               ) : (
                 <View style={styles.tvaBreakdownRow}>
                   <Text style={styles.tvaBreakdownCell}>0%</Text>
@@ -369,24 +385,35 @@ export function InvoicePDFDocument({ invoice, companySettings, products }: { inv
           <View style={styles.totalsBox}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Sous-total HT:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(totalHT)}</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(totalHTBeforeFodec)}</Text>
             </View>
             {totalRemise > 0 && (
               <View style={styles.totalsRow}>
-                <Text style={styles.totalsLabel}>Remise totale:</Text>
+                <Text style={styles.totalsLabel}>Remise ({discountPercentage.toFixed(2)}%):</Text>
                 <Text style={styles.totalsValue}>-{formatCurrency(totalRemise)}</Text>
               </View>
             )}
             {fodecAmount > 0 && (
               <View style={styles.totalsRow}>
-                <Text style={styles.totalsLabel}>FODEC:</Text>
+                <Text style={styles.totalsLabel}>FODEC ({fodecRate.toFixed(2)}%):</Text>
                 <Text style={styles.totalsValue}>{formatCurrency(fodecAmount)}</Text>
               </View>
             )}
             <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>TVA:</Text>
-              <Text style={styles.totalsValue}>{formatCurrency(totalTVA)}</Text>
+              <Text style={styles.totalsLabel}>Total HT:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(totalHT)}</Text>
             </View>
+            {Object.keys(tvaBreakdown).length > 0 && Object.entries(tvaBreakdown)
+              .sort(([a], [b]) => Number(b) - Number(a))
+              .map(([rate]) => {
+                const values = tvaBreakdown[Number(rate)];
+                return (
+                  <View style={styles.totalsRow} key={rate}>
+                    <Text style={styles.totalsLabel}>TVA ({Number(rate).toFixed(0)}%):</Text>
+                    <Text style={styles.totalsValue}>{formatCurrency(values.tvaAmount)}</Text>
+                  </View>
+                );
+              })}
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Timbre Fiscal:</Text>
               <Text style={styles.totalsValue}>{formatCurrency(timbreFiscal)}</Text>

@@ -70,31 +70,33 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Helper function to check if supplier can be deleted
+  const canDeleteSupplier = (id) => {
+    const checks = [
+      { table: 'supplier_orders', supplierId: id },
+      { table: 'supplier_invoices', supplierId: id },
+    ];
+
+    for (const check of checks) {
+      const count = db.prepare(`SELECT COUNT(*) as count FROM ${check.table} WHERE supplierId = ?`).get(check.supplierId);
+      if (count.count > 0) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  ipcMain.handle("can-delete-supplier", async (event, id) => {
+    try {
+      return canDeleteSupplier(id);
+    } catch (error) {
+      console.error("Error checking if supplier can be deleted:", error);
+      return false;
+    }
+  });
+
   ipcMain.handle("delete-supplier", async (event, id) => {
     try {
-      // Check if supplier has orders or invoices
-      const ordersCount = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM supplier_orders WHERE supplierId = ?"
-        )
-        .get(id);
-      if (ordersCount.count > 0) {
-        throw new Error(
-          "Impossible de supprimer ce fournisseur car il a des commandes associées"
-        );
-      }
-
-      const invoicesCount = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM supplier_invoices WHERE supplierId = ?"
-        )
-        .get(id);
-      if (invoicesCount.count > 0) {
-        throw new Error(
-          "Impossible de supprimer ce fournisseur car il a des factures associées"
-        );
-      }
-
       const stmt = db.prepare("DELETE FROM suppliers WHERE id = ?");
       stmt.run(id);
       notifyDataChange("suppliers", "delete", { id });
@@ -633,6 +635,23 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       throw new Error(
         "Erreur lors de la mise à jour de la facture fournisseur"
       );
+    }
+  });
+
+  // Helper function to check if supplier invoice can be deleted
+  const canDeleteSupplierInvoice = (id) => {
+    const paymentsCount = db
+      .prepare("SELECT COUNT(*) as count FROM supplier_payments WHERE invoiceId = ?")
+      .get(id);
+    return paymentsCount.count === 0;
+  };
+
+  ipcMain.handle("can-delete-supplier-invoice", async (event, id) => {
+    try {
+      return canDeleteSupplierInvoice(id);
+    } catch (error) {
+      console.error("Error checking if supplier invoice can be deleted:", error);
+      return false;
     }
   });
 

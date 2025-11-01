@@ -60,19 +60,27 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Helper function to check if category can be deleted
+  const canDeleteCategory = (id) => {
+    const productCount = db
+      .prepare(
+        "SELECT COUNT(*) as count FROM products WHERE category = (SELECT name FROM categories WHERE id = ?)"
+      )
+      .get(id);
+    return productCount.count === 0;
+  };
+
+  ipcMain.handle("can-delete-category", async (event, id) => {
+    try {
+      return canDeleteCategory(id);
+    } catch (error) {
+      console.error("Error checking if category can be deleted:", error);
+      return false;
+    }
+  });
+
   ipcMain.handle("delete-category", async (event, id) => {
     try {
-      // Check if category is used by products
-      const productCount = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM products WHERE category = (SELECT name FROM categories WHERE id = ?)"
-        )
-        .get(id);
-      if (productCount.count > 0) {
-        throw new Error(
-          "Impossible de supprimer cette catégorie car elle est utilisée par des produits"
-        );
-      }
       const stmt = db.prepare("DELETE FROM categories WHERE id = ?");
       stmt.run(id);
       notifyDataChange("categories", "delete", { id });

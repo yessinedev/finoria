@@ -22,6 +22,7 @@ export default function VatManagement({ className }: VatManagementProps) {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTva, setEditingTva] = useState<TVA | null>(null);
+  const [canDeleteMap, setCanDeleteMap] = useState<Record<number, boolean>>({});
   const [formData, setFormData] = useState({
     rate: 0,
     isActive: true,
@@ -36,6 +37,18 @@ export default function VatManagement({ className }: VatManagementProps) {
       const result = await db.tva.getAll();
       if (result.success) {
         setTvaRates(result.data || []);
+        // Check which TVA rates can be deleted
+        const deleteChecks = await Promise.all(
+          (result.data || []).map(async (tva) => {
+            const checkResult = await db.tva.canDelete(tva.id);
+            return { id: tva.id, canDelete: checkResult.success && checkResult.data };
+          })
+        );
+        const newCanDeleteMap: Record<number, boolean> = {};
+        deleteChecks.forEach(({ id, canDelete }) => {
+          newCanDeleteMap[id] = canDelete;
+        });
+        setCanDeleteMap(newCanDeleteMap);
       }
     } catch (error) {
       console.error("Error loading TVA rates:", error);
@@ -251,6 +264,7 @@ export default function VatManagement({ className }: VatManagementProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDelete(tva.id)}
+                          disabled={!canDeleteMap[tva.id]}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

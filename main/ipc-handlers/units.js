@@ -78,14 +78,23 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Helper function to check if unit can be deleted
+  const canDeleteUnit = (id) => {
+    const productsUsingUnit = db.prepare("SELECT COUNT(*) as count FROM products WHERE unitId = ?").get(id);
+    return productsUsingUnit.count === 0;
+  };
+
+  ipcMain.handle("can-delete-unit", async (event, id) => {
+    try {
+      return canDeleteUnit(id);
+    } catch (error) {
+      console.error("Error checking if unit can be deleted:", error);
+      return false;
+    }
+  });
+
   ipcMain.handle("delete-unit", async (event, id) => {
     try {
-      // Check if unit is being used by any products
-      const productsUsingUnit = db.prepare("SELECT COUNT(*) as count FROM products WHERE unitId = ?").get(id);
-      if (productsUsingUnit.count > 0) {
-        throw new Error("Cette unité est utilisée par des produits et ne peut pas être supprimée");
-      }
-      
       const stmt = db.prepare("DELETE FROM units WHERE id = ?");
       stmt.run(id);
       notifyDataChange("units", "delete", { id });

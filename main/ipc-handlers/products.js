@@ -152,6 +152,40 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Helper function to check if product can be deleted
+  const canDeleteProduct = (id) => {
+    // Check if product is used in any related table
+    const checks = [
+      { table: 'sale_items', productId: id },
+      { table: 'invoice_items', productId: id },
+      { table: 'quote_items', productId: id },
+      { table: 'supplier_order_items', productId: id },
+      { table: 'supplier_invoice_items', productId: id },
+      { table: 'delivery_receipt_items', productId: id },
+      { table: 'reception_note_items', productId: id },
+      { table: 'credit_note_items', productId: id },
+      { table: 'purchase_order_items', productId: id },
+      { table: 'stock_movements', productId: id },
+    ];
+
+    for (const check of checks) {
+      const count = db.prepare(`SELECT COUNT(*) as count FROM ${check.table} WHERE productId = ?`).get(check.productId);
+      if (count.count > 0) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  ipcMain.handle("can-delete-product", async (event, id) => {
+    try {
+      return canDeleteProduct(id);
+    } catch (error) {
+      console.error("Error checking if product can be deleted:", error);
+      return false;
+    }
+  });
+
   ipcMain.handle("delete-product", async (event, id) => {
     try {
       const stmt = db.prepare("DELETE FROM products WHERE id = ?");
@@ -160,7 +194,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return true;
     } catch (error) {
       console.error("Error deleting product:", error);
-      throw new Error("Erreur lors de la suppression du produit");
+      throw error;
     }
   });
 };

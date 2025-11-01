@@ -32,6 +32,7 @@ export default function CategoryManager({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canDeleteMap, setCanDeleteMap] = useState<Record<number, boolean>>({});
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -100,6 +101,18 @@ export default function CategoryManager({
       if (result.success) {
         setLocalCategories(result.data || []);
         onCategoriesChange(result.data || []);
+        // Check which categories can be deleted
+        const deleteChecks = await Promise.all(
+          (result.data || []).map(async (category) => {
+            const checkResult = await db.categories.canDelete(category.id);
+            return { id: category.id, canDelete: checkResult.success && checkResult.data };
+          })
+        );
+        const newCanDeleteMap: Record<number, boolean> = {};
+        deleteChecks.forEach(({ id, canDelete }) => {
+          newCanDeleteMap[id] = canDelete;
+        });
+        setCanDeleteMap(newCanDeleteMap);
       } else {
         setError(result.error || "Erreur lors du chargement des catégories");
       }
@@ -243,6 +256,7 @@ export default function CategoryManager({
           label: "Supprimer",
           onClick: () => handleDelete(category.id),
           className: "text-red-600",
+          disabled: !canDeleteMap[category.id],
         },
       ]}
     />

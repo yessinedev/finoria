@@ -15,9 +15,6 @@ import {
   Printer,
   FileText,
   Loader2,
-  Check,
-  Clock,
-  AlertCircle,
   X,
 } from "lucide-react";
 import type { SupplierInvoice } from "@/types/types";
@@ -106,17 +103,6 @@ export default function SupplierInvoicePreview({
             <div className="flex gap-2">
               {onStatusChange && (
                 <div className="flex gap-1">
-                  {invoice.status !== "Payée" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onStatusChange(invoice.id, "Payée")}
-                      className="text-green-600 border-green-200 hover:bg-green-50"
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Marquer payée
-                    </Button>
-                  )}
                   {invoice.status !== "Annulée" && (
                     <Button
                       variant="outline"
