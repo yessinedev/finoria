@@ -10,6 +10,7 @@ let mainWindow;
 let db;
 let nextProcess;
 const dataChangeListeners = new Map();
+const registeredWebContents = new Set();
 let restartScheduled = false;
 
 const getDatabasePath = () =>
@@ -288,9 +289,15 @@ ipcMain.handle("register-data-listener", (event) => {
     event.sender.send("data-changed", table, action, data);
   };
   dataChangeListeners.set(senderId, listener);
-  event.sender.once("destroyed", () => {
-    dataChangeListeners.delete(senderId);
-  });
+  
+  // Only add destroyed listener once per WebContents
+  if (!registeredWebContents.has(senderId)) {
+    registeredWebContents.add(senderId);
+    event.sender.once("destroyed", () => {
+      dataChangeListeners.delete(senderId);
+      registeredWebContents.delete(senderId);
+    });
+  }
 });
 
 ipcMain.handle("unregister-data-listener", (event) => {
