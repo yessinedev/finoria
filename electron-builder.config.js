@@ -45,12 +45,19 @@ module.exports = {
     const resourcesPath = path.join(appOutDir, "resources");
     const targetAppFolder = path.join(resourcesPath, "app");
 
-    const projectRoot = packager.info.metadata.buildResources || process.cwd();
-    // or just process.cwd()
-
+    // Use process.cwd() directly to get the project root
+    const projectRoot = process.cwd();
     const standaloneDir = path.join(projectRoot, ".next", "standalone");
     const staticDir = path.join(projectRoot, ".next", "static");
     const publicDir = path.join(projectRoot, "public");
+
+    // Verify standalone directory exists
+    if (!await fs.pathExists(standaloneDir)) {
+      throw new Error(
+        `Standalone directory not found: ${standaloneDir}\n` +
+        `Make sure to run 'npm run build:next' before building the Electron app.`
+      );
+    }
 
     // Remove old if exists
     await fs.remove(targetAppFolder);

@@ -37,8 +37,8 @@ interface ElectronAPI {
   getSupplierInvoices: () => Promise<any[]>;
   createSupplierInvoice: (invoice: any) => Promise<any>;
   updateSupplierInvoice: (id: number, invoice: any) => Promise<any>;
+  updateSupplierInvoiceStatus: (id: number, status: string) => Promise<any>;
   deleteSupplierInvoice: (id: number) => Promise<boolean>;
-  // Removed updateSupplierInvoiceStatus function
 
   // Products
   getProducts: () => Promise<any[]>;
@@ -68,6 +68,8 @@ interface ElectronAPI {
   generateInvoiceFromSale: (saleId: number) => Promise<any>;
   generateInvoiceFromQuote: (quoteId: number) => Promise<any>;
   getInvoiceItems: (invoiceId: number) => Promise<any[]>;
+  checkInvoiceDueDates: () => Promise<void>;
+  checkSupplierInvoiceDueDates: () => Promise<void>;
 
   // Quotes
   getQuotes: () => Promise<any[]>;

@@ -138,7 +138,9 @@ export default function Sales() {
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const loadData = async () => {

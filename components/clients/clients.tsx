@@ -118,7 +118,9 @@ export default function Clients() {
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const loadClients = async () => {

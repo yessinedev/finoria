@@ -128,7 +128,9 @@ export default function SupplierInvoices() {
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {

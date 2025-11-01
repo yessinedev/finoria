@@ -120,7 +120,9 @@ export default function CategoryManager({
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Modularize form modal logic

@@ -134,7 +134,9 @@ export default function UnitManager({
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const loadUnits = async () => {

@@ -169,7 +169,9 @@ export default function Products() {
       }
     })
 
-    return unsubscribe
+    return () => {
+      unsubscribe();
+    };
   }, [])
 
   const loadData = async () => {
