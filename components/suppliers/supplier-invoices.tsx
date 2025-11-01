@@ -838,17 +838,30 @@ Commande #{order.id} - {order.supplierName}
                     {invoice.totalAmount.toFixed(3)} DNT
                   </TableCell>
                   <TableCell>
-                    <StatusDropdown
-                      currentValue={invoice.status}
-                      options={[
-                        { value: "En attente", label: "En attente", variant: "secondary" },
-                        { value: "Partiellement payée", label: "Partiellement payée", variant: "default" },
-                        { value: "Payée", label: "Payée", variant: "default" },
-                        { value: "En retard", label: "En retard", variant: "destructive" },
-                        { value: "Annulée", label: "Annulée", variant: "outline" },
-                      ]}
-                      onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
-                    />
+                    {(() => {
+                      // Filter options based on current status to prevent manual setting of payment statuses
+                      const availableOptions = [
+                        { value: "En attente", label: "En attente", variant: "secondary" as const },
+                        { value: "Annulée", label: "Annulée", variant: "outline" as const },
+                      ];
+                      
+                      // Only show payment statuses if already set (auto-updated by payments)
+                      if (invoice.status === "Partiellement payée") {
+                        availableOptions.push({ value: "Partiellement payée", label: "Partiellement payée", variant: "default" as const });
+                      } else if (invoice.status === "Payée") {
+                        availableOptions.push({ value: "Payée", label: "Payée", variant: "default" as const });
+                      } else if (invoice.status === "En retard") {
+                        availableOptions.push({ value: "En retard", label: "En retard", variant: "destructive" as const });
+                      }
+                      
+                      return (
+                        <StatusDropdown
+                          currentValue={invoice.status}
+                          options={availableOptions}
+                          onStatusChange={(newStatus) => handleStatusChange(invoice.id, newStatus)}
+                        />
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <ActionsDropdown

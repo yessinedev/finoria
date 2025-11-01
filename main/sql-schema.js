@@ -11,6 +11,22 @@ function createTables(db) {
     )
   `);
 
+  // Insert default categories if they don't exist
+  const checkCategory = db.prepare("SELECT COUNT(*) as count FROM categories WHERE name = ?");
+  const insertCategory = db.prepare("INSERT OR IGNORE INTO categories (name, description) VALUES (?, ?)");
+  
+  const defaultCategories = [
+    { name: "Service", description: "Services professionnels" },
+    { name: "Matériel Informatique", description: "Équipements informatiques et électroniques" },
+  ];
+  
+  for (const category of defaultCategories) {
+    const result = checkCategory.get(category.name);
+    if (result.count === 0) {
+      insertCategory.run(category.name, category.description);
+    }
+  }
+
   // Clients table
   db.exec(`
     CREATE TABLE IF NOT EXISTS clients (
@@ -335,6 +351,19 @@ function createTables(db) {
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Insert default TVA rates if they don't exist
+  const checkTva = db.prepare("SELECT COUNT(*) as count FROM tva WHERE rate = ?");
+  const insertTva = db.prepare("INSERT OR IGNORE INTO tva (rate) VALUES (?)");
+  
+  const defaultTvaRates = [3, 7, 13, 19];
+  
+  for (const rate of defaultTvaRates) {
+    const result = checkTva.get(rate);
+    if (result.count === 0) {
+      insertTva.run(rate);
+    }
+  }
 
   // Client payments table
   db.exec(`

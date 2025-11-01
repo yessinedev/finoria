@@ -10,7 +10,7 @@ import {
 import { PDFViewer, pdf } from "@react-pdf/renderer";
 
 import { InvoicePDFDocument } from "./invoice-pdf";
-import { Download, Printer, FileText, Loader2, Check, X } from "lucide-react";
+import { Download, Printer, FileText, Loader2, X } from "lucide-react";
 import type { Invoice } from "@/types/types";
 
 interface InvoicePreviewProps {
@@ -107,17 +107,6 @@ export default function InvoicePreview({
             <div className="flex gap-2">
               {onStatusChange && (
                 <div className="flex gap-1">
-                  {invoice.status !== "Payée" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onStatusChange(invoice.id, "Payée")}
-                      className="text-green-600 border-green-200 hover:bg-green-50"
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Marquer payée
-                    </Button>
-                  )}
                   {invoice.status !== "Annulée" && (
                     <Button
                       variant="outline"
