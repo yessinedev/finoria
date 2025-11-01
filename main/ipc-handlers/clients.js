@@ -67,38 +67,34 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Helper function to check if client can be deleted
+  const canDeleteClient = (id) => {
+    const checks = [
+      { table: 'sales', clientId: id },
+      { table: 'quotes', clientId: id },
+      { table: 'invoices', clientId: id },
+    ];
+
+    for (const check of checks) {
+      const count = db.prepare(`SELECT COUNT(*) as count FROM ${check.table} WHERE clientId = ?`).get(check.clientId);
+      if (count.count > 0) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  ipcMain.handle("can-delete-client", async (event, id) => {
+    try {
+      return canDeleteClient(id);
+    } catch (error) {
+      console.error("Error checking if client can be deleted:", error);
+      return false;
+    }
+  });
+
   ipcMain.handle("delete-client", async (event, id) => {
     try {
-      // Check if client has sales
-      const salesCount = db
-        .prepare("SELECT COUNT(*) as count FROM sales WHERE clientId = ?")
-        .get(id);
-      if (salesCount.count > 0) {
-        throw new Error(
-          "Impossible de supprimer ce client car il a des ventes associées"
-        );
-      }
-
-      // Check if client has quotes
-      const quotesCount = db
-        .prepare("SELECT COUNT(*) as count FROM quotes WHERE clientId = ?")
-        .get(id);
-      if (quotesCount.count > 0) {
-        throw new Error(
-          "Impossible de supprimer ce client car il a des devis associés"
-        );
-      }
-
-      // Check if client has invoices
-      const invoicesCount = db
-        .prepare("SELECT COUNT(*) as count FROM invoices WHERE clientId = ?")
-        .get(id);
-      if (invoicesCount.count > 0) {
-        throw new Error(
-          "Impossible de supprimer ce client car il a des factures associées"
-        );
-      }
-
       const stmt = db.prepare("DELETE FROM clients WHERE id = ?");
       stmt.run(id);
       notifyDataChange("clients", "delete", { id });

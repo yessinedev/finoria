@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createCategory: (category) => ipcRenderer.invoke("create-category", category),
   updateCategory: (id, category) =>
     ipcRenderer.invoke("update-category", id, category),
+  canDeleteCategory: (id) => ipcRenderer.invoke("can-delete-category", id),
   deleteCategory: (id) => ipcRenderer.invoke("delete-category", id),
 
   // --- Units API ---
@@ -14,18 +15,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getUnitById: (id) => ipcRenderer.invoke("get-unit-by-id", id),
   createUnit: (unit) => ipcRenderer.invoke("create-unit", unit),
   updateUnit: (id, unit) => ipcRenderer.invoke("update-unit", id, unit),
+  canDeleteUnit: (id) => ipcRenderer.invoke("can-delete-unit", id),
   deleteUnit: (id) => ipcRenderer.invoke("delete-unit", id),
 
   // --- Clients API ---
   getClients: () => ipcRenderer.invoke("get-clients"),
   createClient: (client) => ipcRenderer.invoke("create-client", client),
   updateClient: (id, client) => ipcRenderer.invoke("update-client", id, client),
+  canDeleteClient: (id) => ipcRenderer.invoke("can-delete-client", id),
   deleteClient: (id) => ipcRenderer.invoke("delete-client", id),
 
   // --- Suppliers API ---
   getSuppliers: () => ipcRenderer.invoke("get-suppliers"),
   createSupplier: (supplier) => ipcRenderer.invoke("create-supplier", supplier),
   updateSupplier: (id, supplier) => ipcRenderer.invoke("update-supplier", id, supplier),
+  canDeleteSupplier: (id) => ipcRenderer.invoke("can-delete-supplier", id),
   deleteSupplier: (id) => ipcRenderer.invoke("delete-supplier", id),
 
   // --- Supplier Orders API ---
@@ -38,6 +42,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getSupplierInvoices: () => ipcRenderer.invoke("get-supplier-invoices"),
   createSupplierInvoice: (invoice) => ipcRenderer.invoke("create-supplier-invoice", invoice),
   updateSupplierInvoice: (id, invoice) => ipcRenderer.invoke("update-supplier-invoice", id, invoice),
+  canDeleteSupplierInvoice: (id) => ipcRenderer.invoke("can-delete-supplier-invoice", id),
   deleteSupplierInvoice: (id) => ipcRenderer.invoke("delete-supplier-invoice", id),
   updateSupplierInvoiceStatus: (id, status) => ipcRenderer.invoke("update-supplier-invoice-status", id, status),
 
@@ -51,6 +56,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-product-stock", id, quantity),
   getProductStock: (id) => ipcRenderer.invoke("get-product-stock", id),
   checkProductStock: (id, requestedQuantity) => ipcRenderer.invoke("check-product-stock", id, requestedQuantity),
+  canDeleteProduct: (id) => ipcRenderer.invoke("can-delete-product", id),
   deleteProduct: (id) => ipcRenderer.invoke("delete-product", id),
 
   // --- Sales API ---
@@ -82,6 +88,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createQuote: (quote) => ipcRenderer.invoke("create-quote", quote),
   updateQuote: (id, quote) => ipcRenderer.invoke("update-quote", id, quote),
   updateQuoteStatus: (id, status) => ipcRenderer.invoke("update-quote-status", id, status),
+  canDeleteQuote: (id) => ipcRenderer.invoke("can-delete-quote", id),
   deleteQuote: (id) => ipcRenderer.invoke("delete-quote", id),
   getQuoteItems: (quoteId) => ipcRenderer.invoke("get-quote-items", quoteId),
   
@@ -112,6 +119,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getTvaRates: () => ipcRenderer.invoke("get-tva-rates"),
   createTvaRate: (tvaRate) => ipcRenderer.invoke("create-tva-rate", tvaRate),
   updateTvaRate: (id, tvaRate) => ipcRenderer.invoke("update-tva-rate", id, tvaRate),
+  canDeleteTvaRate: (id) => ipcRenderer.invoke("can-delete-tva-rate", id),
   deleteTvaRate: (id) => ipcRenderer.invoke("delete-tva-rate", id),
   getTvaRate: (id) => ipcRenderer.invoke("get-tva-rate", id),
 

@@ -243,6 +243,11 @@ class DatabaseService {
           Promise.resolve(null),
         "updateCategory"
       ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteCategory(id) || Promise.resolve(false),
+        "canDeleteCategory"
+      ),
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteCategory(id) || Promise.resolve(false),
@@ -275,6 +280,11 @@ class DatabaseService {
           Promise.resolve(null),
         "updateUnit"
       ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteUnit(id) || Promise.resolve(false),
+        "canDeleteUnit"
+      ),
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteUnit(id) || Promise.resolve(false),
@@ -299,6 +309,11 @@ class DatabaseService {
         () =>
           window.electronAPI?.updateClient(id, client) || Promise.resolve(null),
         "updateClient"
+      ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteClient(id) || Promise.resolve(false),
+        "canDeleteClient"
       ),
     delete: (id: number) =>
       this.handle(
@@ -327,6 +342,11 @@ class DatabaseService {
           window.electronAPI?.updateSupplier(id, supplier) ||
           Promise.resolve(null),
         "updateSupplier"
+      ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteSupplier(id) || Promise.resolve(false),
+        "canDeleteSupplier"
       ),
     delete: (id: number) =>
       this.handle(
@@ -394,6 +414,11 @@ class DatabaseService {
           Promise.resolve(null),
         "updateSupplierInvoice"
       ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteSupplierInvoice(id) || Promise.resolve(false),
+        "canDeleteSupplierInvoice"
+      ),
     delete: (id: number) =>
       this.handle(
         () =>
@@ -449,6 +474,11 @@ class DatabaseService {
           window.electronAPI?.updateProduct(id, product) ||
           Promise.resolve(null),
         "updateProduct"
+      ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteProduct(id) || Promise.resolve(false),
+        "canDeleteProduct"
       ),
     delete: (id: number) =>
       this.handle(
@@ -565,6 +595,11 @@ class DatabaseService {
         () => window.electronAPI?.updateQuoteStatus(id, status),
         "updateQuoteStatus"
       ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteQuote(id) || Promise.resolve(false),
+        "canDeleteQuote"
+      ),
     delete: (id: number) =>
       this.handle(
         () => window.electronAPI?.deleteQuote(id) || Promise.resolve(false),
@@ -657,6 +692,11 @@ class DatabaseService {
       this.handle(
         () => window.electronAPI?.updateTvaRate(id, tvaRate) || Promise.resolve(null),
         "updateTvaRate"
+      ),
+    canDelete: (id: number) =>
+      this.handle(
+        () => window.electronAPI?.canDeleteTvaRate(id) || Promise.resolve(false),
+        "canDeleteTvaRate"
       ),
     delete: (id: number) =>
       this.handle(

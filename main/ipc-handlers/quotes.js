@@ -225,6 +225,23 @@ module.exports = (ipcMain, db, notifyDataChange) => {
     }
   });
 
+  // Helper function to check if quote can be deleted
+  const canDeleteQuote = (id) => {
+    const invoicesCount = db
+      .prepare("SELECT COUNT(*) as count FROM invoices WHERE quoteId = ?")
+      .get(id);
+    return invoicesCount.count === 0;
+  };
+
+  ipcMain.handle("can-delete-quote", async (event, id) => {
+    try {
+      return canDeleteQuote(id);
+    } catch (error) {
+      console.error("Error checking if quote can be deleted:", error);
+      return false;
+    }
+  });
+
   ipcMain.handle("delete-quote", async (event, id) => {
     try {
       const stmt = db.prepare("DELETE FROM quotes WHERE id = ?");
@@ -233,7 +250,7 @@ module.exports = (ipcMain, db, notifyDataChange) => {
       return { id };
     } catch (error) {
       console.error("Error deleting quote:", error);
-      throw new Error("Erreur lors de la suppression du devis");
+      throw error;
     }
   });
   

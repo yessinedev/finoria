@@ -44,6 +44,7 @@ export default function Products() {
   const [error, setError] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [canDeleteMap, setCanDeleteMap] = useState<Record<number, boolean>>({})
   const { toast } = useToast()
 
   // Pagination state
@@ -186,6 +187,18 @@ export default function Products() {
 
       if (productsResult.success) {
         setProducts(productsResult.data || [])
+        // Check which products can be deleted
+        const deleteChecks = await Promise.all(
+          (productsResult.data || []).map(async (product) => {
+            const checkResult = await db.products.canDelete(product.id)
+            return { id: product.id, canDelete: checkResult.success && checkResult.data }
+          })
+        )
+        const newCanDeleteMap: Record<number, boolean> = {}
+        deleteChecks.forEach(({ id, canDelete }) => {
+          newCanDeleteMap[id] = canDelete
+        })
+        setCanDeleteMap(newCanDeleteMap)
       } else {
         setError(productsResult.error || "Erreur lors du chargement des produits")
       }
@@ -351,6 +364,7 @@ export default function Products() {
           icon: <Trash2 className="h-4 w-4" />,
           onClick: () => handleDelete(product),
           className: "text-red-600",
+          disabled: !canDeleteMap[product.id],
         },
       ]}
     />

@@ -38,6 +38,7 @@ export default function Clients() {
   const [error, setError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [canDeleteMap, setCanDeleteMap] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
   // Pagination state
@@ -128,6 +129,18 @@ export default function Clients() {
     const result = await db.clients.getAll();
     if (result.success) {
       setClients(result.data || []);
+      // Check which clients can be deleted
+      const deleteChecks = await Promise.all(
+        (result.data || []).map(async (client) => {
+          const checkResult = await db.clients.canDelete(client.id);
+          return { id: client.id, canDelete: checkResult.success && checkResult.data };
+        })
+      );
+      const newCanDeleteMap: Record<number, boolean> = {};
+      deleteChecks.forEach(({ id, canDelete }) => {
+        newCanDeleteMap[id] = canDelete;
+      });
+      setCanDeleteMap(newCanDeleteMap);
     } else {
       setError(result.error || "Erreur lors du chargement des clients");
     }
@@ -236,6 +249,7 @@ export default function Clients() {
           icon: <Trash2 className="h-4 w-4" />,
           onClick: () => handleDelete(client),
           className: "text-red-600",
+          disabled: !canDeleteMap[client.id],
         },
       ]}
     />
